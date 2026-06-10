@@ -211,24 +211,13 @@ function respuesta(statusCode, payload) {
 }
 
 exports.handler = async (event) => {
-  console.log('env check:', {
-    supabase_url: !!process.env.SUPABASE_URL,
-    service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    strava_id: !!process.env.STRAVA_CLIENT_ID,
-    strava_secret: !!process.env.STRAVA_CLIENT_SECRET,
-    coach_secret: !!process.env.COACH_SECRET,
-  })
-  console.log('coach secret value length:', process.env.COACH_SECRET?.length ?? 'undefined')
-  // TEMPORAL: quitar tras depurar la config de env vars en Netlify
-  console.log('all env keys:', Object.keys(process.env).filter((k) => k.includes('COACH') || k.includes('SECRET')))
-
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return respuesta(405, { error: 'Method Not Allowed' })
 
   // 1. Validar env vars
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const COACH_SECRET = process.env.COACH_SECRET
+  const COACH_SECRET = process.env.COACH_FUNCTION_SECRET
   const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID
   const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET
   if (!SUPABASE_URL || !SERVICE_KEY || !COACH_SECRET || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
