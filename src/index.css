@@ -1,0 +1,12 @@
+/* Reset mínimo — el resto del estilo es inline (regla del proyecto) */
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0a0f1e;
+  color: #f1f5f9;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
