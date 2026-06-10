@@ -263,14 +263,14 @@ exports.handler = async (event) => {
     )
     const perfil = Array.isArray(perfilRes.json) ? perfilRes.json[0] : null
     if (!perfil) return respuesta(404, { error: 'Perfil del atleta no encontrado' })
-    if (!perfil.strava_access_token || !perfil.strava_refresh_token) {
+    if (!perfil.strava_token || !perfil.strava_refresh_token) {
       return respuesta(409, { error: 'El atleta no tiene Strava conectado' })
     }
 
     // 6. Refrescar token si expirado (margen de 60s)
-    let accessToken = perfil.strava_access_token
+    let accessToken = perfil.strava_token
     const ahora = Math.floor(Date.now() / 1000)
-    if (!perfil.strava_expires_at || perfil.strava_expires_at <= ahora + 60) {
+    if (!perfil.strava_token_expires_at || perfil.strava_token_expires_at <= ahora + 60) {
       const refresh = await withTimeout(
         refreshStravaToken(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, perfil.strava_refresh_token),
         5000
@@ -281,9 +281,9 @@ exports.handler = async (event) => {
       accessToken = refresh.json.access_token
       await withTimeout(
         supabasePatch(supabaseHost, `/rest/v1/profiles?id=eq.${athleteId}`, SERVICE_KEY, {
-          strava_access_token: refresh.json.access_token,
+          strava_token: refresh.json.access_token,
           strava_refresh_token: refresh.json.refresh_token,
-          strava_expires_at: refresh.json.expires_at,
+          strava_token_expires_at: refresh.json.expires_at,
         }),
         5000
       )
@@ -306,7 +306,7 @@ exports.handler = async (event) => {
     }
 
     // 8. Transformar y agrupar
-    const fcMax = perfil.fc_max || FC_MAX_DEFAULT
+    const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
     const actividades = actRes.json
       .map((a) => transformarActividad(a, fcMax))
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
