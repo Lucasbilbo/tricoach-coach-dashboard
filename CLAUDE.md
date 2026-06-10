@@ -15,6 +15,7 @@ Dashboard web para entrenador de triatlón. Lee datos de atletas (Strava vía Su
 ## Stack
 
 - Frontend: React 19 + Vite, react-router-dom, recharts
+- ⚠️ Vite pineado a `^7` + `@vitejs/plugin-react@^5`: Vite 8 (rolldown) + plugin-react 6 genera bundles sin los módulos JSX propios (página en blanco sin error de build). Ver `coach-dashboard-spec-v2.md`.
 - Backend: Netlify Functions (CommonJS, módulo `https` nativo, sin supabase-js en functions)
 - DB/Auth: Supabase (cliente JS solo en frontend con anon key)
 - Datos: Strava API v3
