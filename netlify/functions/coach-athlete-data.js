@@ -218,6 +218,7 @@ exports.handler = async (event) => {
     strava_secret: !!process.env.STRAVA_CLIENT_SECRET,
     coach_secret: !!process.env.COACH_SECRET,
   })
+  console.log('coach secret value length:', process.env.COACH_SECRET?.length ?? 'undefined')
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return respuesta(405, { error: 'Method Not Allowed' })
