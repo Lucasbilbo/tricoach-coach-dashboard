@@ -7,7 +7,10 @@ import {
   DISCIPLINE_LABELS,
   cardStyle,
   pageStyle,
+  buttonStyle,
 } from '../lib/theme'
+import PrescribeModal from './PrescribeModal'
+import SessionsList from './SessionsList'
 import ChartCard from './charts/ChartCard'
 import VolumeChart from './charts/VolumeChart'
 import ZonesChart from './charts/ZonesChart'
@@ -56,6 +59,10 @@ export default function AthleteView() {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [coachId, setCoachId] = useState(null)
+  const [activeTab, setActiveTab] = useState('analisis')
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [sesionesVersion, setSesionesVersion] = useState(0)
 
   useEffect(() => {
     let activo = true
@@ -65,11 +72,12 @@ export default function AthleteView() {
       setError('')
       try {
         const { data: sessionData } = await supabase.auth.getSession()
-        const coachId = sessionData?.session?.user?.id
-        if (!coachId) {
+        const usuarioId = sessionData?.session?.user?.id
+        if (!usuarioId) {
           navigate('/')
           return
         }
+        setCoachId(usuarioId)
 
         const res = await fetch('/.netlify/functions/coach-athlete-data', {
           method: 'POST',
@@ -77,7 +85,7 @@ export default function AthleteView() {
             'Content-Type': 'application/json',
             'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
           },
-          body: JSON.stringify({ athleteId: id, coachId, weeks }),
+          body: JSON.stringify({ athleteId: id, coachId: usuarioId, weeks }),
         })
 
         const json = await res.json()
@@ -160,7 +168,7 @@ export default function AthleteView() {
             </h1>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {RANGOS_SEMANAS.map((rango) => (
               <button
                 key={rango}
@@ -180,13 +188,64 @@ export default function AthleteView() {
                 {rango} sem
               </button>
             ))}
+            <button
+              onClick={() => setModalAbierto(true)}
+              style={{ ...buttonStyle, marginLeft: 8 }}
+            >
+              Prescribir sesión
+            </button>
           </div>
         </header>
 
-        {cargando && <p style={{ color: COLORS.textSecondary }}>Cargando datos del atleta…</p>}
-        {error && <p style={{ color: COLORS.error }}>{error}</p>}
+        <nav
+          style={{
+            display: 'flex',
+            gap: 4,
+            borderBottom: `1px solid ${COLORS.cardBorder}`,
+            marginBottom: 24,
+          }}
+        >
+          {[
+            { clave: 'analisis', etiqueta: 'Análisis' },
+            { clave: 'sesiones', etiqueta: 'Sesiones prescritas' },
+          ].map((tab) => (
+            <button
+              key={tab.clave}
+              onClick={() => setActiveTab(tab.clave)}
+              style={{
+                background: 'none',
+                border: 'none',
+                borderBottom:
+                  activeTab === tab.clave ? `2px solid ${COLORS.accent}` : '2px solid transparent',
+                color: activeTab === tab.clave ? COLORS.textPrimary : COLORS.textSecondary,
+                padding: '10px 16px',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              {tab.etiqueta}
+            </button>
+          ))}
+        </nav>
 
-        {!cargando && !error && (
+        {activeTab === 'sesiones' && coachId && (
+          <SessionsList
+            key={sesionesVersion}
+            coachId={coachId}
+            athleteId={id}
+            actividades={actividades}
+            onNewSession={() => setSesionesVersion((v) => v + 1)}
+          />
+        )}
+
+        {activeTab === 'analisis' && cargando && (
+          <p style={{ color: COLORS.textSecondary }}>Cargando datos del atleta…</p>
+        )}
+        {activeTab === 'analisis' && error && <p style={{ color: COLORS.error }}>{error}</p>}
+
+        {activeTab === 'analisis' && !cargando && !error && (
           <>
             <div
               style={{
@@ -294,6 +353,19 @@ export default function AthleteView() {
               </table>
             </div>
           </>
+        )}
+
+        {modalAbierto && coachId && (
+          <PrescribeModal
+            athleteId={id}
+            coachId={coachId}
+            onClose={() => setModalAbierto(false)}
+            onSaved={() => {
+              setModalAbierto(false)
+              setActiveTab('sesiones')
+              setSesionesVersion((v) => v + 1)
+            }}
+          />
         )}
       </div>
     </div>
