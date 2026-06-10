@@ -20,6 +20,14 @@ import {
 } from '../../lib/chartUtils'
 
 const VENTANA_MEDIA = 3
+// Red de seguridad frente a outliers que el backend no haya filtrado
+const RITMO_MIN_PLAUSIBLE = 2.0
+const RITMO_MAX_PLAUSIBLE = 20.0
+
+function ritmoValido(ritmo) {
+  const dec = ritmoToDecimal(ritmo)
+  return dec != null && dec >= RITMO_MIN_PLAUSIBLE && dec <= RITMO_MAX_PLAUSIBLE
+}
 
 function PaceTooltip({ active, payload }) {
   if (!active || !payload || payload.length === 0) return null
@@ -42,22 +50,11 @@ function PaceTooltip({ active, payload }) {
 
 export default function PaceChart({ actividades }) {
   const runs = (actividades || [])
-    .filter((a) => a.disciplina === 'run' && ritmoToDecimal(a.ritmo_min_km) != null)
+    .filter((a) => a.disciplina === 'run' && ritmoValido(a.ritmo_min_km))
     .slice()
     .sort((a, b) => (a.fecha < b.fecha ? -1 : 1))
 
   if (runs.length === 0) return null
-
-  // TEMPORAL: diagnóstico de ritmos absurdos en producción — quitar tras confirmar
-  console.log(
-    'PaceChart ritmos recibidos (3 primeros):',
-    runs.slice(0, 3).map((a) => ({
-      fecha: a.fecha,
-      ritmo_min_km: a.ritmo_min_km,
-      distancia_km: a.distancia_km,
-      duracion_min: a.duracion_min,
-    }))
-  )
 
   const ritmos = runs.map((a) => ritmoToDecimal(a.ritmo_min_km))
   const medias = mediaMovil(ritmos, VENTANA_MEDIA)

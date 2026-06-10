@@ -16,6 +16,9 @@ const TIMEZONE = 'Europe/Madrid'
 const FC_MAX_DEFAULT = 185
 const WEEKS_DEFAULT = 8
 const WEEKS_MAX = 52
+// Ritmos fuera de este rango son outliers (GPS roto, cinta sin footpod) → null
+const RITMO_MIN_PLAUSIBLE = 2.0
+const RITMO_MAX_PLAUSIBLE = 20.0
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -135,9 +138,11 @@ function transformarActividad(act, fcMax) {
   const disciplina = mapDisciplina(act.sport_type || act.type)
   const fcMedia = act.average_heartrate ? round(act.average_heartrate, 0) : null
 
+  const ritmoBruto =
+    disciplina === 'run' && distanciaKm > 0 && duracionMin ? duracionMin / distanciaKm : null
   const ritmoMinKm =
-    disciplina === 'run' && distanciaKm > 0 && duracionMin
-      ? round(duracionMin / distanciaKm, 2)
+    ritmoBruto != null && ritmoBruto >= RITMO_MIN_PLAUSIBLE && ritmoBruto <= RITMO_MAX_PLAUSIBLE
+      ? round(ritmoBruto, 2)
       : null
 
   const intensidadPct = fcMedia ? round((fcMedia / fcMax) * 100, 0) : null
