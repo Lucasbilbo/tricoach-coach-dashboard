@@ -8,6 +8,12 @@ import {
   cardStyle,
   pageStyle,
 } from '../lib/theme'
+import ChartCard from './charts/ChartCard'
+import VolumeChart from './charts/VolumeChart'
+import ZonesChart from './charts/ZonesChart'
+import PaceChart from './charts/PaceChart'
+import PowerChart from './charts/PowerChart'
+import TSSChart from './charts/TSSChart'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -97,6 +103,12 @@ export default function AthleteView() {
   }, [id, weeks, navigate])
 
   const actividades = datos?.actividades || []
+  const semanas = datos?.semanas || []
+
+  const hayRuns = actividades.some((a) => a.disciplina === 'run')
+  const hayZonas = actividades.some((a) => a.zona_fc && a.duracion_min)
+  const hayPotencia =
+    actividades.filter((a) => a.disciplina === 'bike' && a.potencia_media != null).length >= 3
 
   const resumen = actividades.reduce(
     (acc, act) => ({
@@ -195,6 +207,36 @@ export default function AthleteView() {
                 </div>
               ))}
             </div>
+
+            {semanas.length > 0 && (
+              <ChartCard title="Volumen semanal">
+                <VolumeChart semanas={semanas} actividades={actividades} />
+              </ChartCard>
+            )}
+
+            {hayZonas && (
+              <ChartCard title="Distribución zonas FC">
+                <ZonesChart actividades={actividades} />
+              </ChartCard>
+            )}
+
+            {hayRuns && (
+              <ChartCard title="Progresión ritmo running">
+                <PaceChart actividades={actividades} />
+              </ChartCard>
+            )}
+
+            {hayPotencia && (
+              <ChartCard title="Progresión potencia ciclismo">
+                <PowerChart actividades={actividades} />
+              </ChartCard>
+            )}
+
+            {semanas.length > 0 && (
+              <ChartCard title="Carga semanal (TSS)">
+                <TSSChart actividades={actividades} semanas={semanas} />
+              </ChartCard>
+            )}
 
             <div style={{ ...cardStyle, padding: 0, overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
