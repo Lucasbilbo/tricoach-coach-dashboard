@@ -219,6 +219,8 @@ exports.handler = async (event) => {
     coach_secret: !!process.env.COACH_SECRET,
   })
   console.log('coach secret value length:', process.env.COACH_SECRET?.length ?? 'undefined')
+  // TEMPORAL: quitar tras depurar la config de env vars en Netlify
+  console.log('all env keys:', Object.keys(process.env).filter((k) => k.includes('COACH') || k.includes('SECRET')))
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return respuesta(405, { error: 'Method Not Allowed' })
