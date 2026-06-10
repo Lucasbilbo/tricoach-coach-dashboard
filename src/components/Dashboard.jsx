@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { COLORS, cardStyle, pageStyle, buttonStyle } from '../lib/theme'
 
+const TSS_VERDE = '#00E5A0'
+const TSS_AMARILLO = '#FDE68A'
+const TSS_ROJO = '#FF4D6D'
+
+function colorTss(tss) {
+  if (tss == null) return COLORS.textSecondary
+  if (tss < 300) return TSS_VERDE
+  if (tss <= 450) return TSS_AMARILLO
+  return TSS_ROJO
+}
+
+function textoUltimaActividad(dias) {
+  if (dias == null) return 'Sin actividad reciente'
+  if (dias === 0) return 'Última actividad hoy'
+  if (dias === 1) return 'Última actividad hace 1 día'
+  return `Última actividad hace ${dias} días`
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [atletas, setAtletas] = useState([])
@@ -42,19 +60,24 @@ export default function Dashboard() {
           return
         }
 
-        const { data, error: queryError } = await supabase
-          .from('coach_athletes')
-          .select('athlete_id, profiles ( id, nombre )')
-          .eq('coach_id', userId)
+        const res = await fetch('/.netlify/functions/coach-dashboard-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
+          },
+          body: JSON.stringify({ coachId: userId }),
+        })
 
+        const json = await res.json()
         if (!activo) return
 
-        if (queryError) {
-          setError('No se pudieron cargar los atletas')
+        if (!res.ok) {
+          setError(json?.error || 'No se pudieron cargar los atletas')
           return
         }
 
-        setAtletas(data || [])
+        setAtletas(Array.isArray(json) ? json : [])
       } catch {
         if (activo) setError('Error de conexión cargando atletas')
       } finally {
@@ -89,7 +112,7 @@ export default function Dashboard() {
               Mis <span style={{ color: COLORS.accent }}>atletas</span>
             </h1>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: '4px 0 0' }}>
-              Panel del entrenador
+              Panel del entrenador · últimos 7 días
             </p>
           </div>
           <button
@@ -105,7 +128,47 @@ export default function Dashboard() {
           </button>
         </header>
 
-        {cargando && <p style={{ color: COLORS.textSecondary }}>Cargando atletas…</p>}
+        {cargando && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 16,
+            }}
+          >
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ ...cardStyle, opacity: 0.5 }}>
+                <div
+                  style={{
+                    height: 16,
+                    width: '60%',
+                    background: 'rgba(255,255,255,0.06)',
+                    borderRadius: 4,
+                    marginBottom: 12,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 12,
+                    width: '40%',
+                    background: 'rgba(255,255,255,0.06)',
+                    borderRadius: 4,
+                    marginBottom: 20,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 24,
+                    width: '80%',
+                    background: 'rgba(255,255,255,0.06)',
+                    borderRadius: 4,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         {error && <p style={{ color: COLORS.error }}>{error}</p>}
 
         {!cargando && !error && atletas.length === 0 && (
@@ -123,15 +186,14 @@ export default function Dashboard() {
             gap: 16,
           }}
         >
-          {atletas.map((fila) => {
-            const nombre = fila.profiles?.nombre || 'Atleta sin nombre'
-            return (
+          {!cargando &&
+            atletas.map((atleta) => (
               <div
-                key={fila.athlete_id}
-                onClick={() => navigate(`/athlete/${fila.athlete_id}`)}
+                key={atleta.athlete_id}
+                onClick={() => navigate(`/athlete/${atleta.athlete_id}`)}
                 style={{ ...cardStyle, cursor: 'pointer' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
                   <div
                     style={{
                       width: 40,
@@ -144,27 +206,41 @@ export default function Dashboard() {
                       justifyContent: 'center',
                       fontWeight: 700,
                       fontSize: 16,
+                      flexShrink: 0,
                     }}
                   >
-                    {nombre.charAt(0).toUpperCase()}
+                    {(atleta.nombre || 'A').charAt(0).toUpperCase()}
                   </div>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{nombre}</h2>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{atleta.nombre}</h2>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+                      {textoUltimaActividad(atleta.ultima_actividad_dias)}
+                    </p>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  {['Km semana', 'Horas', 'TSS'].map((etiqueta) => (
-                    <div key={etiqueta}>
-                      <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>
-                        —
-                      </p>
-                      <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>
-                        {etiqueta}
-                      </p>
-                    </div>
-                  ))}
+
+                <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>
+                      {atleta.km_semana != null ? atleta.km_semana : '—'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>Km semana</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>
+                      {atleta.horas_semana != null ? atleta.horas_semana : '—'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>Horas</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colorTss(atleta.tss_semana) }}>
+                      {atleta.tss_semana != null ? atleta.tss_semana : '—'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>TSS</p>
+                  </div>
                 </div>
               </div>
-            )
-          })}
+            ))}
         </div>
       </div>
     </div>
