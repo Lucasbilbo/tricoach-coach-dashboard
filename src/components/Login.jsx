@@ -56,6 +56,21 @@ export default function Login() {
     }
   }
 
+  async function handleGoogle() {
+    setError('')
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'https://jongarcia.getricoach.com/dashboard' },
+      })
+      if (oauthError) {
+        setError('No se pudo iniciar sesión con Google. Inténtalo de nuevo.')
+      }
+    } catch {
+      setError('Error de conexión con Google. Inténtalo de nuevo.')
+    }
+  }
+
   return (
     <div
       style={{
@@ -107,6 +122,26 @@ export default function Login() {
           style={{ ...buttonStyle, width: '100%', opacity: cargando ? 0.6 : 1 }}
         >
           {cargando ? 'Entrando…' : 'Entrar'}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+          <div style={{ flex: 1, height: 1, background: COLORS.cardBorder }} />
+          <span style={{ color: COLORS.textSecondary, fontSize: 12 }}>o</span>
+          <div style={{ flex: 1, height: 1, background: COLORS.cardBorder }} />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          style={{
+            ...buttonStyle,
+            width: '100%',
+            background: 'transparent',
+            color: COLORS.textPrimary,
+            border: `1px solid ${COLORS.cardBorder}`,
+          }}
+        >
+          Continuar con Google
         </button>
       </form>
     </div>

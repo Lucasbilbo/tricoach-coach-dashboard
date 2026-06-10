@@ -21,6 +21,27 @@ export default function Dashboard() {
           return
         }
 
+        // El login con Google llega aquí sin pasar por la verificación de Login.jsx:
+        // solo usuarios presentes en `coaches` pueden usar el panel
+        const { data: coach, error: coachError } = await supabase
+          .from('coaches')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle()
+
+        if (!activo) return
+
+        if (coachError) {
+          setError('Error verificando el acceso')
+          return
+        }
+
+        if (!coach) {
+          await supabase.auth.signOut()
+          navigate('/')
+          return
+        }
+
         const { data, error: queryError } = await supabase
           .from('coach_athletes')
           .select('athlete_id, profiles ( id, nombre )')
