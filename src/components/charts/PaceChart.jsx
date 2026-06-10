@@ -48,6 +48,17 @@ export default function PaceChart({ actividades }) {
 
   if (runs.length === 0) return null
 
+  // TEMPORAL: diagnóstico de ritmos absurdos en producción — quitar tras confirmar
+  console.log(
+    'PaceChart ritmos recibidos (3 primeros):',
+    runs.slice(0, 3).map((a) => ({
+      fecha: a.fecha,
+      ritmo_min_km: a.ritmo_min_km,
+      distancia_km: a.distancia_km,
+      duracion_min: a.duracion_min,
+    }))
+  )
+
   const ritmos = runs.map((a) => ritmoToDecimal(a.ritmo_min_km))
   const medias = mediaMovil(ritmos, VENTANA_MEDIA)
 
