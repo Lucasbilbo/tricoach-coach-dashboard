@@ -211,6 +211,14 @@ function respuesta(statusCode, payload) {
 }
 
 exports.handler = async (event) => {
+  console.log('env check:', {
+    supabase_url: !!process.env.SUPABASE_URL,
+    service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    strava_id: !!process.env.STRAVA_CLIENT_ID,
+    strava_secret: !!process.env.STRAVA_CLIENT_SECRET,
+    coach_secret: !!process.env.COACH_SECRET,
+  })
+
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return respuesta(405, { error: 'Method Not Allowed' })
 
