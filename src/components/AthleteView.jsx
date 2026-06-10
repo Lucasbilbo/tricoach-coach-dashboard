@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { decimalToRitmo } from '../lib/chartUtils'
 import {
   COLORS,
   DISCIPLINE_COLORS,
@@ -23,9 +24,7 @@ const RANGOS_SEMANAS = [4, 8, 12, 24]
 
 function formatRitmo(ritmoMinKm) {
   if (ritmoMinKm == null) return '—'
-  const min = Math.floor(ritmoMinKm)
-  const seg = Math.round((ritmoMinKm - min) * 60)
-  return `${min}:${String(seg).padStart(2, '0')} /km`
+  return `${decimalToRitmo(ritmoMinKm)} /km`
 }
 
 function formatDuracion(duracionMin) {
