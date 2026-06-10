@@ -11,6 +11,7 @@ import {
 } from '../lib/theme'
 import PrescribeModal from './PrescribeModal'
 import SessionsList from './SessionsList'
+import ActivityDetail from './ActivityDetail'
 import ChartCard from './charts/ChartCard'
 import VolumeChart from './charts/VolumeChart'
 import ZonesChart from './charts/ZonesChart'
@@ -63,6 +64,7 @@ export default function AthleteView() {
   const [activeTab, setActiveTab] = useState('analisis')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
+  const [selectedActivityId, setSelectedActivityId] = useState(null)
 
   useEffect(() => {
     let activo = true
@@ -323,7 +325,17 @@ export default function AthleteView() {
                     </tr>
                   )}
                   {actividades.map((act, i) => (
-                    <tr key={`${act.fecha}-${i}`}>
+                    <tr
+                      key={act.id || `${act.fecha}-${i}`}
+                      onClick={() => act.id && setSelectedActivityId(act.id)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent'
+                      }}
+                      style={{ cursor: act.id ? 'pointer' : 'default' }}
+                    >
                       <td style={tdStyle}>{act.fecha || '—'}</td>
                       <td style={tdStyle}>
                         <span
@@ -353,6 +365,15 @@ export default function AthleteView() {
               </table>
             </div>
           </>
+        )}
+
+        {selectedActivityId && coachId && (
+          <ActivityDetail
+            activityId={selectedActivityId}
+            athleteId={id}
+            coachId={coachId}
+            onClose={() => setSelectedActivityId(null)}
+          />
         )}
 
         {modalAbierto && coachId && (

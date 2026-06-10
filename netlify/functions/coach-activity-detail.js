@@ -1,7 +1,7 @@
-// coach-athlete-data.js — Netlify Function (CommonJS)
-// POST { athleteId, coachId, weeks } + header x-coach-secret
-// Devuelve { atleta, actividades, semanas } leyendo Strava con tokens del perfil
-// del atleta en Supabase (service key, nunca expuesto al frontend).
+// coach-activity-detail.js — Netlify Function (CommonJS)
+// POST { activityId, athleteId, coachId } + header x-coach-secret
+// Devuelve { actividad, vueltas } con el detalle completo de una actividad
+// de Strava (splits, laps, polyline). Misma verificación que coach-athlete-data.
 
 const https = require('https')
 
@@ -12,10 +12,8 @@ const CORS = {
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const TIMEZONE = 'Europe/Madrid'
+const ACTIVITY_ID_REGEX = /^\d+$/
 const FC_MAX_DEFAULT = 185
-const WEEKS_DEFAULT = 8
-const WEEKS_MAX = 52
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -109,102 +107,104 @@ function round(value, decimals) {
   return Math.round(value * factor) / factor
 }
 
-// Fecha local (YYYY-MM-DD) en Europe/Madrid para un instante dado
-function fechaMadrid(date) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+// Segundos por km → "M:SS"
+function formatRitmo(segundosPorKm) {
+  if (segundosPorKm == null || !Number.isFinite(segundosPorKm)) return null
+  let min = Math.floor(segundosPorKm / 60)
+  let seg = Math.round(segundosPorKm % 60)
+  if (seg === 60) {
+    min += 1
+    seg = 0
+  }
+  return `${min}:${String(seg).padStart(2, '0')}`
 }
 
-// Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
-function lunesDeSemana(fechaLocal) {
-  const [y, m, d] = fechaLocal.split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  const dow = date.getUTCDay() // 0=domingo
-  const offset = dow === 0 ? 6 : dow - 1
-  const monday = new Date(date.getTime() - offset * 86400000)
-  return monday.toISOString().slice(0, 10)
+function ritmoDesdeTiempos(movingTimeS, distanciaM) {
+  if (!movingTimeS || !distanciaM || distanciaM <= 0) return null
+  return formatRitmo(movingTimeS / (distanciaM / 1000))
+}
+
+function transformarSplits(splitsMetric) {
+  if (!Array.isArray(splitsMetric)) return []
+  return splitsMetric.map((s) => ({
+    km: s.split,
+    elapsed_time_s: s.elapsed_time ?? null,
+    moving_time_s: s.moving_time ?? null,
+    distancia_m: s.distance != null ? round(s.distance, 0) : null,
+    ritmo_min_km: ritmoDesdeTiempos(s.moving_time, s.distance),
+    fc_media: s.average_heartrate != null ? round(s.average_heartrate, 0) : null,
+    velocidad_ms: s.average_speed ?? null,
+    desnivel_m: s.elevation_difference != null ? round(s.elevation_difference, 0) : null,
+  }))
+}
+
+function transformarVueltas(laps) {
+  if (!Array.isArray(laps)) return []
+  return laps.map((lap) => ({
+    indice: lap.lap_index,
+    nombre: lap.name || `Vuelta ${lap.lap_index}`,
+    distancia_km: lap.distance != null ? round(lap.distance / 1000, 2) : null,
+    elapsed_time_s: lap.elapsed_time ?? null,
+    moving_time_s: lap.moving_time ?? null,
+    ritmo_min_km: ritmoDesdeTiempos(lap.moving_time, lap.distance),
+    velocidad_media_kmh: lap.average_speed != null ? round(lap.average_speed * 3.6, 1) : null,
+    velocidad_max_kmh: lap.max_speed != null ? round(lap.max_speed * 3.6, 1) : null,
+    fc_media: lap.average_heartrate != null ? round(lap.average_heartrate, 0) : null,
+    fc_max: lap.max_heartrate != null ? round(lap.max_heartrate, 0) : null,
+    potencia_media: lap.average_watts != null ? round(lap.average_watts, 0) : null,
+    cadencia_media: lap.average_cadence != null ? round(lap.average_cadence, 0) : null,
+    desnivel_m: lap.total_elevation_gain != null ? round(lap.total_elevation_gain, 0) : null,
+  }))
 }
 
 function transformarActividad(act, fcMax) {
-  const duracionMin = act.moving_time ? round(act.moving_time / 60, 1) : null
-  const distanciaKm = act.distance ? round(act.distance / 1000, 2) : null
   const disciplina = mapDisciplina(act.sport_type || act.type)
+  const distanciaKm = act.distance ? round(act.distance / 1000, 2) : null
+  const duracionMovMin = act.moving_time ? round(act.moving_time / 60, 1) : null
   const fcMedia = act.average_heartrate ? round(act.average_heartrate, 0) : null
-
-  const ritmoMinKm =
-    disciplina === 'run' && distanciaKm > 0 && duracionMin
-      ? round(duracionMin / distanciaKm, 2)
-      : null
-
   const intensidadPct = fcMedia ? round((fcMedia / fcMax) * 100, 0) : null
-
   const tssEstimado =
-    fcMedia && duracionMin
-      ? round((duracionMin / 60) * (intensidadPct / 100) ** 2 * 100, 0)
+    fcMedia && duracionMovMin
+      ? round((duracionMovMin / 60) * (intensidadPct / 100) ** 2 * 100, 0)
       : null
+
+  const splits = transformarSplits(act.splits_metric)
+  const desnivelNeg = splits.reduce(
+    (acc, s) => (s.desnivel_m != null && s.desnivel_m < 0 ? acc + Math.abs(s.desnivel_m) : acc),
+    0
+  )
 
   return {
     id: act.id,
+    nombre: act.name || null,
     tipo: act.sport_type || act.type || null,
     disciplina,
+    fecha: act.start_date_local ? act.start_date_local.slice(0, 10) : null,
     distancia_km: distanciaKm,
-    duracion_min: duracionMin,
-    fecha: act.start_date_local ? act.start_date_local.slice(0, 10) : fechaMadrid(new Date(act.start_date)),
-    ritmo_min_km: ritmoMinKm,
+    duracion_min: act.elapsed_time ? round(act.elapsed_time / 60, 1) : null,
+    duracion_mov_min: duracionMovMin,
+    ritmo_min_km: disciplina === 'run' ? ritmoDesdeTiempos(act.moving_time, act.distance) : null,
+    velocidad_media_kmh: act.average_speed != null ? round(act.average_speed * 3.6, 1) : null,
+    velocidad_max_kmh: act.max_speed != null ? round(act.max_speed * 3.6, 1) : null,
     fc_media: fcMedia,
     fc_maxima_actividad: act.max_heartrate ? round(act.max_heartrate, 0) : null,
-    potencia_media: act.average_watts ? round(act.average_watts, 0) : null,
-    cadencia_media: act.average_cadence ? round(act.average_cadence, 0) : null,
-    desnivel_m: act.total_elevation_gain ? round(act.total_elevation_gain, 0) : null,
-    intensidad_pct: intensidadPct,
+    potencia_media: act.average_watts != null ? round(act.average_watts, 0) : null,
+    potencia_max: act.max_watts != null ? round(act.max_watts, 0) : null,
+    potencia_normalizada: act.weighted_average_watts != null ? round(act.weighted_average_watts, 0) : null,
+    cadencia_media: act.average_cadence != null ? round(act.average_cadence, 0) : null,
+    cadencia_max: act.max_cadence != null ? round(act.max_cadence, 0) : null,
+    desnivel_pos_m: act.total_elevation_gain != null ? round(act.total_elevation_gain, 0) : null,
+    desnivel_neg_m: splits.length > 0 ? round(desnivelNeg, 0) : null,
+    altitud_max_m: act.elev_high != null ? round(act.elev_high, 0) : null,
+    altitud_min_m: act.elev_low != null ? round(act.elev_low, 0) : null,
+    calorias: act.calories != null ? round(act.calories, 0) : null,
+    descripcion: act.description || null,
     zona_fc: zonaFc(intensidadPct),
+    intensidad_pct: intensidadPct,
     tss_estimado: tssEstimado,
-    nombre_actividad: act.name || null,
+    polyline: act.map?.polyline || act.map?.summary_polyline || null,
+    splits_km: splits,
   }
-}
-
-function agruparSemanas(actividades) {
-  const porLunes = {}
-  for (const act of actividades) {
-    if (!act.fecha) continue
-    const lunes = lunesDeSemana(act.fecha)
-    if (!porLunes[lunes]) {
-      porLunes[lunes] = {
-        semana: lunes,
-        km_run: 0,
-        km_bike: 0,
-        km_swim: 0,
-        horas_totales: 0,
-        tss_total: 0,
-        n_sesiones: 0,
-      }
-    }
-    const s = porLunes[lunes]
-    const nueva = {
-      ...s,
-      km_run: s.km_run + (act.disciplina === 'run' ? act.distancia_km || 0 : 0),
-      km_bike: s.km_bike + (act.disciplina === 'bike' ? act.distancia_km || 0 : 0),
-      km_swim: s.km_swim + (act.disciplina === 'swim' ? act.distancia_km || 0 : 0),
-      horas_totales: s.horas_totales + (act.duracion_min || 0) / 60,
-      tss_total: s.tss_total + (act.tss_estimado || 0),
-      n_sesiones: s.n_sesiones + 1,
-    }
-    porLunes[lunes] = nueva
-  }
-  return Object.values(porLunes)
-    .map((s) => ({
-      ...s,
-      km_run: round(s.km_run, 1),
-      km_bike: round(s.km_bike, 1),
-      km_swim: round(s.km_swim, 2),
-      horas_totales: round(s.horas_totales, 1),
-      tss_total: round(s.tss_total, 0),
-    }))
-    .sort((a, b) => (a.semana < b.semana ? -1 : 1))
 }
 
 function respuesta(statusCode, payload) {
@@ -237,8 +237,10 @@ exports.handler = async (event) => {
   } catch {
     return respuesta(400, { error: 'JSON inválido' })
   }
-  const { athleteId, coachId } = parsed
-  const weeks = Math.min(Math.max(parseInt(parsed.weeks, 10) || WEEKS_DEFAULT, 1), WEEKS_MAX)
+  const { activityId, athleteId, coachId } = parsed
+  if (!ACTIVITY_ID_REGEX.test(String(activityId || ''))) {
+    return respuesta(400, { error: 'activityId debe ser un id numérico de Strava' })
+  }
   if (!UUID_REGEX.test(athleteId || '') || !UUID_REGEX.test(coachId || '')) {
     return respuesta(400, { error: 'athleteId y coachId deben ser UUID válidos' })
   }
@@ -290,36 +292,47 @@ exports.handler = async (event) => {
       )
     }
 
-    // 7. Actividades de Strava desde el inicio del rango
-    const after = Math.floor(Date.now() / 1000) - weeks * 7 * 86400
-    const actRes = await withTimeout(
-      httpsRequest({
-        hostname: 'www.strava.com',
-        path: `/api/v3/athlete/activities?per_page=200&after=${after}`,
-        method: 'GET',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      10000
-    )
-    if (actRes.status !== 200 || !Array.isArray(actRes.json)) {
-      console.error('Strava error', actRes.status, actRes.json)
-      return respuesta(502, { error: 'Error consultando Strava' })
+    // 7. Detalle de actividad + vueltas en paralelo
+    const stravaHeaders = { Authorization: `Bearer ${accessToken}` }
+    const [actRes, lapsRes] = await Promise.all([
+      withTimeout(
+        httpsRequest({
+          hostname: 'www.strava.com',
+          path: `/api/v3/activities/${activityId}`,
+          method: 'GET',
+          headers: stravaHeaders,
+        }),
+        10000
+      ),
+      withTimeout(
+        httpsRequest({
+          hostname: 'www.strava.com',
+          path: `/api/v3/activities/${activityId}/laps`,
+          method: 'GET',
+          headers: stravaHeaders,
+        }),
+        10000
+      ),
+    ])
+
+    if (actRes.status === 404) {
+      return respuesta(404, { error: 'Actividad no encontrada en Strava' })
+    }
+    if (actRes.status !== 200 || !actRes.json) {
+      console.error('Strava activity error', actRes.status, actRes.json)
+      return respuesta(502, { error: 'Error consultando la actividad en Strava' })
     }
 
-    // 8. Transformar y agrupar
-    const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
-    const actividades = actRes.json
-      .map((a) => transformarActividad(a, fcMax))
-      .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
-    const semanas = agruparSemanas(actividades)
+    // Las vueltas son opcionales: si fallan, devolvemos la actividad igualmente
+    const laps = lapsRes.status === 200 && Array.isArray(lapsRes.json) ? lapsRes.json : []
 
+    const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
     return respuesta(200, {
-      atleta: { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' },
-      actividades,
-      semanas,
+      actividad: transformarActividad(actRes.json, fcMax),
+      vueltas: transformarVueltas(laps),
     })
   } catch (err) {
-    console.error('coach-athlete-data error:', err.message)
+    console.error('coach-activity-detail error:', err.message)
     return respuesta(500, { error: 'Error interno' })
   }
 }
