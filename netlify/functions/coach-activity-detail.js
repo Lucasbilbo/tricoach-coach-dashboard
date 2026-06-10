@@ -14,6 +14,9 @@ const CORS = {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ACTIVITY_ID_REGEX = /^\d+$/
 const FC_MAX_DEFAULT = 185
+// Ritmos fuera de este rango son outliers (GPS roto, cinta sin footpod) → null
+const RITMO_MIN_PLAUSIBLE_S = 2.0 * 60
+const RITMO_MAX_PLAUSIBLE_S = 20.0 * 60
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -121,7 +124,9 @@ function formatRitmo(segundosPorKm) {
 
 function ritmoDesdeTiempos(movingTimeS, distanciaM) {
   if (!movingTimeS || !distanciaM || distanciaM <= 0) return null
-  return formatRitmo(movingTimeS / (distanciaM / 1000))
+  const segundosPorKm = movingTimeS / (distanciaM / 1000)
+  if (segundosPorKm < RITMO_MIN_PLAUSIBLE_S || segundosPorKm > RITMO_MAX_PLAUSIBLE_S) return null
+  return formatRitmo(segundosPorKm)
 }
 
 function transformarSplits(splitsMetric) {
