@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { decimalToRitmo, formatDiaMes } from '../lib/chartUtils'
+import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import {
   COLORS,
   DISCIPLINE_COLORS,
@@ -23,6 +23,29 @@ import PowerChart from './charts/PowerChart'
 import TSSChart from './charts/TSSChart'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
+
+// Escapa un valor para CSV: comillas si contiene separadores, null → vacío
+function campoCsv(valor) {
+  if (valor == null) return ''
+  const s = String(valor)
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+const CSV_CABECERAS = [
+  'Fecha',
+  'Disciplina',
+  'Nombre',
+  'Distancia (km)',
+  'Duración (min)',
+  'Ritmo',
+  'FC media',
+  'FC máx',
+  'Zona',
+  'Potencia (W)',
+  'Cadencia',
+  'Desnivel (m)',
+  'TSS',
+]
 
 const FILTROS_DISCIPLINA = [
   { clave: 'todos', etiqueta: 'Todos' },
@@ -132,6 +155,43 @@ export default function AthleteView() {
     filtroDisciplina === 'todos'
       ? actividades
       : actividades.filter((a) => a.disciplina === filtroDisciplina)
+
+  function exportarCSV() {
+    const filas = actividadesFiltradas.map((act) =>
+      [
+        act.fecha,
+        DISCIPLINE_LABELS[act.disciplina] || act.disciplina,
+        act.nombre_actividad,
+        act.distancia_km,
+        act.duracion_min,
+        act.ritmo_min_km != null ? decimalToRitmo(act.ritmo_min_km) : null,
+        act.fc_media,
+        act.fc_maxima_actividad,
+        act.zona_fc,
+        act.potencia_media,
+        act.cadencia_media,
+        act.desnivel_m,
+        act.tss_estimado,
+      ]
+        .map(campoCsv)
+        .join(',')
+    )
+    const csv = [CSV_CABECERAS.map(campoCsv).join(','), ...filas].join('\n')
+
+    const nombreAtleta = (datos?.atleta?.nombre || 'atleta').replace(/[^\p{L}\p{N}]+/gu, '_')
+    const nombreArchivo = `${nombreAtleta}_${weeks}sem_${filtroDisciplina}_${hoyMadrid()}.csv`
+
+    // BOM para que Excel interprete UTF-8 (acentos en nombres de actividades)
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const enlace = document.createElement('a')
+    enlace.href = url
+    enlace.download = nombreArchivo
+    document.body.appendChild(enlace)
+    enlace.click()
+    document.body.removeChild(enlace)
+    URL.revokeObjectURL(url)
+  }
 
   const hayRuns = actividades.some((a) => a.disciplina === 'run')
   const hayZonas = actividades.some((a) => a.zona_fc && a.duracion_min)
@@ -358,6 +418,25 @@ export default function AthleteView() {
                   </button>
                 )
               })}
+              <button
+                onClick={exportarCSV}
+                disabled={actividadesFiltradas.length === 0}
+                style={{
+                  marginLeft: 'auto',
+                  background: 'transparent',
+                  color: COLORS.accent,
+                  border: `1px solid ${COLORS.cardBorder}`,
+                  borderRadius: 8,
+                  padding: '6px 14px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: actividadesFiltradas.length === 0 ? 'default' : 'pointer',
+                  opacity: actividadesFiltradas.length === 0 ? 0.4 : 1,
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                Exportar CSV
+              </button>
             </div>
 
             <div style={{ ...cardStyle, padding: 0, overflowX: 'auto' }}>

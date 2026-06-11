@@ -22,6 +22,16 @@ export function formatDiaMes(fecha) {
   return `${d} ${MESES_CORTOS[m - 1]}`
 }
 
+// Hoy en Europe/Madrid como 'YYYY-MM-DD'
+export function hoyMadrid() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
 // 'YYYY-MM-DD' + n días → 'YYYY-MM-DD' (aritmética en UTC, sin DST)
 export function sumarDias(fecha, dias) {
   const [y, m, d] = fecha.split('-').map(Number)
