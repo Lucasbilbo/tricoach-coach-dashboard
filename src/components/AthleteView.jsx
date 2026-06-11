@@ -259,15 +259,36 @@ export default function AthleteView() {
             </h1>
           </div>
 
+          {/* Dos grupos: en desktop quedan en línea, en móvil cada grupo baja a su propia fila */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            {RANGOS_SEMANAS.map((rango) => (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {RANGOS_SEMANAS.map((rango) => (
+                <button
+                  key={rango}
+                  onClick={() => setWeeks(rango)}
+                  style={{
+                    background: weeks === rango ? COLORS.accent : 'transparent',
+                    color: weeks === rango ? COLORS.background : COLORS.textSecondary,
+                    border: `1px solid ${weeks === rango ? COLORS.accent : COLORS.cardBorder}`,
+                    borderRadius: 8,
+                    padding: '6px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  {rango} sem
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <button
-                key={rango}
-                onClick={() => setWeeks(rango)}
+                onClick={() => setComparadorAbierto(true)}
                 style={{
-                  background: weeks === rango ? COLORS.accent : 'transparent',
-                  color: weeks === rango ? COLORS.background : COLORS.textSecondary,
-                  border: `1px solid ${weeks === rango ? COLORS.accent : COLORS.cardBorder}`,
+                  background: 'transparent',
+                  color: COLORS.textSecondary,
+                  border: `1px solid ${COLORS.cardBorder}`,
                   borderRadius: 8,
                   padding: '6px 14px',
                   fontSize: 13,
@@ -276,31 +297,12 @@ export default function AthleteView() {
                   fontFamily: "'Inter', sans-serif",
                 }}
               >
-                {rango} sem
+                Comparar semanas
               </button>
-            ))}
-            <button
-              onClick={() => setComparadorAbierto(true)}
-              style={{
-                background: 'transparent',
-                color: COLORS.textSecondary,
-                border: `1px solid ${COLORS.cardBorder}`,
-                borderRadius: 8,
-                padding: '6px 14px',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
-              }}
-            >
-              Comparar semanas
-            </button>
-            <button
-              onClick={() => setModalAbierto(true)}
-              style={{ ...buttonStyle, marginLeft: 8 }}
-            >
-              Prescribir sesión
-            </button>
+              <button onClick={() => setModalAbierto(true)} style={buttonStyle}>
+                Prescribir sesión
+              </button>
+            </div>
           </div>
         </header>
 
@@ -357,7 +359,7 @@ export default function AthleteView() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
                 gap: 16,
                 marginBottom: 24,
               }}

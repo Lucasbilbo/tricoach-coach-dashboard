@@ -168,7 +168,9 @@ export default function Dashboard() {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 8,
             marginBottom: 32,
           }}
         >
