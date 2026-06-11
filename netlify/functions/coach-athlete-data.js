@@ -20,10 +20,30 @@ const WEEKS_MAX = 52
 const RITMO_MIN_PLAUSIBLE = 2.0
 const RITMO_MAX_PLAUSIBLE = 20.0
 
-// Distancias objetivo para mejores marcas (km)
-const RECORDS_RUN_KM = { '1km': 1, '5km': 5, '10km': 10, '21km': 21, '42km': 42 }
+// Rangos de distancia para mejores marcas (km). Sin splits por actividad
+// (el endpoint /athlete/activities no los trae), el PR se aproxima con el
+// mejor ritmo medio entre actividades DENTRO del rango — el tope evita que
+// una actividad larga contamine las distancias cortas.
+const RECORDS_RUN_KM = {
+  '1km': { min: 1, max: 3 },
+  '5km': { min: 5, max: 12 },
+  '10km': { min: 10, max: 25 },
+  '21km': { min: 18, max: 30 },
+  '42km': { min: 38, max: null },
+}
 const RECORDS_BIKE_KM = { '10km': 10, '20km': 20, '40km': 40, '90km': 90, '180km': 180 }
-const RECORDS_SWIM_KM = { '100m': 0.1, '400m': 0.4, '1km': 1, '1500m': 1.5, '3800m': 3.8 }
+// Rangos proporcionales a los de running
+const RECORDS_SWIM_KM = {
+  '100m': { min: 0.1, max: 0.3 },
+  '400m': { min: 0.4, max: 1.0 },
+  '1km': { min: 1.0, max: 2.5 },
+  '1500m': { min: 1.3, max: 2.1 },
+  '3800m': { min: 3.4, max: null },
+}
+
+function dentroDeRango(distanciaKm, rango) {
+  return distanciaKm >= rango.min && (rango.max == null || distanciaKm < rango.max)
+}
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -201,8 +221,10 @@ function calcularRecords(actividades) {
   )
 
   const running = Object.fromEntries(
-    Object.entries(RECORDS_RUN_KM).map(([clave, dist]) => {
-      const ritmos = runs.filter((a) => a.distancia_km >= dist).map((a) => a.ritmo_min_km)
+    Object.entries(RECORDS_RUN_KM).map(([clave, rango]) => {
+      const ritmos = runs
+        .filter((a) => dentroDeRango(a.distancia_km, rango))
+        .map((a) => a.ritmo_min_km)
       return [clave, ritmos.length > 0 ? formatRitmoMinSeg(Math.min(...ritmos)) : null]
     })
   )
@@ -217,10 +239,10 @@ function calcularRecords(actividades) {
   )
 
   const natacion = Object.fromEntries(
-    Object.entries(RECORDS_SWIM_KM).map(([clave, dist]) => {
+    Object.entries(RECORDS_SWIM_KM).map(([clave, rango]) => {
       // min por 100 m = duracion_min / distancia_km / 10
       const ritmos = swims
-        .filter((a) => a.distancia_km >= dist)
+        .filter((a) => dentroDeRango(a.distancia_km, rango))
         .map((a) => a.duracion_min / a.distancia_km / 10)
       return [clave, ritmos.length > 0 ? formatRitmoMinSeg(Math.min(...ritmos)) : null]
     })
