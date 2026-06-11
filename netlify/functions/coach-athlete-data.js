@@ -45,6 +45,13 @@ function dentroDeRango(distanciaKm, rango) {
   return distanciaKm >= rango.min && (rango.max == null || distanciaKm < rango.max)
 }
 
+// PRs cortos con splits reales: cuántas actividades recientes detallar por disciplina
+const PR_SPLITS_RUN_ACTIVIDADES = 10
+const PR_SPLITS_SWIM_ACTIVIDADES = 5
+// Ventanas de distancia de split válido (evita el último split incompleto)
+const SPLIT_RUN = { minM: 800, maxM: 1200, metrosUnidad: 1000, ritmoMin: RITMO_MIN_PLAUSIBLE, ritmoMax: RITMO_MAX_PLAUSIBLE }
+const SPLIT_SWIM = { minM: 80, maxM: 120, metrosUnidad: 100, ritmoMin: 0.8, ritmoMax: 6.0 }
+
 function withTimeout(promise, ms) {
   return Promise.race([
     promise,
@@ -207,6 +214,44 @@ function formatRitmoMinSeg(decimal) {
     seg = 0
   }
   return `${min}:${String(seg).padStart(2, '0')}`
+}
+
+// Splits métricos del detalle de una actividad; [] si falla (no rompe el resto)
+async function obtenerSplits(activityId, accessToken) {
+  try {
+    const res = await withTimeout(
+      httpsRequest({
+        hostname: 'www.strava.com',
+        path: `/api/v3/activities/${activityId}?include_all_efforts=false`,
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }),
+      10000
+    )
+    if (res.status !== 200 || !res.json || !Array.isArray(res.json.splits_metric)) return []
+    return res.json.splits_metric
+  } catch {
+    return []
+  }
+}
+
+// Mejor split individual (min por `metrosUnidad` metros) de las N actividades
+// más recientes de una disciplina. null si no hay splits válidos.
+async function prDesdeSplits(actividadesDisciplina, accessToken, nActividades, cfg) {
+  const ids = actividadesDisciplina
+    .slice(0, nActividades)
+    .map((a) => a.id)
+    .filter(Boolean)
+  if (ids.length === 0) return null
+
+  const listas = await Promise.all(ids.map((id) => obtenerSplits(id, accessToken)))
+  const ritmos = listas
+    .flat()
+    .filter((s) => s.distance >= cfg.minM && s.distance <= cfg.maxM && s.moving_time > 0)
+    .map((s) => s.moving_time / 60 / (s.distance / cfg.metrosUnidad))
+    .filter((r) => r >= cfg.ritmoMin && r <= cfg.ritmoMax)
+
+  return ritmos.length > 0 ? formatRitmoMinSeg(Math.min(...ritmos)) : null
 }
 
 function calcularRecords(actividades) {
@@ -397,11 +442,33 @@ exports.handler = async (event) => {
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
     const semanas = agruparSemanas(actividades)
 
+    // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)
+    const records = calcularRecords(actividades)
+    const [pr1km, pr100m] = await Promise.all([
+      prDesdeSplits(
+        actividades.filter((a) => a.disciplina === 'run'),
+        accessToken,
+        PR_SPLITS_RUN_ACTIVIDADES,
+        SPLIT_RUN
+      ),
+      prDesdeSplits(
+        actividades.filter((a) => a.disciplina === 'swim'),
+        accessToken,
+        PR_SPLITS_SWIM_ACTIVIDADES,
+        SPLIT_SWIM
+      ),
+    ])
+
     return respuesta(200, {
       atleta: { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' },
       actividades,
       semanas,
-      records: calcularRecords(actividades),
+      records: {
+        ...records,
+        // Si los splits no dan resultado, conservar la aproximación por rangos
+        running: { ...records.running, '1km': pr1km ?? records.running['1km'] },
+        natacion: { ...records.natacion, '100m': pr100m ?? records.natacion['100m'] },
+      },
     })
   } catch (err) {
     console.error('coach-athlete-data error:', err.message)
