@@ -13,6 +13,7 @@ import {
 import PrescribeModal from './PrescribeModal'
 import SessionsList from './SessionsList'
 import ActivityDetail from './ActivityDetail'
+import WeekCompare from './WeekCompare'
 import ChartCard from './charts/ChartCard'
 import VolumeChart from './charts/VolumeChart'
 import ZonesChart from './charts/ZonesChart'
@@ -64,6 +65,7 @@ export default function AthleteView() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [selectedActivityId, setSelectedActivityId] = useState(null)
+  const [comparadorAbierto, setComparadorAbierto] = useState(false)
 
   useEffect(() => {
     let activo = true
@@ -189,6 +191,22 @@ export default function AthleteView() {
                 {rango} sem
               </button>
             ))}
+            <button
+              onClick={() => setComparadorAbierto(true)}
+              style={{
+                background: 'transparent',
+                color: COLORS.textSecondary,
+                border: `1px solid ${COLORS.cardBorder}`,
+                borderRadius: 8,
+                padding: '6px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              Comparar semanas
+            </button>
             <button
               onClick={() => setModalAbierto(true)}
               style={{ ...buttonStyle, marginLeft: 8 }}
@@ -364,6 +382,14 @@ export default function AthleteView() {
               </table>
             </div>
           </>
+        )}
+
+        {comparadorAbierto && (
+          <WeekCompare
+            key={`${weeks}-${semanas.length}`}
+            semanas={semanas}
+            onClose={() => setComparadorAbierto(false)}
+          />
         )}
 
         {selectedActivityId && coachId && (

@@ -21,6 +21,37 @@ function textoUltimaActividad(dias) {
   return `Última actividad hace ${dias} días`
 }
 
+const DIAS_ACTIVO = 3
+
+function BarraProgreso({ valor, max, color }) {
+  const pct = max > 0 && valor != null ? Math.min((valor / max) * 100, 100) : 0
+  return (
+    <div
+      style={{
+        height: 3,
+        borderRadius: 2,
+        background: 'rgba(255,255,255,0.08)',
+        marginTop: 6,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: color }} />
+    </div>
+  )
+}
+
+function MetricaConBarra({ etiqueta, valor, max, color }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color }}>
+        {valor != null ? valor : '—'}
+      </p>
+      <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>{etiqueta}</p>
+      <BarraProgreso valor={valor} max={max} color={color} />
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [atletas, setAtletas] = useState([])
@@ -187,60 +218,84 @@ export default function Dashboard() {
           }}
         >
           {!cargando &&
-            atletas.map((atleta) => (
-              <div
-                key={atleta.athlete_id}
-                onClick={() => navigate(`/athlete/${atleta.athlete_id}`)}
-                style={{ ...cardStyle, cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      background: COLORS.accent,
-                      color: COLORS.background,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: 16,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {(atleta.nombre || 'A').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{atleta.nombre}</h2>
-                    <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
-                      {textoUltimaActividad(atleta.ultima_actividad_dias)}
-                    </p>
-                  </div>
-                </div>
+            (() => {
+              const maxKm = Math.max(...atletas.map((a) => a.km_semana || 0), 0)
+              const maxHoras = Math.max(...atletas.map((a) => a.horas_semana || 0), 0)
+              const maxTss = Math.max(...atletas.map((a) => a.tss_semana || 0), 0)
 
-                <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>
-                      {atleta.km_semana != null ? atleta.km_semana : '—'}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>Km semana</p>
+              return atletas.map((atleta) => {
+                const activo =
+                  atleta.ultima_actividad_dias != null &&
+                  atleta.ultima_actividad_dias <= DIAS_ACTIVO
+                return (
+                  <div
+                    key={atleta.athlete_id}
+                    onClick={() => navigate(`/athlete/${atleta.athlete_id}`)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(0,212,255,0.3)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.cardBorder
+                      e.currentTarget.style.transform = 'none'
+                    }}
+                    style={{ ...cardStyle, cursor: 'pointer', transition: 'all 0.15s ease' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+                          {atleta.nombre}
+                        </h2>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+                          {textoUltimaActividad(atleta.ultima_actividad_dias)}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          color: activo ? TSS_VERDE : COLORS.textSecondary,
+                          background: activo ? 'rgba(0,229,160,0.1)' : 'rgba(255,255,255,0.06)',
+                          borderRadius: 4,
+                          padding: '2px 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
+                      <MetricaConBarra
+                        etiqueta="Km semana"
+                        valor={atleta.km_semana}
+                        max={maxKm}
+                        color={COLORS.textPrimary}
+                      />
+                      <MetricaConBarra
+                        etiqueta="Horas"
+                        valor={atleta.horas_semana}
+                        max={maxHoras}
+                        color={COLORS.textPrimary}
+                      />
+                      <MetricaConBarra
+                        etiqueta="TSS"
+                        valor={atleta.tss_semana}
+                        max={maxTss}
+                        color={colorTss(atleta.tss_semana)}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>
-                      {atleta.horas_semana != null ? atleta.horas_semana : '—'}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>Horas</p>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colorTss(atleta.tss_semana) }}>
-                      {atleta.tss_semana != null ? atleta.tss_semana : '—'}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>TSS</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+                )
+              })
+            })()}
         </div>
       </div>
     </div>

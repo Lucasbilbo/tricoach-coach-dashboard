@@ -14,6 +14,12 @@ export function formatFechaCorta(fecha) {
   return `${MESES_CORTOS[m - 1]} ${d}`
 }
 
+// 'YYYY-MM-DD' + n días → 'YYYY-MM-DD' (aritmética en UTC, sin DST)
+export function sumarDias(fecha, dias) {
+  const [y, m, d] = fecha.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d) + dias * 86400000).toISOString().slice(0, 10)
+}
+
 // Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
 export function lunesDeSemana(fechaLocal) {
   const [y, m, d] = fechaLocal.split('-').map(Number)
