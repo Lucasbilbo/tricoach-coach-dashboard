@@ -23,6 +23,15 @@ import TSSChart from './charts/TSSChart'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
+const FILTROS_DISCIPLINA = [
+  { clave: 'todos', etiqueta: 'Todos' },
+  { clave: 'run', etiqueta: 'Carrera' },
+  { clave: 'bike', etiqueta: 'Ciclismo' },
+  { clave: 'swim', etiqueta: 'Natación' },
+  { clave: 'strength', etiqueta: 'Fuerza' },
+  { clave: 'other', etiqueta: 'Otro' },
+]
+
 function formatRitmo(ritmoMinKm) {
   if (ritmoMinKm == null) return '—'
   return `${decimalToRitmo(ritmoMinKm)} /km`
@@ -66,6 +75,7 @@ export default function AthleteView() {
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [selectedActivityId, setSelectedActivityId] = useState(null)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
+  const [filtroDisciplina, setFiltroDisciplina] = useState('todos')
 
   useEffect(() => {
     let activo = true
@@ -115,6 +125,12 @@ export default function AthleteView() {
 
   const actividades = datos?.actividades || []
   const semanas = datos?.semanas || []
+
+  // Solo afecta a la tabla: las métricas resumen reflejan siempre el período completo
+  const actividadesFiltradas =
+    filtroDisciplina === 'todos'
+      ? actividades
+      : actividades.filter((a) => a.disciplina === filtroDisciplina)
 
   const hayRuns = actividades.some((a) => a.disciplina === 'run')
   const hayZonas = actividades.some((a) => a.zona_fc && a.duracion_min)
@@ -316,6 +332,31 @@ export default function AthleteView() {
               </ChartCard>
             )}
 
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              {FILTROS_DISCIPLINA.map((filtro) => {
+                const activo = filtroDisciplina === filtro.clave
+                return (
+                  <button
+                    key={filtro.clave}
+                    onClick={() => setFiltroDisciplina(filtro.clave)}
+                    style={{
+                      background: activo ? 'rgba(0,212,255,0.1)' : 'transparent',
+                      color: activo ? COLORS.textPrimary : COLORS.textSecondary,
+                      border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
+                      borderRadius: 8,
+                      padding: '6px 14px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                  >
+                    {filtro.etiqueta}
+                  </button>
+                )
+              })}
+            </div>
+
             <div style={{ ...cardStyle, padding: 0, overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -334,14 +375,16 @@ export default function AthleteView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {actividades.length === 0 && (
+                  {actividadesFiltradas.length === 0 && (
                     <tr>
                       <td colSpan={11} style={{ ...tdStyle, color: COLORS.textSecondary, textAlign: 'center' }}>
-                        Sin actividades en este rango
+                        {filtroDisciplina === 'todos'
+                          ? 'Sin actividades en este rango'
+                          : 'Sin actividades de esta disciplina en este rango'}
                       </td>
                     </tr>
                   )}
-                  {actividades.map((act, i) => (
+                  {actividadesFiltradas.map((act, i) => (
                     <tr
                       key={act.id || `${act.fecha}-${i}`}
                       onClick={() => act.id && setSelectedActivityId(act.id)}
