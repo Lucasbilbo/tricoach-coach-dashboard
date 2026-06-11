@@ -14,6 +14,7 @@ import PrescribeModal from './PrescribeModal'
 import SessionsList from './SessionsList'
 import ActivityDetail from './ActivityDetail'
 import WeekCompare from './WeekCompare'
+import PRsBlock from './PRsBlock'
 import ChartCard from './charts/ChartCard'
 import VolumeChart from './charts/VolumeChart'
 import ZonesChart from './charts/ZonesChart'
@@ -301,6 +302,8 @@ export default function AthleteView() {
                 </div>
               ))}
             </div>
+
+            <PRsBlock records={datos?.records} weeks={weeks} />
 
             {semanas.length > 0 && (
               <ChartCard title="Volumen semanal">

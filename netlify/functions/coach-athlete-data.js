@@ -20,6 +20,11 @@ const WEEKS_MAX = 52
 const RITMO_MIN_PLAUSIBLE = 2.0
 const RITMO_MAX_PLAUSIBLE = 20.0
 
+// Distancias objetivo para mejores marcas (km)
+const RECORDS_RUN_KM = { '1km': 1, '5km': 5, '10km': 10, '21km': 21, '42km': 42 }
+const RECORDS_BIKE_KM = { '10km': 10, '20km': 20, '40km': 40, '90km': 90, '180km': 180 }
+const RECORDS_SWIM_KM = { '100m': 0.1, '400m': 0.4, '1km': 1, '1500m': 1.5, '3800m': 3.8 }
+
 function withTimeout(promise, ms) {
   return Promise.race([
     promise,
@@ -172,6 +177,58 @@ function transformarActividad(act, fcMax) {
   }
 }
 
+// Minutos decimales → "M:SS"
+function formatRitmoMinSeg(decimal) {
+  if (decimal == null || !Number.isFinite(decimal)) return null
+  let min = Math.floor(decimal)
+  let seg = Math.round((decimal - min) * 60)
+  if (seg === 60) {
+    min += 1
+    seg = 0
+  }
+  return `${min}:${String(seg).padStart(2, '0')}`
+}
+
+function calcularRecords(actividades) {
+  const runs = actividades.filter(
+    (a) => a.disciplina === 'run' && a.ritmo_min_km != null && a.distancia_km > 0
+  )
+  const bikes = actividades.filter(
+    (a) => a.disciplina === 'bike' && a.distancia_km > 0 && a.duracion_min > 0
+  )
+  const swims = actividades.filter(
+    (a) => a.disciplina === 'swim' && a.distancia_km > 0 && a.duracion_min > 0
+  )
+
+  const running = Object.fromEntries(
+    Object.entries(RECORDS_RUN_KM).map(([clave, dist]) => {
+      const ritmos = runs.filter((a) => a.distancia_km >= dist).map((a) => a.ritmo_min_km)
+      return [clave, ritmos.length > 0 ? formatRitmoMinSeg(Math.min(...ritmos)) : null]
+    })
+  )
+
+  const ciclismo = Object.fromEntries(
+    Object.entries(RECORDS_BIKE_KM).map(([clave, dist]) => {
+      const velocidades = bikes
+        .filter((a) => a.distancia_km >= dist)
+        .map((a) => a.distancia_km / (a.duracion_min / 60))
+      return [clave, velocidades.length > 0 ? round(Math.max(...velocidades), 1) : null]
+    })
+  )
+
+  const natacion = Object.fromEntries(
+    Object.entries(RECORDS_SWIM_KM).map(([clave, dist]) => {
+      // min por 100 m = duracion_min / distancia_km / 10
+      const ritmos = swims
+        .filter((a) => a.distancia_km >= dist)
+        .map((a) => a.duracion_min / a.distancia_km / 10)
+      return [clave, ritmos.length > 0 ? formatRitmoMinSeg(Math.min(...ritmos)) : null]
+    })
+  )
+
+  return { running, ciclismo, natacion }
+}
+
 function agruparSemanas(actividades) {
   const porLunes = {}
   for (const act of actividades) {
@@ -322,6 +379,7 @@ exports.handler = async (event) => {
       atleta: { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' },
       actividades,
       semanas,
+      records: calcularRecords(actividades),
     })
   } catch (err) {
     console.error('coach-athlete-data error:', err.message)
