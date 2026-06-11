@@ -56,9 +56,20 @@ const FILTROS_DISCIPLINA = [
   { clave: 'other', etiqueta: 'Otro' },
 ]
 
-function formatRitmo(ritmoMinKm) {
-  if (ritmoMinKm == null) return '—'
-  return `${decimalToRitmo(ritmoMinKm)} /km`
+// Ritmo/velocidad según disciplina: run en min/km, bike en km/h, swim en min/100m
+function formatRitmoActividad(act) {
+  if (act.disciplina === 'run') {
+    return act.ritmo_min_km != null ? `${decimalToRitmo(act.ritmo_min_km)} /km` : '—'
+  }
+  if (act.disciplina === 'bike') {
+    if (!act.distancia_km || !act.duracion_min) return '—'
+    return `${(act.distancia_km / (act.duracion_min / 60)).toFixed(1)} km/h`
+  }
+  if (act.disciplina === 'swim') {
+    if (!act.distancia_km || !act.duracion_min) return '—'
+    return `${decimalToRitmo(act.duracion_min / act.distancia_km / 10)} /100m`
+  }
+  return '—'
 }
 
 function formatDuracion(duracionMin) {
@@ -495,7 +506,7 @@ export default function AthleteView() {
                       </td>
                       <td style={tdStyle}>{act.distancia_km != null ? `${act.distancia_km} km` : '—'}</td>
                       <td style={tdStyle}>{formatDuracion(act.duracion_min)}</td>
-                      <td style={tdStyle}>{formatRitmo(act.ritmo_min_km)}</td>
+                      <td style={tdStyle}>{formatRitmoActividad(act)}</td>
                       <td style={tdStyle}>{act.fc_media != null ? `${act.fc_media} ppm` : '—'}</td>
                       <td style={tdStyle}>{act.zona_fc || '—'}</td>
                       <td style={tdStyle}>{act.potencia_media != null ? `${act.potencia_media} W` : '—'}</td>

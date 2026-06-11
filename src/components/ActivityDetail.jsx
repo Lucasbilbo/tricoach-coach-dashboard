@@ -27,6 +27,16 @@ function formatDuracionMin(minutos) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
+// Vueltas de natación cortas en metros; el resto en km
+function formatDistanciaVuelta(vuelta, disciplina) {
+  if (disciplina === 'swim') {
+    const metros = vuelta.distancia_m ?? (vuelta.distancia_km != null ? Math.round(vuelta.distancia_km * 1000) : null)
+    if (metros == null) return '—'
+    if (metros < 1000) return `${metros} m`
+  }
+  return vuelta.distancia_km != null ? `${vuelta.distancia_km} km` : '—'
+}
+
 const thStyle = {
   textAlign: 'left',
   padding: '8px 12px',
@@ -308,7 +318,7 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
                         <tr key={v.indice}>
                           <td style={tdStyle}>{v.indice}</td>
                           <td style={tdStyle}>{v.nombre}</td>
-                          <td style={tdStyle}>{v.distancia_km != null ? `${v.distancia_km} km` : '—'}</td>
+                          <td style={tdStyle}>{formatDistanciaVuelta(v, act.disciplina)}</td>
                           <td style={tdStyle}>{formatTiempo(v.moving_time_s)}</td>
                           <td style={tdStyle}>
                             {act.disciplina === 'run'

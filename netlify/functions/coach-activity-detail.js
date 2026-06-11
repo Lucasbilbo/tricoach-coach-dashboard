@@ -160,6 +160,7 @@ function transformarVueltas(laps, disciplina) {
     indice: lap.lap_index,
     nombre: lap.name || `Vuelta ${lap.lap_index}`,
     distancia_km: lap.distance != null ? round(lap.distance / 1000, 2) : null,
+    distancia_m: lap.distance != null ? round(lap.distance, 0) : null,
     elapsed_time_s: lap.elapsed_time ?? null,
     moving_time_s: lap.moving_time ?? null,
     ritmo_min_km: disciplina === 'swim' ? null : ritmoDesdeTiempos(lap.moving_time, lap.distance),
