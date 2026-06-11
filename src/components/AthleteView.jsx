@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { decimalToRitmo } from '../lib/chartUtils'
+import { decimalToRitmo, formatDiaMes } from '../lib/chartUtils'
 import {
   COLORS,
   DISCIPLINE_COLORS,
@@ -353,7 +353,7 @@ export default function AthleteView() {
                       }}
                       style={{ cursor: act.id ? 'pointer' : 'default' }}
                     >
-                      <td style={tdStyle}>{act.fecha || '—'}</td>
+                      <td style={tdStyle}>{act.fecha ? formatDiaMes(act.fecha) : '—'}</td>
                       <td style={tdStyle}>
                         <span
                           style={{

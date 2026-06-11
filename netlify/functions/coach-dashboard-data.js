@@ -15,6 +15,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const FC_MAX_DEFAULT = 185
 const DIA_MS = 86400000
 const VENTANA_DIAS = 7
+const SEMANAS_SPARKLINE = 4
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -90,6 +91,30 @@ function round(value, decimals) {
   return Math.round(value * factor) / factor
 }
 
+// Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
+function lunesDeSemana(fechaLocal) {
+  const [y, m, d] = fechaLocal.split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  const dow = date.getUTCDay() // 0=domingo
+  const offset = dow === 0 ? 6 : dow - 1
+  const monday = new Date(date.getTime() - offset * 86400000)
+  return monday.toISOString().slice(0, 10)
+}
+
+// Últimas N semanas con TSS agregado, ordenadas de más antigua a más reciente
+function semanasRecientes(actividades, fcMax, n) {
+  const porLunes = actividades.reduce((acc, a) => {
+    if (!a.start_date_local) return acc
+    const lunes = lunesDeSemana(a.start_date_local.slice(0, 10))
+    return { ...acc, [lunes]: (acc[lunes] || 0) + tssEstimado(a, fcMax) }
+  }, {})
+
+  return Object.keys(porLunes)
+    .sort()
+    .slice(-n)
+    .map((lunes) => ({ semana: lunes, tss_total: round(porLunes[lunes], 0) }))
+}
+
 function tssEstimado(act, fcMax) {
   const fcMedia = act.average_heartrate
   const duracionMin = act.moving_time ? act.moving_time / 60 : null
@@ -128,6 +153,7 @@ async function procesarAtleta(athleteId, env) {
     horas_semana: null,
     tss_semana: null,
     ultima_actividad_dias: null,
+    semanas_recientes: [],
   }
 
   try {
@@ -184,6 +210,7 @@ async function procesarAtleta(athleteId, env) {
       horas_semana: round(totales.horas, 1),
       tss_semana: round(totales.tss, 0),
       ultima_actividad_dias: ultimaDias,
+      semanas_recientes: semanasRecientes(actividades, fcMax, SEMANAS_SPARKLINE),
     }
   } catch (err) {
     console.error(`procesarAtleta ${athleteId} error:`, err.message)

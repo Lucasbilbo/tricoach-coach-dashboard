@@ -40,6 +40,40 @@ function BarraProgreso({ valor, max, color }) {
   )
 }
 
+const SPARKLINE_ALTO = 32
+const SPARKLINE_BARRA_ANCHO = 18
+const SPARKLINE_COLOR = 'rgba(124,58,237,0.6)'
+
+function SparklineTss({ semanas }) {
+  if (!semanas || semanas.length === 0) return null
+  const maxTss = Math.max(...semanas.map((s) => s.tss_total || 0))
+  if (maxTss <= 0) return null
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: 4,
+        height: SPARKLINE_ALTO,
+        marginTop: 16,
+      }}
+    >
+      {semanas.map((s) => (
+        <div
+          key={s.semana}
+          style={{
+            width: SPARKLINE_BARRA_ANCHO,
+            height: Math.max(((s.tss_total || 0) / maxTss) * SPARKLINE_ALTO, 2),
+            background: SPARKLINE_COLOR,
+            borderRadius: 2,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function MetricaConBarra({ etiqueta, valor, max, color }) {
   return (
     <div style={{ flex: 1 }}>
@@ -163,12 +197,12 @@ export default function Dashboard() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 16,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: 20,
             }}
           >
             {[1, 2, 3].map((i) => (
-              <div key={i} style={{ ...cardStyle, opacity: 0.5 }}>
+              <div key={i} style={{ ...cardStyle, padding: 28, opacity: 0.5 }}>
                 <div
                   style={{
                     height: 16,
@@ -213,8 +247,8 @@ export default function Dashboard() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 16,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: 20,
           }}
         >
           {!cargando &&
@@ -239,7 +273,7 @@ export default function Dashboard() {
                       e.currentTarget.style.borderColor = COLORS.cardBorder
                       e.currentTarget.style.transform = 'none'
                     }}
-                    style={{ ...cardStyle, cursor: 'pointer', transition: 'all 0.15s ease' }}
+                    style={{ ...cardStyle, padding: 28, cursor: 'pointer', transition: 'all 0.15s ease' }}
                   >
                     <div
                       style={{
@@ -292,6 +326,8 @@ export default function Dashboard() {
                         color={colorTss(atleta.tss_semana)}
                       />
                     </div>
+
+                    <SparklineTss semanas={atleta.semanas_recientes} />
                   </div>
                 )
               })

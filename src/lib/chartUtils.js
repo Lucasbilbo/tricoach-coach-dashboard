@@ -14,6 +14,14 @@ export function formatFechaCorta(fecha) {
   return `${MESES_CORTOS[m - 1]} ${d}`
 }
 
+// 'YYYY-MM-DD' → '10 Jun' (orden día-mes, para tablas; los ejes usan formatFechaCorta)
+export function formatDiaMes(fecha) {
+  if (!fecha || typeof fecha !== 'string') return ''
+  const [, m, d] = fecha.split('-').map(Number)
+  if (!m || !d || !MESES_CORTOS[m - 1]) return fecha
+  return `${d} ${MESES_CORTOS[m - 1]}`
+}
+
 // 'YYYY-MM-DD' + n días → 'YYYY-MM-DD' (aritmética en UTC, sin DST)
 export function sumarDias(fecha, dias) {
   const [y, m, d] = fecha.split('-').map(Number)
