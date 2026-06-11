@@ -17,6 +17,9 @@ const FC_MAX_DEFAULT = 185
 // Ritmos fuera de este rango son outliers (GPS roto, cinta sin footpod) → null
 const RITMO_MIN_PLAUSIBLE_S = 2.0 * 60
 const RITMO_MAX_PLAUSIBLE_S = 20.0 * 60
+// Natación: min/100m plausibles (fuera de rango → null)
+const RITMO_SWIM_MIN_PLAUSIBLE_S = 0.8 * 60
+const RITMO_SWIM_MAX_PLAUSIBLE_S = 6.0 * 60
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -110,11 +113,11 @@ function round(value, decimals) {
   return Math.round(value * factor) / factor
 }
 
-// Segundos por km → "M:SS"
-function formatRitmo(segundosPorKm) {
-  if (segundosPorKm == null || !Number.isFinite(segundosPorKm)) return null
-  let min = Math.floor(segundosPorKm / 60)
-  let seg = Math.round(segundosPorKm % 60)
+// Segundos por unidad de distancia (km o 100 m) → "M:SS"
+function formatRitmo(segundosPorUnidad) {
+  if (segundosPorUnidad == null || !Number.isFinite(segundosPorUnidad)) return null
+  let min = Math.floor(segundosPorUnidad / 60)
+  let seg = Math.round(segundosPorUnidad % 60)
   if (seg === 60) {
     min += 1
     seg = 0
@@ -129,21 +132,29 @@ function ritmoDesdeTiempos(movingTimeS, distanciaM) {
   return formatRitmo(segundosPorKm)
 }
 
-function transformarSplits(splitsMetric) {
+function ritmo100DesdeTiempos(movingTimeS, distanciaM) {
+  if (!movingTimeS || !distanciaM || distanciaM <= 0) return null
+  const segundosPor100m = movingTimeS / (distanciaM / 100)
+  if (segundosPor100m < RITMO_SWIM_MIN_PLAUSIBLE_S || segundosPor100m > RITMO_SWIM_MAX_PLAUSIBLE_S) return null
+  return formatRitmo(segundosPor100m)
+}
+
+function transformarSplits(splitsMetric, disciplina) {
   if (!Array.isArray(splitsMetric)) return []
   return splitsMetric.map((s) => ({
     km: s.split,
     elapsed_time_s: s.elapsed_time ?? null,
     moving_time_s: s.moving_time ?? null,
     distancia_m: s.distance != null ? round(s.distance, 0) : null,
-    ritmo_min_km: ritmoDesdeTiempos(s.moving_time, s.distance),
+    ritmo_min_km: disciplina === 'swim' ? null : ritmoDesdeTiempos(s.moving_time, s.distance),
+    ritmo_min_100m: disciplina === 'swim' ? ritmo100DesdeTiempos(s.moving_time, s.distance) : null,
     fc_media: s.average_heartrate != null ? round(s.average_heartrate, 0) : null,
     velocidad_ms: s.average_speed ?? null,
     desnivel_m: s.elevation_difference != null ? round(s.elevation_difference, 0) : null,
   }))
 }
 
-function transformarVueltas(laps) {
+function transformarVueltas(laps, disciplina) {
   if (!Array.isArray(laps)) return []
   return laps.map((lap) => ({
     indice: lap.lap_index,
@@ -151,7 +162,8 @@ function transformarVueltas(laps) {
     distancia_km: lap.distance != null ? round(lap.distance / 1000, 2) : null,
     elapsed_time_s: lap.elapsed_time ?? null,
     moving_time_s: lap.moving_time ?? null,
-    ritmo_min_km: ritmoDesdeTiempos(lap.moving_time, lap.distance),
+    ritmo_min_km: disciplina === 'swim' ? null : ritmoDesdeTiempos(lap.moving_time, lap.distance),
+    ritmo_min_100m: disciplina === 'swim' ? ritmo100DesdeTiempos(lap.moving_time, lap.distance) : null,
     velocidad_media_kmh: lap.average_speed != null ? round(lap.average_speed * 3.6, 1) : null,
     velocidad_max_kmh: lap.max_speed != null ? round(lap.max_speed * 3.6, 1) : null,
     fc_media: lap.average_heartrate != null ? round(lap.average_heartrate, 0) : null,
@@ -173,7 +185,7 @@ function transformarActividad(act, fcMax) {
       ? round((duracionMovMin / 60) * (intensidadPct / 100) ** 2 * 100, 0)
       : null
 
-  const splits = transformarSplits(act.splits_metric)
+  const splits = transformarSplits(act.splits_metric, disciplina)
   const desnivelNeg = splits.reduce(
     (acc, s) => (s.desnivel_m != null && s.desnivel_m < 0 ? acc + Math.abs(s.desnivel_m) : acc),
     0
@@ -189,6 +201,7 @@ function transformarActividad(act, fcMax) {
     duracion_min: act.elapsed_time ? round(act.elapsed_time / 60, 1) : null,
     duracion_mov_min: duracionMovMin,
     ritmo_min_km: disciplina === 'run' ? ritmoDesdeTiempos(act.moving_time, act.distance) : null,
+    ritmo_min_100m: disciplina === 'swim' ? ritmo100DesdeTiempos(act.moving_time, act.distance) : null,
     velocidad_media_kmh: act.average_speed != null ? round(act.average_speed * 3.6, 1) : null,
     velocidad_max_kmh: act.max_speed != null ? round(act.max_speed * 3.6, 1) : null,
     fc_media: fcMedia,
@@ -332,9 +345,10 @@ exports.handler = async (event) => {
     const laps = lapsRes.status === 200 && Array.isArray(lapsRes.json) ? lapsRes.json : []
 
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
+    const disciplina = mapDisciplina(actRes.json.sport_type || actRes.json.type)
     return respuesta(200, {
       actividad: transformarActividad(actRes.json, fcMax),
-      vueltas: transformarVueltas(laps),
+      vueltas: transformarVueltas(laps, disciplina),
     })
   } catch (err) {
     console.error('coach-activity-detail error:', err.message)

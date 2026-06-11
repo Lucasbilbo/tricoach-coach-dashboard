@@ -102,7 +102,9 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
         { etiqueta: 'Duración', valor: formatDuracionMin(act.duracion_mov_min ?? act.duracion_min) },
         act.disciplina === 'run'
           ? { etiqueta: 'Ritmo', valor: act.ritmo_min_km ? `${act.ritmo_min_km} /km` : null }
-          : { etiqueta: 'Vel. media', valor: act.velocidad_media_kmh != null ? `${act.velocidad_media_kmh} km/h` : null },
+          : act.disciplina === 'swim'
+            ? { etiqueta: 'Ritmo', valor: act.ritmo_min_100m ? `${act.ritmo_min_100m} /100m` : null }
+            : { etiqueta: 'Vel. media', valor: act.velocidad_media_kmh != null ? `${act.velocidad_media_kmh} km/h` : null },
         { etiqueta: 'FC media', valor: act.fc_media != null ? `${act.fc_media} ppm` : null },
         { etiqueta: 'FC máx', valor: act.fc_maxima_actividad != null ? `${act.fc_maxima_actividad} ppm` : null },
         { etiqueta: 'Potencia media', valor: act.potencia_media != null ? `${act.potencia_media} W` : null },
@@ -263,7 +265,13 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
                           <td style={tdStyle}>{s.km}</td>
                           <td style={tdStyle}>{formatTiempo(s.moving_time_s)}</td>
                           <td style={{ ...tdStyle, color: colorSplit(s.velocidad_ms), fontWeight: 600 }}>
-                            {s.ritmo_min_km ? `${s.ritmo_min_km} /km` : '—'}
+                            {act.disciplina === 'swim'
+                              ? s.ritmo_min_100m
+                                ? `${s.ritmo_min_100m} /100m`
+                                : '—'
+                              : s.ritmo_min_km
+                                ? `${s.ritmo_min_km} /km`
+                                : '—'}
                           </td>
                           <td style={tdStyle}>{s.fc_media != null ? `${s.fc_media} ppm` : '—'}</td>
                           <td style={tdStyle}>{s.desnivel_m != null ? `${s.desnivel_m} m` : '—'}</td>
@@ -286,7 +294,9 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
                         <th style={thStyle}>Nombre</th>
                         <th style={thStyle}>Distancia</th>
                         <th style={thStyle}>Tiempo</th>
-                        <th style={thStyle}>{act.disciplina === 'run' ? 'Ritmo' : 'Vel.'}</th>
+                        <th style={thStyle}>
+                          {act.disciplina === 'run' || act.disciplina === 'swim' ? 'Ritmo' : 'Vel.'}
+                        </th>
                         <th style={thStyle}>FC</th>
                         <th style={thStyle}>Potencia</th>
                         <th style={thStyle}>Cadencia</th>
@@ -305,9 +315,13 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
                               ? v.ritmo_min_km
                                 ? `${v.ritmo_min_km} /km`
                                 : '—'
-                              : v.velocidad_media_kmh != null
-                                ? `${v.velocidad_media_kmh} km/h`
-                                : '—'}
+                              : act.disciplina === 'swim'
+                                ? v.ritmo_min_100m
+                                  ? `${v.ritmo_min_100m} /100m`
+                                  : '—'
+                                : v.velocidad_media_kmh != null
+                                  ? `${v.velocidad_media_kmh} km/h`
+                                  : '—'}
                           </td>
                           <td style={tdStyle}>{v.fc_media != null ? `${v.fc_media} ppm` : '—'}</td>
                           <td style={tdStyle}>{v.potencia_media != null ? `${v.potencia_media} W` : '—'}</td>
