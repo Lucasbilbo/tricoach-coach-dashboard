@@ -279,7 +279,9 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
       {/* Modal ActivityDetail para sesiones completadas */}
       {actividadDetalle && (
         <ActivityDetail
-          actividad={actividadDetalle}
+          activityId={actividadDetalle.id}
+          athleteId={athleteId}
+          coachId={coachId}
           onClose={() => setActividadDetalle(null)}
         />
       )}

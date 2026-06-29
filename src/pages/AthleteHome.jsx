@@ -9,8 +9,8 @@ import {
   cardStyle,
   pageStyle,
 } from '../lib/theme'
-import { buildIntervalsText } from '../lib/intervalsText'
 import ActivityDetail from '../components/ActivityDetail'
+import WorkoutDetail from '../components/WorkoutDetail'
 import WeekCompare from '../components/WeekCompare'
 import PRsBlock from '../components/PRsBlock'
 import ChartCard from '../components/charts/ChartCard'
@@ -71,6 +71,11 @@ function formatDuracion(duracionMin) {
   const h = Math.floor(duracionMin / 60)
   const m = Math.round(duracionMin % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
+
+function tituloSesion(sesion) {
+  const desc = sesion.descripcion || ''
+  return desc.length > 50 ? desc.slice(0, 50) + '…' : desc || '—'
 }
 
 function resumeRepeat(bloques) {
@@ -371,11 +376,6 @@ export default function AthleteHome() {
                 'Mi panel'
               )}
             </h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
-              {intervalsOk
-                ? `✅ Intervals conectado · ${perfil.intervals_athlete_id}`
-                : '❌ Intervals no configurado'}
-            </p>
           </div>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -398,23 +398,6 @@ export default function AthleteHome() {
                 {rango} sem
               </button>
             ))}
-            <Link
-              to="/setup/intervals"
-              style={{
-                background: 'transparent',
-                color: COLORS.textSecondary,
-                border: `1px solid ${COLORS.cardBorder}`,
-                borderRadius: 8,
-                padding: '6px 14px',
-                fontSize: 13,
-                fontWeight: 600,
-                textDecoration: 'none',
-                fontFamily: "'Inter', sans-serif",
-                whiteSpace: 'nowrap',
-              }}
-            >
-              ⚙ Intervals
-            </Link>
           </div>
         </header>
 
@@ -481,9 +464,6 @@ export default function AthleteHome() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {proximas.map((sesion) => {
-                    const resumen = resumeRepeat(sesion.workout_steps?.bloques)
-                    const detalle = buildIntervalsText(sesion)
-
                     const tieneDetalle = sesion.workout_steps?.bloques?.length > 0
 
                     return (
@@ -545,20 +525,8 @@ export default function AthleteHome() {
                                 color: COLORS.textPrimary,
                               }}
                             >
-                              {sesion.descripcion || '—'}
+                              {tituloSesion(sesion)}
                             </p>
-
-                            {resumen && (
-                              <p
-                                style={{
-                                  margin: '4px 0 0',
-                                  fontSize: 13,
-                                  color: COLORS.textSecondary,
-                                }}
-                              >
-                                {resumen}
-                              </p>
-                            )}
 
                             {sesion.notas && !expandidas[sesion.id] && (
                               <p
@@ -596,25 +564,9 @@ export default function AthleteHome() {
 
                         {expandidas[sesion.id] && tieneDetalle && (
                           <div onClick={(e) => e.stopPropagation()}>
-                            <pre
-                              style={{
-                                background: '#0A0F1E',
-                                border: `1px solid ${COLORS.cardBorder}`,
-                                borderRadius: 8,
-                                padding: 12,
-                                fontSize: 12,
-                                color: COLORS.textSecondary,
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                fontFamily: 'monospace',
-                                marginTop: 12,
-                                marginBottom: 0,
-                              }}
-                            >
-                              {detalle}
-                            </pre>
+                            <WorkoutDetail sesion={sesion} mostrarNotas={true} />
 
-                            {!sesion.enviado_a_garmin && (
+                            {perfil?.intervals_api_key && !sesion.enviado_a_garmin && (
                               <div style={{ marginTop: 8 }}>
                                 {erroresGarmin[sesion.id] && (
                                   <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>
@@ -656,7 +608,7 @@ export default function AthleteHome() {
               )}
             </section>
 
-            {/* Pasados */}
+            {/* Historial */}
             <section>
               <h2
                 style={{
@@ -704,7 +656,7 @@ export default function AthleteHome() {
                               textOverflow: 'ellipsis',
                             }}
                           >
-                            {sesion.descripcion || '—'}
+                            {tituloSesion(sesion)}
                           </td>
                           <td
                             style={{
@@ -751,22 +703,7 @@ export default function AthleteHome() {
                               colSpan={5}
                               style={{ padding: '0 12px 12px', borderBottom: `1px solid ${COLORS.cardBorder}` }}
                             >
-                              <pre
-                                style={{
-                                  background: '#0A0F1E',
-                                  border: `1px solid ${COLORS.cardBorder}`,
-                                  borderRadius: 8,
-                                  padding: 12,
-                                  fontSize: 12,
-                                  color: COLORS.textSecondary,
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word',
-                                  fontFamily: 'monospace',
-                                  margin: 0,
-                                }}
-                              >
-                                {buildIntervalsText(sesion)}
-                              </pre>
+                              <WorkoutDetail sesion={sesion} mostrarNotas={true} />
                             </td>
                           </tr>
                         ) : null
@@ -775,6 +712,64 @@ export default function AthleteHome() {
                   </table>
                 </div>
               )}
+            </section>
+
+            {/* Configuración Intervals — siempre al fondo, siempre opcional */}
+            <section style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+              <div
+                style={{
+                  ...cardStyle,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}
+              >
+                {intervalsOk ? (
+                  <>
+                    <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+                      ✅ Intervals.icu conectado ·{' '}
+                      <span style={{ color: COLORS.accent }}>{perfil.intervals_athlete_id}</span>
+                    </p>
+                    <Link
+                      to="/setup/intervals"
+                      style={{
+                        color: COLORS.textSecondary,
+                        fontSize: 12,
+                        textDecoration: 'none',
+                        border: `1px solid ${COLORS.cardBorder}`,
+                        borderRadius: 6,
+                        padding: '4px 10px',
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                    >
+                      Reconfigurar →
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+                      ⚡ Conecta Intervals.icu para recibir entrenamientos en tu Garmin
+                    </p>
+                    <Link
+                      to="/setup/intervals"
+                      style={{
+                        color: COLORS.accent,
+                        fontSize: 12,
+                        textDecoration: 'none',
+                        border: `1px solid ${COLORS.accent}`,
+                        borderRadius: 6,
+                        padding: '4px 10px',
+                        fontFamily: "'Inter', sans-serif",
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Configurar (opcional) →
+                    </Link>
+                  </>
+                )}
+              </div>
             </section>
           </>
         )}
