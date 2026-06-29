@@ -90,14 +90,17 @@ function defaultZona(disciplina) {
   return ''
 }
 
+const normalizarZona = (v) => v && v.includes('-') ? v.split('-')[0] : v
+
 function objetivoStr(step, disciplina) {
   const tipo = step.objetivo_tipo
   const valor = step.objetivo_valor
   if (!tipo || !valor) return ''
   if (tipo === 'zona') {
-    if (disciplina === 'swim') return ` ${valor} Pace`
-    if (disciplina === 'run') return ` ${valor} HR`
-    return ` ${valor}`
+    const zona = normalizarZona(valor)
+    if (disciplina === 'swim') return ` ${zona} Pace`
+    if (disciplina === 'run') return ` ${zona} HR`
+    return ` ${zona}`
   }
   if (tipo === 'fc') return ` ${valor}% HR`
   if (tipo === 'potencia') return ` ${valor}%`
