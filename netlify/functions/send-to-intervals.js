@@ -143,10 +143,6 @@ function buildIntervalsDescription(session) {
     }
   }
 
-  if (notas) {
-    partes.push('---\n' + notas)
-  }
-
   return partes.join('\n\n')
 }
 
@@ -249,6 +245,7 @@ exports.handler = async (event) => {
       type: tipoIntervals,
       name: session.descripcion || 'Entrenamiento',
       description,
+      indoor: false,
     })
 
     console.log('intervals result:', result.status, JSON.stringify(result.body))

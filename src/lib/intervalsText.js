@@ -67,9 +67,9 @@ export function buildIntervalsText(session) {
     }
   }
 
+  const sintaxis = partes.join('\n\n')
   if (notas) {
-    partes.push('---\n' + notas)
+    return sintaxis + '\n\n---\n' + notas
   }
-
-  return partes.join('\n\n')
+  return sintaxis
 }
