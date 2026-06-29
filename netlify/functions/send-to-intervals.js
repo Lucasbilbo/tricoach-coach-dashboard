@@ -253,7 +253,7 @@ exports.handler = async (event) => {
 
     const result = await intervalsPost(intervals_athlete_id, intervals_api_key, {
       category: 'WORKOUT',
-      start_date_local: session.fecha,
+      start_date_local: session.fecha + 'T00:00:00',
       type: tipoIntervals,
       name: session.descripcion || 'Entrenamiento',
       description,
