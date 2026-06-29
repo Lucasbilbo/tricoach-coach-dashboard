@@ -30,25 +30,23 @@ export default function Login() {
         return
       }
 
-      const { data: coach, error: coachError } = await supabase
-        .from('coaches')
-        .select('id')
-        .eq('id', data.user.id)
-        .maybeSingle()
+      const [{ data: coach }, { data: profile }] = await Promise.all([
+        supabase.from('coaches').select('id').eq('id', data.user.id).maybeSingle(),
+        supabase.from('profiles').select('id').eq('id', data.user.id).maybeSingle(),
+      ])
 
-      if (coachError) {
-        setError('Error verificando el acceso. Inténtalo de nuevo.')
-        await supabase.auth.signOut()
+      if (coach) {
+        navigate('/dashboard')
         return
       }
 
-      if (!coach) {
-        setError('Acceso restringido')
-        await supabase.auth.signOut()
+      if (profile) {
+        navigate('/setup/intervals')
         return
       }
 
-      navigate('/dashboard')
+      setError('Acceso restringido')
+      await supabase.auth.signOut()
     } catch {
       setError('Error de conexión. Inténtalo de nuevo.')
     } finally {
