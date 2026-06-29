@@ -59,69 +59,18 @@ const accionBtnStyle = {
   fontFamily: "'Inter', sans-serif",
 }
 
-function WorkoutModal({ sesion, onClose }) {
-  return (
-    <>
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          zIndex: 299,
-        }}
-      />
-      <div
-        style={{
-          position: 'fixed',
-          top: '8%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 520,
-          maxWidth: '92vw',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-          background: '#0F1729',
-          border: `1px solid ${COLORS.cardBorder}`,
-          borderRadius: 12,
-          padding: 24,
-          zIndex: 300,
-          fontFamily: "'Inter', sans-serif",
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <span style={{ fontSize: 13, color: COLORS.textSecondary }}>
-            {formatFechaSesion(sesion.fecha)} · {DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina}
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: COLORS.textSecondary,
-              fontSize: 20,
-              cursor: 'pointer',
-              lineHeight: 1,
-              padding: '0 4px',
-            }}
-          >
-            ×
-          </button>
-        </div>
-        <WorkoutDetail sesion={sesion} mostrarNotas={true} />
-      </div>
-    </>
-  )
-}
-
 export default function SessionsList({ coachId, athleteId, actividades, atletaNombre, onNewSession }) {
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [sesionEditando, setSesionEditando] = useState(null)
   const [reenviando, setReenviando] = useState(null)
-  const [sesionWorkout, setSesionWorkout] = useState(null)
+  const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
+
+  function toggleExpandida(id) {
+    setExpandidaId((prev) => (prev === id ? null : id))
+  }
 
   const cargarSesiones = useCallback(async () => {
     try {
@@ -216,9 +165,14 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
           const estado = estadoSesion(sesion, actividades)
           const completada = !!estado.actividadStrava
           const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
+          const expandida = expandidaId === sesion.id
 
           return (
-            <div key={sesion.id} style={cardStyle}>
+            <div
+              key={sesion.id}
+              onClick={() => tieneWorkout && toggleExpandida(sesion.id)}
+              style={{ ...cardStyle, cursor: tieneWorkout ? 'pointer' : 'default' }}
+            >
               <div
                 style={{
                   display: 'flex',
@@ -264,7 +218,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   {completada && (
                     <button
-                      onClick={() => setActividadDetalle(estado.actividadStrava)}
+                      onClick={(e) => { e.stopPropagation(); setActividadDetalle(estado.actividadStrava) }}
                       style={{ ...accionBtnStyle, color: '#00E5A0', borderColor: '#00E5A0' }}
                     >
                       Ver actividad →
@@ -273,10 +227,10 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
 
                   {tieneWorkout && (
                     <button
-                      onClick={() => setSesionWorkout(sesion)}
+                      onClick={(e) => { e.stopPropagation(); toggleExpandida(sesion.id) }}
                       style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
                     >
-                      Workout
+                      {expandida ? '▼ Workout' : '▶ Workout'}
                     </button>
                   )}
 
@@ -288,24 +242,30 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                   </span>
                   {!sesion.enviado_a_garmin && tieneWorkout && (
                     <button
-                      onClick={() => handleReenviarGarmin(sesion)}
+                      onClick={(e) => { e.stopPropagation(); handleReenviarGarmin(sesion) }}
                       disabled={reenviando === sesion.id}
                       style={{ ...accionBtnStyle, opacity: reenviando === sesion.id ? 0.5 : 1 }}
                     >
                       {reenviando === sesion.id ? '...' : 'Enviar'}
                     </button>
                   )}
-                  <button onClick={() => setSesionEditando(sesion)} style={accionBtnStyle}>
+                  <button onClick={(e) => { e.stopPropagation(); setSesionEditando(sesion) }} style={accionBtnStyle}>
                     Editar
                   </button>
                   <button
-                    onClick={() => handleEliminar(sesion)}
+                    onClick={(e) => { e.stopPropagation(); handleEliminar(sesion) }}
                     style={{ ...accionBtnStyle, color: COLORS.error }}
                   >
                     Eliminar
                   </button>
                 </div>
               </div>
+
+              {expandida && tieneWorkout && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+                </div>
+              )}
             </div>
           )
         })}
@@ -320,13 +280,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
           atletaNombre={atletaNombre}
           onClose={() => setSesionEditando(null)}
           onSaved={handleEditGuardado}
-        />
-      )}
-
-      {sesionWorkout && (
-        <WorkoutModal
-          sesion={sesionWorkout}
-          onClose={() => setSesionWorkout(null)}
         />
       )}
 
