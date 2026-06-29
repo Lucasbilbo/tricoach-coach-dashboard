@@ -136,6 +136,8 @@ export default function AthleteHome() {
   const [pasadas, setPasadas] = useState([])
   const [cargandoSesiones, setCargandoSesiones] = useState(true)
   const [expandidas, setExpandidas] = useState({})
+  const [enviandoGarmin, setEnviandoGarmin] = useState({})
+  const [erroresGarmin, setErroresGarmin] = useState({})
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
@@ -251,6 +253,36 @@ export default function AthleteHome() {
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  function marcarEnviado(id) {
+    setProximas((prev) => prev.map((s) => s.id === id ? { ...s, enviado_a_garmin: true } : s))
+    setPasadas((prev) => prev.map((s) => s.id === id ? { ...s, enviado_a_garmin: true } : s))
+  }
+
+  async function enviarAGarmin(sesion) {
+    setEnviandoGarmin((prev) => ({ ...prev, [sesion.id]: true }))
+    setErroresGarmin((prev) => ({ ...prev, [sesion.id]: null }))
+    try {
+      const res = await fetch('/.netlify/functions/send-to-intervals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
+        },
+        body: JSON.stringify({ sessionId: sesion.id, coachId: sesion.coach_id, athleteId: userId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        marcarEnviado(sesion.id)
+      } else {
+        setErroresGarmin((prev) => ({ ...prev, [sesion.id]: json.error || 'Error enviando a Garmin' }))
+      }
+    } catch {
+      setErroresGarmin((prev) => ({ ...prev, [sesion.id]: 'Error de conexión' }))
+    } finally {
+      setEnviandoGarmin((prev) => ({ ...prev, [sesion.id]: false }))
+    }
   }
 
   const actividades = datos?.actividades || []
@@ -452,8 +484,17 @@ export default function AthleteHome() {
                     const resumen = resumeRepeat(sesion.workout_steps?.bloques)
                     const detalle = buildIntervalsText(sesion)
 
+                    const tieneDetalle = sesion.workout_steps?.bloques?.length > 0
+
                     return (
-                      <div key={sesion.id} style={cardStyle}>
+                      <div
+                        key={sesion.id}
+                        onClick={() => tieneDetalle && toggleDetalle(sesion.id)}
+                        style={{
+                          ...cardStyle,
+                          cursor: tieneDetalle ? 'pointer' : 'default',
+                        }}
+                      >
                         <div
                           style={{
                             display: 'flex',
@@ -533,9 +574,9 @@ export default function AthleteHome() {
                             )}
                           </div>
 
-                          {sesion.workout_steps?.bloques?.length > 0 && (
+                          {tieneDetalle && (
                             <button
-                              onClick={() => toggleDetalle(sesion.id)}
+                              onClick={(e) => { e.stopPropagation(); toggleDetalle(sesion.id) }}
                               style={{
                                 background: 'transparent',
                                 border: `1px solid ${COLORS.cardBorder}`,
@@ -553,24 +594,60 @@ export default function AthleteHome() {
                           )}
                         </div>
 
-                        {expandidas[sesion.id] && detalle && (
-                          <pre
-                            style={{
-                              background: '#0A0F1E',
-                              border: `1px solid ${COLORS.cardBorder}`,
-                              borderRadius: 8,
-                              padding: 12,
-                              fontSize: 12,
-                              color: COLORS.textSecondary,
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-word',
-                              fontFamily: 'monospace',
-                              marginTop: 12,
-                              marginBottom: 0,
-                            }}
-                          >
-                            {detalle}
-                          </pre>
+                        {expandidas[sesion.id] && tieneDetalle && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <pre
+                              style={{
+                                background: '#0A0F1E',
+                                border: `1px solid ${COLORS.cardBorder}`,
+                                borderRadius: 8,
+                                padding: 12,
+                                fontSize: 12,
+                                color: COLORS.textSecondary,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                fontFamily: 'monospace',
+                                marginTop: 12,
+                                marginBottom: 0,
+                              }}
+                            >
+                              {detalle}
+                            </pre>
+
+                            {!sesion.enviado_a_garmin && (
+                              <div style={{ marginTop: 8 }}>
+                                {erroresGarmin[sesion.id] && (
+                                  <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>
+                                    {erroresGarmin[sesion.id]}
+                                  </p>
+                                )}
+                                <button
+                                  onClick={() => enviarAGarmin(sesion)}
+                                  disabled={enviandoGarmin[sesion.id]}
+                                  style={{
+                                    background: COLORS.accent,
+                                    color: COLORS.background,
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    padding: '8px 16px',
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    cursor: enviandoGarmin[sesion.id] ? 'wait' : 'pointer',
+                                    fontFamily: "'Inter', sans-serif",
+                                    opacity: enviandoGarmin[sesion.id] ? 0.6 : 1,
+                                  }}
+                                >
+                                  {enviandoGarmin[sesion.id] ? 'Enviando…' : '✈ Enviar a Garmin'}
+                                </button>
+                              </div>
+                            )}
+
+                            {sesion.enviado_a_garmin && (
+                              <p style={{ color: '#00E5A0', fontSize: 13, fontWeight: 600, marginTop: 8 }}>
+                                ✅ Enviado a Garmin
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     )
