@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
 import { MESES_CORTOS } from '../lib/chartUtils'
-import PrescribeModal from './PrescribeModal'
+import WorkoutBuilder from './WorkoutBuilder'
 
 const BADGE_COLORS = {
   swim: '#00D4FF',
@@ -52,11 +52,12 @@ const accionBtnStyle = {
   fontFamily: "'Inter', sans-serif",
 }
 
-export default function SessionsList({ coachId, athleteId, actividades, onNewSession }) {
+export default function SessionsList({ coachId, athleteId, actividades, atletaNombre, onNewSession }) {
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [sesionEditando, setSesionEditando] = useState(null)
+  const [reenviando, setReenviando] = useState(null)
 
   const cargarSesiones = useCallback(async () => {
     try {
@@ -108,6 +109,30 @@ export default function SessionsList({ coachId, athleteId, actividades, onNewSes
     setSesionEditando(null)
     cargarSesiones()
     if (onNewSession) onNewSession()
+  }
+
+  async function handleReenviarGarmin(sesion) {
+    setReenviando(sesion.id)
+    try {
+      const res = await fetch('/.netlify/functions/send-to-intervals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
+        },
+        body: JSON.stringify({ sessionId: sesion.id, coachId, athleteId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        cargarSesiones()
+      } else {
+        setError(json.error || 'Error enviando a Garmin')
+      }
+    } catch {
+      setError('Error de conexión')
+    } finally {
+      setReenviando(null)
+    }
   }
 
   if (cargando) return <p style={{ color: COLORS.textSecondary }}>Cargando sesiones…</p>
@@ -197,7 +222,23 @@ export default function SessionsList({ coachId, athleteId, actividades, onNewSes
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {/* Garmin status */}
+                  <span
+                    title={sesion.enviado_a_garmin ? 'Enviado a Garmin' : 'No enviado a Garmin'}
+                    style={{ fontSize: 16 }}
+                  >
+                    {sesion.enviado_a_garmin ? '✅' : '⏳'}
+                  </span>
+                  {!sesion.enviado_a_garmin && sesion.workout_steps && (
+                    <button
+                      onClick={() => handleReenviarGarmin(sesion)}
+                      disabled={reenviando === sesion.id}
+                      style={{ ...accionBtnStyle, color: COLORS.accent, opacity: reenviando === sesion.id ? 0.5 : 1 }}
+                    >
+                      {reenviando === sesion.id ? '...' : 'Enviar'}
+                    </button>
+                  )}
                   <button onClick={() => setSesionEditando(sesion)} style={accionBtnStyle}>
                     Editar
                   </button>
@@ -215,10 +256,12 @@ export default function SessionsList({ coachId, athleteId, actividades, onNewSes
       </div>
 
       {sesionEditando && (
-        <PrescribeModal
+        <WorkoutBuilder
+          isOpen={!!sesionEditando}
           athleteId={athleteId}
           coachId={coachId}
-          sessionToEdit={sesionEditando}
+          sessionExistente={sesionEditando}
+          atletaNombre={atletaNombre}
           onClose={() => setSesionEditando(null)}
           onSaved={handleEditGuardado}
         />

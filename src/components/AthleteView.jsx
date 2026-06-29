@@ -10,7 +10,8 @@ import {
   pageStyle,
   buttonStyle,
 } from '../lib/theme'
-import PrescribeModal from './PrescribeModal'
+import WorkoutBuilder from './WorkoutBuilder'
+import IntervalsOnboarding from './IntervalsOnboarding'
 import SessionsList from './SessionsList'
 import ActivityDetail from './ActivityDetail'
 import WeekCompare from './WeekCompare'
@@ -300,7 +301,7 @@ export default function AthleteView() {
                 Comparar semanas
               </button>
               <button onClick={() => setModalAbierto(true)} style={buttonStyle}>
-                Prescribir sesión
+                ＋ Prescribir entrenamiento
               </button>
             </div>
           </div>
@@ -340,13 +341,17 @@ export default function AthleteView() {
         </nav>
 
         {activeTab === 'sesiones' && coachId && (
-          <SessionsList
-            key={sesionesVersion}
-            coachId={coachId}
-            athleteId={id}
-            actividades={actividades}
-            onNewSession={() => setSesionesVersion((v) => v + 1)}
-          />
+          <>
+            <IntervalsOnboarding athleteId={id} />
+            <SessionsList
+              key={sesionesVersion}
+              coachId={coachId}
+              athleteId={id}
+              atletaNombre={datos?.atleta?.nombre}
+              actividades={actividades}
+              onNewSession={() => setSesionesVersion((v) => v + 1)}
+            />
+          </>
         )}
 
         {activeTab === 'analisis' && cargando && (
@@ -540,9 +545,11 @@ export default function AthleteView() {
         )}
 
         {modalAbierto && coachId && (
-          <PrescribeModal
+          <WorkoutBuilder
+            isOpen={modalAbierto}
             athleteId={id}
             coachId={coachId}
+            atletaNombre={datos?.atleta?.nombre}
             onClose={() => setModalAbierto(false)}
             onSaved={() => {
               setModalAbierto(false)
