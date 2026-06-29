@@ -234,13 +234,13 @@ export default function AthleteView() {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             marginBottom: 24,
             flexWrap: 'wrap',
             gap: 12,
           }}
         >
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <button
               onClick={() => navigate('/dashboard')}
               style={{
@@ -255,7 +255,7 @@ export default function AthleteView() {
             >
               ← Volver al panel
             </button>
-            <h1 style={{ margin: '6px 0 0', fontSize: 24, fontWeight: 700 }}>
+            <h1 style={{ margin: '6px 0 0', fontSize: 24, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {datos?.atleta?.nombre || 'Atleta'}
             </h1>
           </div>
@@ -313,6 +313,8 @@ export default function AthleteView() {
             gap: 4,
             borderBottom: `1px solid ${COLORS.cardBorder}`,
             marginBottom: 24,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
           }}
         >
           {[

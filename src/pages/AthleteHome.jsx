@@ -418,6 +418,8 @@ export default function AthleteHome() {
             gap: 4,
             borderBottom: `1px solid ${COLORS.cardBorder}`,
             marginBottom: 24,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
           }}
         >
           {[
@@ -494,7 +496,7 @@ export default function AthleteHome() {
                             flexWrap: 'wrap',
                           }}
                         >
-                          <div style={{ flex: 1, minWidth: 200 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div
                               style={{
                                 display: 'flex',
@@ -533,6 +535,9 @@ export default function AthleteHome() {
                                 fontSize: 15,
                                 fontWeight: 600,
                                 color: COLORS.textPrimary,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               {tituloSesion(sesion)}

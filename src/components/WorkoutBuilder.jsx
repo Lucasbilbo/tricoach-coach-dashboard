@@ -710,7 +710,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           position: 'fixed',
           top: 0,
           right: 0,
-          height: '100vh',
+          height: '100dvh',
           width: 520,
           maxWidth: '100vw',
           background: '#0F1729',

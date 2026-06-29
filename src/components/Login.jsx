@@ -78,7 +78,7 @@ export default function Login() {
         justifyContent: 'center',
       }}
     >
-      <form onSubmit={handleSubmit} style={{ ...cardStyle, width: 360, padding: 32 }}>
+      <form onSubmit={handleSubmit} style={{ ...cardStyle, maxWidth: 360, width: '100%', padding: 32 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>
           TriCoach <span style={{ color: COLORS.accent }}>Coach</span>
         </h1>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
 import { MESES_CORTOS } from '../lib/chartUtils'
+import { useIsMobile } from '../hooks/useIsMobile'
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
@@ -61,13 +62,16 @@ const accionBtnStyle = {
   border: `1px solid ${COLORS.cardBorder}`,
   borderRadius: 6,
   color: COLORS.textSecondary,
-  padding: '4px 10px',
+  padding: '8px 10px',
   fontSize: 12,
   cursor: 'pointer',
   fontFamily: "'Inter', sans-serif",
+  minHeight: 36,
+  lineHeight: 1,
 }
 
 export default function SessionsList({ coachId, athleteId, actividades, atletaNombre, onNewSession }) {
+  const isMobile = useIsMobile()
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -190,7 +194,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                   flexWrap: 'wrap',
                 }}
               >
-                <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
                       {formatFechaSesion(sesion.fecha)}
@@ -218,7 +222,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
 
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', ...(isMobile && { width: '100%', marginTop: 8 }) }}>
                   {completada && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setActividadDetalle(estado.actividadStrava) }}

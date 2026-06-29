@@ -541,10 +541,13 @@ export default function Dashboard() {
                                 background: '#0A0F1E',
                                 padding: '3px 8px',
                                 borderRadius: 4,
+                                flex: 1,
+                                minWidth: 0,
                                 maxWidth: 220,
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
+                                display: 'block',
                               }}
                             >
                               {link}
