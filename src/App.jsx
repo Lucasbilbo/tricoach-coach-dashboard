@@ -5,6 +5,8 @@ import { COLORS, pageStyle } from './lib/theme'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import AthleteView from './components/AthleteView'
+import JoinPage from './pages/JoinPage'
+import IntervalsSetup from './pages/IntervalsSetup'
 
 function ProtectedRoute({ session, cargando, children }) {
   if (cargando) {
@@ -58,6 +60,9 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {/* Rutas públicas */}
+        <Route path="/join/:token" element={<JoinPage />} />
+        <Route path="/setup/intervals" element={<IntervalsSetup />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

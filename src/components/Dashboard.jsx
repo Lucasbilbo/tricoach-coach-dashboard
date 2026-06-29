@@ -91,6 +91,11 @@ export default function Dashboard() {
   const [atletas, setAtletas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [coachId, setCoachId] = useState(null)
+  const [invitaciones, setInvitaciones] = useState([])
+  const [emailInvite, setEmailInvite] = useState('')
+  const [generando, setGenerando] = useState(false)
+  const [copiados, setCopiados] = useState({})
 
   useEffect(() => {
     let activo = true
@@ -125,6 +130,8 @@ export default function Dashboard() {
           return
         }
 
+        setCoachId(userId)
+
         const res = await fetch('/.netlify/functions/coach-dashboard-data', {
           method: 'POST',
           headers: {
@@ -143,6 +150,14 @@ export default function Dashboard() {
         }
 
         setAtletas(Array.isArray(json) ? json : [])
+
+        // Cargar invitaciones
+        const { data: invs } = await supabase
+          .from('athlete_invitations')
+          .select('*')
+          .eq('coach_id', userId)
+          .order('created_at', { ascending: false })
+        if (activo) setInvitaciones(invs || [])
       } catch {
         if (activo) setError('Error de conexión cargando atletas')
       } finally {
@@ -159,6 +174,43 @@ export default function Dashboard() {
   async function handleLogout() {
     await supabase.auth.signOut()
     navigate('/')
+  }
+
+  async function generarInvitacion() {
+    if (!coachId) return
+    setGenerando(true)
+    try {
+      const registro = { coach_id: coachId }
+      if (emailInvite.trim()) registro.email = emailInvite.trim()
+
+      const { data, error: insertError } = await supabase
+        .from('athlete_invitations')
+        .insert(registro)
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      setInvitaciones((prev) => [data, ...prev])
+      setEmailInvite('')
+    } catch {
+      setError('Error generando la invitación')
+    } finally {
+      setGenerando(false)
+    }
+  }
+
+  async function eliminarInvitacion(invId) {
+    await supabase.from('athlete_invitations').delete().eq('id', invId)
+    setInvitaciones((prev) => prev.filter((i) => i.id !== invId))
+  }
+
+  function copiarLink(inv) {
+    const link = `${window.location.origin}/join/${inv.token}`
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiados((prev) => ({ ...prev, [inv.id]: true }))
+      setTimeout(() => setCopiados((prev) => ({ ...prev, [inv.id]: false })), 2000)
+    })
   }
 
   return (
@@ -334,6 +386,185 @@ export default function Dashboard() {
                 )
               })
             })()}
+        </div>
+
+        {/* ── Invitar atleta ─────────────────────────────────────────────── */}
+        <div style={{ marginTop: 40 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              borderTop: `1px solid ${COLORS.cardBorder}`,
+              paddingTop: 28,
+              marginBottom: 20,
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>
+              Invitar nuevo atleta
+            </h2>
+          </div>
+
+          <div
+            style={{
+              background: '#0F1729',
+              border: `1px solid ${COLORS.cardBorder}`,
+              borderRadius: 12,
+              padding: 20,
+            }}
+          >
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 12,
+                    color: COLORS.textSecondary,
+                    marginBottom: 6,
+                  }}
+                >
+                  Email del atleta (opcional)
+                </label>
+                <input
+                  type="email"
+                  value={emailInvite}
+                  onChange={(e) => setEmailInvite(e.target.value)}
+                  placeholder="atleta@email.com"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    background: COLORS.background,
+                    border: `1px solid ${COLORS.cardBorder}`,
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: COLORS.textPrimary,
+                    fontSize: 14,
+                    fontFamily: "'Inter', sans-serif",
+                    outline: 'none',
+                  }}
+                />
+              </div>
+              <button
+                onClick={generarInvitacion}
+                disabled={generando || !coachId}
+                style={{
+                  background: COLORS.accent,
+                  color: COLORS.background,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 18px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: generando ? 'wait' : 'pointer',
+                  fontFamily: "'Inter', sans-serif",
+                  opacity: generando ? 0.7 : 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {generando ? 'Generando...' : 'Generar link de invitación'}
+              </button>
+            </div>
+
+            {invitaciones.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <p
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: COLORS.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: 10,
+                  }}
+                >
+                  Invitaciones enviadas
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {invitaciones.map((inv) => {
+                    const link = `${window.location.origin}/join/${inv.token}`
+                    return (
+                      <div
+                        key={inv.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          flexWrap: 'wrap',
+                          padding: '10px 12px',
+                          background: 'rgba(255,255,255,0.03)',
+                          borderRadius: 8,
+                          border: `1px solid ${COLORS.cardBorder}`,
+                        }}
+                      >
+                        <span style={{ fontSize: 13, color: COLORS.textPrimary, flex: 1, minWidth: 120 }}>
+                          {inv.email || <span style={{ color: COLORS.textSecondary }}>Sin email</span>}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: inv.used ? '#00E5A0' : COLORS.textSecondary,
+                          }}
+                        >
+                          {inv.used ? '✅ Usada' : 'Pendiente'}
+                        </span>
+                        {!inv.used && (
+                          <>
+                            <code
+                              style={{
+                                fontSize: 11,
+                                color: COLORS.accent,
+                                background: '#0A0F1E',
+                                padding: '3px 8px',
+                                borderRadius: 4,
+                                maxWidth: 220,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {link}
+                            </code>
+                            <button
+                              onClick={() => copiarLink(inv)}
+                              style={{
+                                background: 'transparent',
+                                color: copiados[inv.id] ? '#00E5A0' : COLORS.textSecondary,
+                                border: `1px solid ${COLORS.cardBorder}`,
+                                borderRadius: 6,
+                                padding: '4px 10px',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                fontFamily: "'Inter', sans-serif",
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {copiados[inv.id] ? '✓ Copiado' : '📋 Copiar'}
+                            </button>
+                            <button
+                              onClick={() => eliminarInvitacion(inv.id)}
+                              style={{
+                                background: 'transparent',
+                                color: COLORS.error,
+                                border: `1px solid ${COLORS.cardBorder}`,
+                                borderRadius: 6,
+                                padding: '4px 8px',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                fontFamily: "'Inter', sans-serif",
+                              }}
+                            >
+                              🗑
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
