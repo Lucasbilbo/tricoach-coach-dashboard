@@ -247,7 +247,7 @@ exports.handler = async (event) => {
       category: 'WORKOUT',
       start_date_local: session.fecha + 'T00:00:00',
       type: tipoIntervals,
-      name: session.descripcion || 'Entrenamiento',
+      name: session.workout_steps?.nombre || session.descripcion?.substring(0, 60) || 'Entrenamiento',
       description,
       indoor: isSwim && !isOpen,
     }

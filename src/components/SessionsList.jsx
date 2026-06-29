@@ -216,11 +216,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                     {tituloSesion(sesion)}
                   </p>
 
-                  {sesion.notas && (
-                    <p style={{ margin: '6px 0 0', fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' }}>
-                      {sesion.notas}
-                    </p>
-                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
