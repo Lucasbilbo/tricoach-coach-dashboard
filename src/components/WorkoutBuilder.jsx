@@ -58,13 +58,18 @@ function initForm(sesion) {
   if (!sesion) {
     return { fecha: '', disciplina: 'swim', nombre: '', material: [], bloques: [], notas: '' }
   }
+  const ws = sesion.workout_steps
+  // Compat: workout_steps puede ser el array plano (formato antiguo) o {bloques, material, notas}
+  const bloques = Array.isArray(ws) ? ws : (ws?.bloques || [])
+  const material = ws?.material || sesion.material || []
+  const notas = ws?.notas ?? sesion.notas ?? ''
   return {
     fecha: sesion.fecha || '',
     disciplina: sesion.disciplina || 'swim',
     nombre: sesion.descripcion || '',
-    material: sesion.material || [],
-    bloques: sesion.workout_steps || [],
-    notas: sesion.notas || '',
+    material,
+    bloques,
+    notas,
   }
 }
 
@@ -438,9 +443,13 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       fecha: form.fecha,
       disciplina: form.disciplina,
       descripcion: form.nombre,
+      // Columnas legacy mantenidas para compatibilidad con SessionsList
       notas: form.notas || null,
-      workout_steps: form.bloques.length > 0 ? form.bloques : null,
       material: form.disciplina === 'swim' && form.material.length > 0 ? form.material : null,
+      // workout_steps en formato objeto {bloques, material, notas}
+      workout_steps: form.bloques.length > 0
+        ? { bloques: form.bloques, material: form.material, notas: form.notas || '' }
+        : null,
     }
   }
 
@@ -524,7 +533,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     }
   }
 
-  const preview = buildIntervalsText(form)
+  const preview = buildIntervalsText({
+    disciplina: form.disciplina,
+    workout_steps: { bloques: form.bloques, material: form.material, notas: form.notas },
+  })
 
   // ── Render ──────────────────────────────────────────────────────────────
 

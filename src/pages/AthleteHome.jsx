@@ -73,9 +73,9 @@ function formatDuracion(duracionMin) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-function resumeRepeat(workout_steps) {
-  if (!Array.isArray(workout_steps)) return null
-  const repeat = workout_steps.find((b) => b.tipo === 'repeat')
+function resumeRepeat(bloques) {
+  if (!Array.isArray(bloques)) return null
+  const repeat = bloques.find((b) => b.tipo === 'repeat')
   if (!repeat) return null
   const paso = repeat.pasos?.[0]
   if (!paso) return `${repeat.repeticiones}x`
@@ -449,13 +449,8 @@ export default function AthleteHome() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {proximas.map((sesion) => {
-                    const resumen = resumeRepeat(sesion.workout_steps)
-                    const detalle = buildIntervalsText({
-                      disciplina: sesion.disciplina,
-                      material: sesion.material || [],
-                      bloques: sesion.workout_steps || [],
-                      notas: sesion.notas,
-                    })
+                    const resumen = resumeRepeat(sesion.workout_steps?.bloques)
+                    const detalle = buildIntervalsText(sesion)
 
                     return (
                       <div key={sesion.id} style={cardStyle}>
@@ -538,7 +533,7 @@ export default function AthleteHome() {
                             )}
                           </div>
 
-                          {sesion.workout_steps && (
+                          {sesion.workout_steps?.bloques?.length > 0 && (
                             <button
                               onClick={() => toggleDetalle(sesion.id)}
                               style={{
@@ -645,7 +640,7 @@ export default function AthleteHome() {
                             {sesion.enviado_a_garmin ? '✅' : '⏳'}
                           </td>
                           <td style={tdStyle}>
-                            {sesion.workout_steps ? (
+                            {sesion.workout_steps?.bloques?.length > 0 ? (
                               <button
                                 onClick={() =>
                                   setExpandidas((prev) => ({
@@ -673,7 +668,7 @@ export default function AthleteHome() {
                         </tr>
                       ))}
                       {pasadas.map((sesion) =>
-                        expandidas[sesion.id] && sesion.workout_steps ? (
+                        expandidas[sesion.id] && sesion.workout_steps?.bloques?.length > 0 ? (
                           <tr key={`detalle-${sesion.id}`}>
                             <td
                               colSpan={5}
@@ -693,12 +688,7 @@ export default function AthleteHome() {
                                   margin: 0,
                                 }}
                               >
-                                {buildIntervalsText({
-                                  disciplina: sesion.disciplina,
-                                  material: sesion.material || [],
-                                  bloques: sesion.workout_steps || [],
-                                  notas: sesion.notas,
-                                })}
+                                {buildIntervalsText(sesion)}
                               </pre>
                             </td>
                           </tr>

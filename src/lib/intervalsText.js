@@ -1,5 +1,9 @@
 // Generador de texto en sintaxis Intervals.icu.
-// Compartido por WorkoutBuilder (preview) y AthleteHome (detalle sesión).
+// Recibe un objeto session (o form adaptado) con:
+//   session.disciplina
+//   session.workout_steps.bloques  → array de bloques
+//   session.workout_steps.material → array de material (natación)
+//   session.workout_steps.notas    → string de notas
 
 function formatCantidad(cantidad, unidad) {
   if (!cantidad) return ''
@@ -34,8 +38,13 @@ function formatObjetivo(tipo, valor, disciplina) {
   return ''
 }
 
-export function buildIntervalsText(form) {
-  const { disciplina, material, bloques, notas } = form
+export function buildIntervalsText(session) {
+  const ws = session.workout_steps || {}
+  const bloques = ws.bloques || []
+  const material = ws.material || []
+  const notas = ws.notas || ''
+  const disciplina = session.disciplina
+
   const lineas = []
 
   if (Array.isArray(material) && material.length > 0) {
@@ -43,7 +52,7 @@ export function buildIntervalsText(form) {
     lineas.push('')
   }
 
-  for (const bloque of bloques || []) {
+  for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
       const cant = formatCantidad(bloque.cantidad, bloque.unidad)
       const obj = formatObjetivo(bloque.objetivo_tipo, bloque.objetivo_valor, disciplina)
