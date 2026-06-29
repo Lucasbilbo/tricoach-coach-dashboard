@@ -174,7 +174,7 @@ export default function AthleteHome() {
       const [perfilRes, coachAtletaRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('nombre, intervals_api_key, intervals_athlete_id')
+          .select('nombre, intervals_api_key, intervals_athlete_id, strava_token')
           .eq('id', uid)
           .maybeSingle(),
         supabase
@@ -362,6 +362,7 @@ export default function AthleteHome() {
   ]
 
   const intervalsOk = !!(perfil?.intervals_api_key && perfil?.intervals_athlete_id)
+  const stravaOk = !!perfil?.strava_token
 
   return (
     <div style={pageStyle}>
@@ -729,61 +730,123 @@ export default function AthleteHome() {
               )}
             </section>
 
-            {/* Configuración Intervals — siempre al fondo, siempre opcional */}
+            {/* Configuración Strava + Intervals — siempre al fondo */}
             <section style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${COLORS.cardBorder}` }}>
-              <div
-                style={{
-                  ...cardStyle,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                }}
-              >
-                {intervalsOk ? (
-                  <>
-                    <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                      ✅ Intervals.icu conectado ·{' '}
-                      <span style={{ color: COLORS.accent }}>{perfil.intervals_athlete_id}</span>
-                    </p>
-                    <Link
-                      to="/setup/intervals"
-                      style={{
-                        color: COLORS.textSecondary,
-                        fontSize: 12,
-                        textDecoration: 'none',
-                        border: `1px solid ${COLORS.cardBorder}`,
-                        borderRadius: 6,
-                        padding: '4px 10px',
-                        fontFamily: "'Inter', sans-serif",
-                      }}
-                    >
-                      Reconfigurar →
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                      ⚡ Conecta Intervals.icu para recibir entrenamientos en tu Garmin
-                    </p>
-                    <Link
-                      to="/setup/intervals"
-                      style={{
-                        color: COLORS.accent,
-                        fontSize: 12,
-                        textDecoration: 'none',
-                        border: `1px solid ${COLORS.accent}`,
-                        borderRadius: 6,
-                        padding: '4px 10px',
-                        fontFamily: "'Inter', sans-serif",
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Configurar (opcional) →
-                    </Link>
-                  </>
-                )}
+              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {/* Strava */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  {stravaOk ? (
+                    <>
+                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+                        ✅ Strava conectado
+                      </p>
+                      <Link
+                        to="/setup/intervals"
+                        style={{
+                          color: COLORS.textSecondary,
+                          fontSize: 12,
+                          textDecoration: 'none',
+                          border: `1px solid ${COLORS.cardBorder}`,
+                          borderRadius: 6,
+                          padding: '4px 10px',
+                          fontFamily: "'Inter', sans-serif",
+                        }}
+                      >
+                        Reconfigurar →
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+                        ❌ Strava no conectado
+                      </p>
+                      <button
+                        onClick={() => userId && (window.location.href = `/.netlify/functions/strava-auth?action=redirect&userId=${userId}`)}
+                        disabled={!userId}
+                        style={{
+                          background: '#FC4C02',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontFamily: "'Inter', sans-serif",
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Conectar →
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Divisor */}
+                <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, margin: '12px 0' }} />
+
+                {/* Intervals */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  {intervalsOk ? (
+                    <>
+                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+                        ✅ Intervals.icu conectado ·{' '}
+                        <span style={{ color: COLORS.accent }}>{perfil.intervals_athlete_id}</span>
+                      </p>
+                      <Link
+                        to="/setup/intervals"
+                        style={{
+                          color: COLORS.textSecondary,
+                          fontSize: 12,
+                          textDecoration: 'none',
+                          border: `1px solid ${COLORS.cardBorder}`,
+                          borderRadius: 6,
+                          padding: '4px 10px',
+                          fontFamily: "'Inter', sans-serif",
+                        }}
+                      >
+                        Reconfigurar →
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+                        ⚡ Conecta Intervals.icu para recibir entrenamientos en tu Garmin
+                      </p>
+                      <Link
+                        to="/setup/intervals"
+                        style={{
+                          color: COLORS.accent,
+                          fontSize: 12,
+                          textDecoration: 'none',
+                          border: `1px solid ${COLORS.accent}`,
+                          borderRadius: 6,
+                          padding: '4px 10px',
+                          fontFamily: "'Inter', sans-serif",
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Configurar (opcional) →
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             </section>
           </>
