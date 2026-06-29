@@ -190,89 +190,104 @@ function intervalsPost(athleteId, apiKey, body) {
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
-  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' }
+  try {
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
+    if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' }
 
-  const secret = event.headers['x-coach-secret']
-  if (!FUNCTION_SECRET || secret !== FUNCTION_SECRET) {
-    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
-  }
-
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Supabase no configurado' }) }
-  }
-
-  let parsed
-  try { parsed = JSON.parse(event.body || '{}') }
-  catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'JSON inválido' }) } }
-
-  const { sessionId, coachId, athleteId } = parsed
-  if (!sessionId || !coachId || !athleteId) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'sessionId, coachId y athleteId son requeridos' }) }
-  }
-  if (!UUID_REGEX.test(sessionId) || !UUID_REGEX.test(coachId) || !UUID_REGEX.test(athleteId)) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'IDs inválidos' }) }
-  }
-
-  // Verificar relación coach-atleta
-  const relacion = await supabaseGet(
-    `coach_athletes?coach_id=eq.${coachId}&athlete_id=eq.${athleteId}&select=id`
-  )
-  if (!Array.isArray(relacion) || relacion.length === 0) {
-    return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'No autorizado para este atleta' }) }
-  }
-
-  // Leer perfil del atleta
-  const perfiles = await supabaseGet(
-    `profiles?id=eq.${athleteId}&select=intervals_api_key,intervals_athlete_id`
-  )
-  if (!Array.isArray(perfiles) || perfiles.length === 0) {
-    return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Atleta no encontrado' }) }
-  }
-  const { intervals_api_key, intervals_athlete_id } = perfiles[0]
-  if (!intervals_api_key || !intervals_athlete_id) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'El atleta no tiene Intervals.icu configurado' }) }
-  }
-
-  // Leer sesión completa
-  const sesiones = await supabaseGet(
-    `coach_sessions?id=eq.${sessionId}&coach_id=eq.${coachId}&select=*`
-  )
-  if (!Array.isArray(sesiones) || sesiones.length === 0) {
-    return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Sesión no encontrada' }) }
-  }
-  const session = sesiones[0]
-
-  const tipoIntervals = DISCIPLINE_TYPE[session.disciplina] || 'Workout'
-  const description = buildIntervalsDescription(session)
-
-  const result = await intervalsPost(intervals_athlete_id, intervals_api_key, {
-    category: 'WORKOUT',
-    start_date_local: session.fecha,
-    type: tipoIntervals,
-    name: session.descripcion || 'Entrenamiento',
-    description,
-  })
-
-  if (result.status < 200 || result.status >= 300) {
-    return {
-      statusCode: 502,
-      headers: CORS,
-      body: JSON.stringify({ error: 'Error enviando a Intervals.icu', details: result.body }),
+    const secret = event.headers['x-coach-secret']
+    if (!FUNCTION_SECRET || secret !== FUNCTION_SECRET) {
+      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
     }
-  }
 
-  const intervals_event_id = result.body?.id ? String(result.body.id) : null
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Supabase no configurado' }) }
+    }
 
-  await supabasePatch(`coach_sessions?id=eq.${sessionId}`, {
-    intervals_event_id,
-    enviado_a_garmin: true,
-    garmin_enviado_at: new Date().toISOString(),
-  })
+    let parsed
+    try { parsed = JSON.parse(event.body || '{}') }
+    catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'JSON inválido' }) } }
 
-  return {
-    statusCode: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ok: true, intervals_event_id }),
+    const { sessionId, coachId, athleteId } = parsed
+    if (!sessionId || !coachId || !athleteId) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'sessionId, coachId y athleteId son requeridos' }) }
+    }
+    if (!UUID_REGEX.test(sessionId) || !UUID_REGEX.test(coachId) || !UUID_REGEX.test(athleteId)) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'IDs inválidos' }) }
+    }
+
+    // Verificar relación coach-atleta
+    const relacion = await supabaseGet(
+      `coach_athletes?coach_id=eq.${coachId}&athlete_id=eq.${athleteId}&select=id`
+    )
+    if (!Array.isArray(relacion) || relacion.length === 0) {
+      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'No autorizado para este atleta' }) }
+    }
+
+    // Leer perfil del atleta
+    const perfiles = await supabaseGet(
+      `profiles?id=eq.${athleteId}&select=intervals_api_key,intervals_athlete_id`
+    )
+    if (!Array.isArray(perfiles) || perfiles.length === 0) {
+      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Atleta no encontrado' }) }
+    }
+    const { intervals_api_key, intervals_athlete_id } = perfiles[0]
+    if (!intervals_api_key || !intervals_athlete_id) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'El atleta no tiene Intervals.icu configurado' }) }
+    }
+
+    // Leer sesión completa
+    const sesiones = await supabaseGet(
+      `coach_sessions?id=eq.${sessionId}&coach_id=eq.${coachId}&select=*`
+    )
+    if (!Array.isArray(sesiones) || sesiones.length === 0) {
+      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Sesión no encontrada' }) }
+    }
+    const session = sesiones[0]
+
+    console.log('session.workout_steps:', JSON.stringify(session.workout_steps))
+
+    const tipoIntervals = DISCIPLINE_TYPE[session.disciplina] || 'Workout'
+    const description = buildIntervalsDescription(session)
+
+    console.log('description:', description)
+
+    const result = await intervalsPost(intervals_athlete_id, intervals_api_key, {
+      category: 'WORKOUT',
+      start_date_local: session.fecha,
+      type: tipoIntervals,
+      name: session.descripcion || 'Entrenamiento',
+      description,
+    })
+
+    console.log('intervals result:', result.status, JSON.stringify(result.body))
+
+    if (result.status < 200 || result.status >= 300) {
+      return {
+        statusCode: 502,
+        headers: CORS,
+        body: JSON.stringify({ error: 'Error enviando a Intervals.icu', details: result.body }),
+      }
+    }
+
+    const intervals_event_id = result.body?.id ? String(result.body.id) : null
+
+    await supabasePatch(`coach_sessions?id=eq.${sessionId}`, {
+      intervals_event_id,
+      enviado_a_garmin: true,
+      garmin_enviado_at: new Date().toISOString(),
+    })
+
+    return {
+      statusCode: 200,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ok: true, intervals_event_id }),
+    }
+  } catch (err) {
+    console.error('ERROR GLOBAL send-to-intervals:', err)
+    return {
+      statusCode: 500,
+      headers: CORS,
+      body: JSON.stringify({ error: err.message, stack: err.stack }),
+    }
   }
 }
