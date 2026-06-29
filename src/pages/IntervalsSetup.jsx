@@ -67,6 +67,27 @@ const btnSecondary = {
   marginTop: 8,
 }
 
+const btnOmitirStyle = {
+  background: 'none',
+  border: 'none',
+  color: '#64748B',
+  fontSize: 13,
+  cursor: 'pointer',
+  fontFamily: "'Inter', sans-serif",
+  marginTop: 20,
+  width: '100%',
+  textAlign: 'center',
+  padding: 0,
+}
+
+function BtnOmitir({ navigate }) {
+  return (
+    <button onClick={() => navigate('/home')} style={btnOmitirStyle}>
+      Omitir y ver mis entrenamientos →
+    </button>
+  )
+}
+
 function ProgressDots({ paso }) {
   return (
     <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
@@ -262,8 +283,9 @@ export default function IntervalsSetup() {
             )}
 
             <button onClick={() => setPaso(2)} style={btnSecondary}>
-              {stravaConectado ? 'Siguiente →' : 'Omitir por ahora →'}
+              {stravaConectado ? 'Siguiente →' : 'Omitir Strava → Siguiente'}
             </button>
+            <BtnOmitir navigate={navigate} />
           </div>
         )}
 
@@ -304,6 +326,7 @@ export default function IntervalsSetup() {
             <button onClick={() => setPaso(1)} style={{ ...btnSecondary, marginTop: 4, fontSize: 12 }}>
               ← Volver
             </button>
+            <BtnOmitir navigate={navigate} />
           </div>
         )}
 
@@ -354,6 +377,7 @@ export default function IntervalsSetup() {
             <button onClick={() => setPaso(2)} style={btnSecondary}>
               ← Volver
             </button>
+            <BtnOmitir navigate={navigate} />
           </div>
         )}
 
@@ -398,6 +422,7 @@ export default function IntervalsSetup() {
             <button onClick={() => setPaso(5)} style={btnPrimary}>
               ✅ Ya he conectado mi Garmin → Siguiente
             </button>
+            <BtnOmitir navigate={navigate} />
           </div>
         )}
 
