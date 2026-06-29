@@ -14,6 +14,14 @@ const BADGE_COLORS = {
   other: '#94A3B8',
 }
 
+const DISC_LABELS = {
+  run: 'Running',
+  swim: 'Natación',
+  bike: 'Ciclismo',
+  strength: 'Fuerza',
+  other: 'Otro',
+}
+
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
 function formatFechaSesion(fecha) {
@@ -197,7 +205,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                         fontWeight: 600,
                       }}
                     >
-                      {DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina}
+                      {DISC_LABELS[sesion.disciplina] || sesion.disciplina}
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: estado.color }}>
                       {estado.texto}
