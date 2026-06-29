@@ -84,7 +84,7 @@ function defaultUnidad(disciplina) {
 
 function initForm(sesion) {
   if (!sesion) {
-    return { fecha: '', disciplina: 'swim', nombre: '', bloques: [], notas: '' }
+    return { fecha: '', disciplina: 'swim', piscina: '25', nombre: '', bloques: [], notas: '' }
   }
   const ws = sesion.workout_steps
   const bloques = Array.isArray(ws) ? ws : (ws?.bloques || [])
@@ -92,6 +92,7 @@ function initForm(sesion) {
   return {
     fecha: sesion.fecha || '',
     disciplina: sesion.disciplina || 'swim',
+    piscina: ws?.piscina || '25',
     nombre: sesion.descripcion || '',
     bloques,
     notas,
@@ -603,7 +604,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       descripcion: form.nombre,
       notas: form.notas || null,
       workout_steps: form.bloques.length > 0
-        ? { bloques: form.bloques, notas: form.notas || '' }
+        ? { bloques: form.bloques, notas: form.notas || '', ...(form.disciplina === 'swim' ? { piscina: form.piscina } : {}) }
         : null,
     }
   }
@@ -784,6 +785,34 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               ))}
             </div>
           </div>
+
+          {/* Piscina — solo natación */}
+          {form.disciplina === 'swim' && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={sectionLabel}>Piscina</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[{ value: '25', label: '25m' }, { value: '50', label: '50m' }, { value: 'open', label: 'Aguas abiertas' }].map((p) => (
+                  <button
+                    key={p.value}
+                    onClick={() => setForm((prev) => ({ ...prev, piscina: p.value }))}
+                    style={{
+                      background: form.piscina === p.value ? COLORS.accent : 'transparent',
+                      color: form.piscina === p.value ? '#0A0F1E' : COLORS.textSecondary,
+                      border: `1px solid ${form.piscina === p.value ? COLORS.accent : COLORS.cardBorder}`,
+                      borderRadius: 6,
+                      padding: '5px 14px',
+                      fontSize: 13,
+                      fontWeight: form.piscina === p.value ? 700 : 400,
+                      cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Fecha — chips de próximos 14 días */}
           <div style={{ marginBottom: 14 }}>

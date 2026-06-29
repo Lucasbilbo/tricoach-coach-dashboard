@@ -237,17 +237,26 @@ exports.handler = async (event) => {
 
     const tipoIntervals = DISCIPLINE_TYPE[session.disciplina] || 'Workout'
     const description = buildIntervalsDescription(session)
+    const piscina = session.workout_steps?.piscina || '25'
+    const isSwim = session.disciplina === 'swim'
+    const isOpen = piscina === 'open'
 
     console.log('DESCRIPTION COMPLETO:\n' + description)
 
-    const result = await intervalsPost(intervals_athlete_id, intervals_api_key, {
+    const eventBody = {
       category: 'WORKOUT',
       start_date_local: session.fecha + 'T00:00:00',
       type: tipoIntervals,
       name: session.descripcion || 'Entrenamiento',
       description,
-      indoor: false,
-    })
+      indoor: isSwim && !isOpen,
+    }
+    if (isSwim && !isOpen) {
+      eventBody.pool_length = piscina === '50' ? 50 : 25
+      eventBody.pool_length_unit = 'Meters'
+    }
+
+    const result = await intervalsPost(intervals_athlete_id, intervals_api_key, eventBody)
 
     console.log('intervals result:', result.status, JSON.stringify(result.body))
 
