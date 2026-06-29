@@ -91,6 +91,7 @@ function defaultZona(disciplina) {
 }
 
 const normalizarZona = (v) => v && v.includes('-') ? v.split('-')[0] : v
+const nombreStr = (nombre) => nombre ? ` @${nombre}` : ''
 
 function objetivoStr(step, disciplina) {
   const tipo = step.objetivo_tipo
@@ -133,11 +134,11 @@ function buildIntervalsDescription(session) {
       partes.push('Cooldown ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
     } else if (bloque.tipo === 'step') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(bloque.nombre))
     } else if (bloque.tipo === 'repeat') {
       const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
       for (const paso of (bloque.pasos || [])) {
-        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina))
+        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina) + nombreStr(paso.nombre))
       }
       partes.push(lines.join('\n'))
     }
