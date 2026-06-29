@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
 import { MESES_CORTOS } from '../lib/chartUtils'
 import WorkoutBuilder from './WorkoutBuilder'
+import WorkoutDetail from './WorkoutDetail'
+import ActivityDetail from './ActivityDetail'
 
 const BADGE_COLORS = {
   swim: '#00D4FF',
@@ -14,7 +16,6 @@ const BADGE_COLORS = {
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-// 'YYYY-MM-DD' → 'Lun 8 Jun'
 function formatFechaSesion(fecha) {
   if (!fecha) return ''
   const [y, m, d] = fecha.split('-').map(Number)
@@ -22,7 +23,6 @@ function formatFechaSesion(fecha) {
   return `${DIAS_CORTOS[date.getUTCDay()]} ${d} ${MESES_CORTOS[m - 1]}`
 }
 
-// Hoy en Europe/Madrid como YYYY-MM-DD
 function hoyMadrid() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
@@ -32,13 +32,19 @@ function hoyMadrid() {
   }).format(new Date())
 }
 
+// Devuelve { completada, actividadStrava } — busca por fecha Y disciplina
 function estadoSesion(sesion, actividades) {
-  const completada = (actividades || []).some(
-    (act) => act.fecha === sesion.fecha && act.disciplina === sesion.disciplina
+  const act = (actividades || []).find(
+    (a) => a.fecha === sesion.fecha && a.disciplina === sesion.disciplina
   )
-  if (completada) return { texto: '✓ Completada', color: '#00E5A0' }
-  if (sesion.fecha > hoyMadrid()) return { texto: 'Programada', color: COLORS.accent }
-  return { texto: 'Pendiente', color: COLORS.textSecondary }
+  if (act) return { texto: '✓ Completada', color: '#00E5A0', actividadStrava: act }
+  if (sesion.fecha > hoyMadrid()) return { texto: 'Programada', color: COLORS.accent, actividadStrava: null }
+  return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
+}
+
+function tituloSesion(sesion) {
+  const desc = sesion.descripcion || ''
+  return desc.length > 50 ? desc.slice(0, 50) + '…' : desc
 }
 
 const accionBtnStyle = {
@@ -58,6 +64,8 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   const [error, setError] = useState('')
   const [sesionEditando, setSesionEditando] = useState(null)
   const [reenviando, setReenviando] = useState(null)
+  const [expandidas, setExpandidas] = useState({})
+  const [actividadDetalle, setActividadDetalle] = useState(null)
 
   const cargarSesiones = useCallback(async () => {
     try {
@@ -82,8 +90,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   }, [coachId, athleteId])
 
   useEffect(() => {
-    // El setState ocurre tras await dentro de cargarSesiones, no de forma síncrona
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarSesiones()
   }, [cargarSesiones])
 
@@ -152,6 +158,10 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sesiones.map((sesion) => {
           const estado = estadoSesion(sesion, actividades)
+          const completada = !!estado.actividadStrava
+          const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
+          const expandida = !!expandidas[sesion.id]
+
           return (
             <div key={sesion.id} style={cardStyle}>
               <div
@@ -180,57 +190,51 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                     >
                       {DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina}
                     </span>
-                    {sesion.duracion_min != null && (
-                      <span style={{ fontSize: 12, color: COLORS.textSecondary }}>
-                        {sesion.duracion_min} min
-                      </span>
-                    )}
-                    {sesion.intensidad && (
-                      <span
-                        style={{
-                          background: 'rgba(255,255,255,0.08)',
-                          color: COLORS.textSecondary,
-                          borderRadius: 4,
-                          padding: '2px 6px',
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {sesion.intensidad}
-                      </span>
-                    )}
                     <span style={{ fontSize: 12, fontWeight: 600, color: estado.color }}>
                       {estado.texto}
                     </span>
                   </div>
 
                   <p style={{ margin: '8px 0 0', fontSize: 14, color: COLORS.textPrimary }}>
-                    {sesion.descripcion}
+                    {tituloSesion(sesion)}
                   </p>
 
                   {sesion.notas && (
-                    <p
-                      style={{
-                        margin: '6px 0 0',
-                        fontSize: 13,
-                        color: COLORS.textSecondary,
-                        fontStyle: 'italic',
-                      }}
-                    >
+                    <p style={{ margin: '6px 0 0', fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' }}>
                       {sesion.notas}
                     </p>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {/* Garmin status */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* Ver actividad Strava si completada */}
+                  {completada && (
+                    <button
+                      onClick={() => setActividadDetalle(estado.actividadStrava)}
+                      style={{ ...accionBtnStyle, color: '#00E5A0', borderColor: '#00E5A0' }}
+                    >
+                      Ver actividad →
+                    </button>
+                  )}
+
+                  {/* Ver workout prescrito */}
+                  {tieneWorkout && (
+                    <button
+                      onClick={() => setExpandidas((prev) => ({ ...prev, [sesion.id]: !prev[sesion.id] }))}
+                      style={accionBtnStyle}
+                    >
+                      {expandida ? 'Cerrar' : 'Workout'}
+                    </button>
+                  )}
+
+                  {/* Garmin */}
                   <span
                     title={sesion.enviado_a_garmin ? 'Enviado a Garmin' : 'No enviado a Garmin'}
                     style={{ fontSize: 16 }}
                   >
                     {sesion.enviado_a_garmin ? '✅' : '⏳'}
                   </span>
-                  {!sesion.enviado_a_garmin && sesion.workout_steps && (
+                  {!sesion.enviado_a_garmin && tieneWorkout && (
                     <button
                       onClick={() => handleReenviarGarmin(sesion)}
                       disabled={reenviando === sesion.id}
@@ -250,6 +254,11 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                   </button>
                 </div>
               </div>
+
+              {/* Workout expandido */}
+              {expandida && tieneWorkout && (
+                <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+              )}
             </div>
           )
         })}
@@ -264,6 +273,14 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
           atletaNombre={atletaNombre}
           onClose={() => setSesionEditando(null)}
           onSaved={handleEditGuardado}
+        />
+      )}
+
+      {/* Modal ActivityDetail para sesiones completadas */}
+      {actividadDetalle && (
+        <ActivityDetail
+          actividad={actividadDetalle}
+          onClose={() => setActividadDetalle(null)}
         />
       )}
     </div>
