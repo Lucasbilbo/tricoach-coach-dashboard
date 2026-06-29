@@ -92,6 +92,7 @@ export default function Dashboard() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [coachId, setCoachId] = useState(null)
+  const [esTambienAtleta, setEsTambienAtleta] = useState(false)
   const [invitaciones, setInvitaciones] = useState([])
   const [emailInvite, setEmailInvite] = useState('')
   const [generando, setGenerando] = useState(false)
@@ -131,6 +132,14 @@ export default function Dashboard() {
         }
 
         setCoachId(userId)
+
+        // Verificar si este coach también aparece como atleta en coach_athletes
+        const { data: comoAtleta } = await supabase
+          .from('coach_athletes')
+          .select('coach_id')
+          .eq('athlete_id', userId)
+          .maybeSingle()
+        if (activo) setEsTambienAtleta(!!comoAtleta)
 
         const res = await fetch('/.netlify/functions/coach-dashboard-data', {
           method: 'POST',
@@ -234,17 +243,32 @@ export default function Dashboard() {
               Panel del entrenador · últimos 7 días
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              ...buttonStyle,
-              background: 'transparent',
-              color: COLORS.textSecondary,
-              border: `1px solid ${COLORS.cardBorder}`,
-            }}
-          >
-            Cerrar sesión
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {esTambienAtleta && (
+              <button
+                onClick={() => navigate('/home')}
+                style={{
+                  ...buttonStyle,
+                  background: 'transparent',
+                  color: COLORS.textSecondary,
+                  border: `1px solid ${COLORS.cardBorder}`,
+                }}
+              >
+                👤 Mis entrenamientos
+              </button>
+            )}
+            <button
+              onClick={handleLogout}
+              style={{
+                ...buttonStyle,
+                background: 'transparent',
+                color: COLORS.textSecondary,
+                border: `1px solid ${COLORS.cardBorder}`,
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </header>
 
         {cargando && (
