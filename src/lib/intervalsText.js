@@ -1,39 +1,26 @@
 // Generador de texto en sintaxis Intervals.icu.
-// Recibe un objeto session (o form adaptado) con:
-//   session.disciplina
-//   session.workout_steps.bloques  → array de bloques
-//   session.workout_steps.material → array de material (natación)
-//   session.workout_steps.notas    → string de notas
+// Cada bloque es un elemento de `partes`, unidos con \n\n para que
+// Intervals.icu los parsee como pasos independientes.
 
-function formatCantidad(cantidad, unidad) {
-  if (!cantidad) return ''
-  if (unidad === 'mtr') return `${cantidad}mtr`
-  if (unidad === 'km') return `${cantidad}km`
-  if (unidad === 'min') return `${cantidad}m`
-  if (unidad === 's') return `${cantidad}s`
-  if (unidad === 'h') {
-    const h = Math.floor(Number(cantidad))
-    const m = Math.round((Number(cantidad) - h) * 60)
-    return m > 0 ? `${h}h${m}m` : `${h}h`
-  }
-  return `${cantidad}`
+function unidadIntervals(unidad) {
+  if (unidad === 'min') return 'm'
+  return unidad || ''
 }
 
-function formatObjetivo(tipo, valor, disciplina) {
+function objetivoStr(step, disciplina) {
+  const tipo = step.objetivo_tipo
+  const valor = step.objetivo_valor
   if (!tipo || !valor) return ''
-  if (disciplina === 'swim') {
-    if (tipo === 'ritmo') return `${valor}/100m Pace`
-    if (tipo === 'fc') return `${valor}% HR`
+  if (tipo === 'zona') {
+    if (disciplina === 'swim') return ` ${valor} Pace`
+    if (disciplina === 'run') return ` ${valor} HR`
+    return ` ${valor}`
   }
-  if (disciplina === 'run') {
-    if (tipo === 'ritmo') return `${valor}/km Pace`
-    if (tipo === 'fc') return `${valor}% HR`
-    if (tipo === 'zona') return valor
-  }
-  if (disciplina === 'bike') {
-    if (tipo === 'potencia') return `${valor}%`
-    if (tipo === 'fc') return `${valor}% HR`
-    if (tipo === 'zona') return valor
+  if (tipo === 'fc') return ` ${valor}% HR`
+  if (tipo === 'potencia') return ` ${valor}%`
+  if (tipo === 'ritmo') {
+    if (disciplina === 'swim') return ` ${valor}/100m Pace`
+    if (disciplina === 'run') return ` ${valor}/km Pace`
   }
   return ''
 }
@@ -45,42 +32,31 @@ export function buildIntervalsText(session) {
   const notas = ws.notas || ''
   const disciplina = session.disciplina
 
-  const lineas = []
+  const partes = []
 
   if (Array.isArray(material) && material.length > 0) {
-    lineas.push(`Material: ${material.join(', ')}`)
-    lineas.push('')
+    partes.push('Material: ' + material.join(', '))
   }
 
   for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
-      const cant = formatCantidad(bloque.cantidad, bloque.unidad)
-      const obj = formatObjetivo(bloque.objetivo_tipo, bloque.objetivo_valor, disciplina)
-      lineas.push(`Warmup ${cant}${obj ? ' ' + obj : ''}`)
+      partes.push('Warmup ' + bloque.cantidad + unidadIntervals(bloque.unidad) + objetivoStr(bloque, disciplina))
     } else if (bloque.tipo === 'cooldown') {
-      const cant = formatCantidad(bloque.cantidad, bloque.unidad)
-      const obj = formatObjetivo(bloque.objetivo_tipo, bloque.objetivo_valor, disciplina)
-      lineas.push(`Cooldown ${cant}${obj ? ' ' + obj : ''}`)
+      partes.push('Cooldown ' + bloque.cantidad + unidadIntervals(bloque.unidad) + objetivoStr(bloque, disciplina))
     } else if (bloque.tipo === 'step') {
-      const cant = formatCantidad(bloque.cantidad, bloque.unidad)
-      const obj = formatObjetivo(bloque.objetivo_tipo, bloque.objetivo_valor, disciplina)
-      lineas.push(`- ${cant}${obj ? ' ' + obj : ''}`)
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + objetivoStr(bloque, disciplina))
     } else if (bloque.tipo === 'repeat') {
-      const nombre = bloque.nombre || 'Main Set'
-      lineas.push(`${nombre} ${bloque.repeticiones}x`)
-      for (const paso of bloque.pasos || []) {
-        const cant = formatCantidad(paso.cantidad, paso.unidad)
-        const obj = formatObjetivo(paso.objetivo_tipo, paso.objetivo_valor, disciplina)
-        lineas.push(`- ${cant}${obj ? ' ' + obj : ''}`)
+      const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
+      for (const paso of (bloque.pasos || [])) {
+        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina))
       }
+      partes.push(lines.join('\n'))
     }
   }
 
   if (notas) {
-    lineas.push('')
-    lineas.push('---')
-    lineas.push(notas)
+    partes.push('---\n' + notas)
   }
 
-  return lineas.join('\n')
+  return partes.join('\n\n')
 }
