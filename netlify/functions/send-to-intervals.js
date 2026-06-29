@@ -112,7 +112,12 @@ function formatObjetivo(tipo, valor, disciplina) {
 }
 
 function buildIntervalsDescription(session) {
-  const { disciplina, workout_steps, material, notas } = session
+  const { disciplina } = session
+  const ws = session.workout_steps || {}
+  // workout_steps es {bloques, material, notas}; columnas legacy como fallback
+  const bloques = ws.bloques || []
+  const material = ws.material || session.material || []
+  const notas = ws.notas || session.notas || ''
   const lineas = []
 
   if (Array.isArray(material) && material.length > 0) {
@@ -120,7 +125,7 @@ function buildIntervalsDescription(session) {
     lineas.push('')
   }
 
-  for (const bloque of workout_steps || []) {
+  for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
       const cant = formatCantidad(bloque.cantidad, bloque.unidad)
       const obj = formatObjetivo(bloque.objetivo_tipo, bloque.objetivo_valor, disciplina)
@@ -152,6 +157,7 @@ function buildIntervalsDescription(session) {
 
   return lineas.join('\n')
 }
+
 
 function intervalsPost(athleteId, apiKey, body) {
   const authHeader = 'Basic ' + Buffer.from('API_KEY:' + apiKey).toString('base64')
