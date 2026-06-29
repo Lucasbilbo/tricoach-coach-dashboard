@@ -8,19 +8,9 @@ import AthleteView from './components/AthleteView'
 import JoinPage from './pages/JoinPage'
 import IntervalsSetup from './pages/IntervalsSetup'
 
-function ProtectedRoute({ session, cargando, children }) {
-  if (cargando) {
-    return (
-      <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: COLORS.textSecondary }}>Cargando…</p>
-      </div>
-    )
-  }
-  if (!session) return <Navigate to="/" replace />
-  return children
-}
-
-export default function App() {
+// Solo protege /dashboard y /athlete/:id.
+// Gestiona su propio estado de auth — las rutas públicas no pasan por aquí.
+function ProtectedRoute({ children }) {
   const [session, setSession] = useState(null)
   const [cargando, setCargando] = useState(true)
 
@@ -40,29 +30,31 @@ export default function App() {
     return () => subscription.subscription.unsubscribe()
   }, [])
 
+  if (cargando) {
+    return (
+      <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: COLORS.textSecondary }}>Cargando…</p>
+      </div>
+    )
+  }
+  if (!session) return <Navigate to="/" replace />
+  return children
+}
+
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute session={session} cargando={cargando}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/athlete/:id"
-          element={
-            <ProtectedRoute session={session} cargando={cargando}>
-              <AthleteView />
-            </ProtectedRoute>
-          }
-        />
-        {/* Rutas públicas */}
+
+        {/* Rutas de coach — requieren sesión */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/athlete/:id" element={<ProtectedRoute><AthleteView /></ProtectedRoute>} />
+
+        {/* Rutas públicas — sin auth, sin checks de coaches */}
         <Route path="/join/:token" element={<JoinPage />} />
         <Route path="/setup/intervals" element={<IntervalsSetup />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
