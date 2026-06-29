@@ -238,7 +238,7 @@ exports.handler = async (event) => {
     const tipoIntervals = DISCIPLINE_TYPE[session.disciplina] || 'Workout'
     const description = buildIntervalsDescription(session)
 
-    console.log('description:', description)
+    console.log('DESCRIPTION COMPLETO:\n' + description)
 
     const result = await intervalsPost(intervals_athlete_id, intervals_api_key, {
       category: 'WORKOUT',
