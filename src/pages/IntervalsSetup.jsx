@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { COLORS } from '../lib/theme'
 
@@ -86,6 +87,7 @@ function ProgressDots({ paso }) {
 }
 
 export default function IntervalsSetup() {
+  const navigate = useNavigate()
   const [paso, setPaso] = useState(1)
   const [apiKey, setApiKey] = useState('')
   const [verificando, setVerificando] = useState(false)
@@ -288,7 +290,7 @@ export default function IntervalsSetup() {
               Los recibirás en la app Garmin Connect y en tu reloj antes de cada sesión.
             </p>
             <button
-              onClick={() => (window.location.href = '/')}
+              onClick={() => navigate('/home')}
               style={btnPrimary}
             >
               Volver al inicio

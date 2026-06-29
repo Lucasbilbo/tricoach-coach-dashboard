@@ -32,7 +32,7 @@ export default function Login() {
 
       const [{ data: coach }, { data: profile }] = await Promise.all([
         supabase.from('coaches').select('id').eq('id', data.user.id).maybeSingle(),
-        supabase.from('profiles').select('id').eq('id', data.user.id).maybeSingle(),
+        supabase.from('profiles').select('id, intervals_api_key').eq('id', data.user.id).maybeSingle(),
       ])
 
       if (coach) {
@@ -41,7 +41,7 @@ export default function Login() {
       }
 
       if (profile) {
-        navigate('/setup/intervals')
+        navigate(profile.intervals_api_key ? '/home' : '/setup/intervals')
         return
       }
 

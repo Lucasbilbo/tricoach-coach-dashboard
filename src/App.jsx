@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard'
 import AthleteView from './components/AthleteView'
 import JoinPage from './pages/JoinPage'
 import IntervalsSetup from './pages/IntervalsSetup'
+import AthleteHome from './pages/AthleteHome'
 
 // Solo protege /dashboard y /athlete/:id.
 // Gestiona su propio estado de auth — las rutas públicas no pasan por aquí.
@@ -50,6 +51,9 @@ export default function App() {
         {/* Rutas de coach — requieren sesión */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/athlete/:id" element={<ProtectedRoute><AthleteView /></ProtectedRoute>} />
+
+        {/* Rutas de atleta — requieren sesión */}
+        <Route path="/home" element={<ProtectedRoute><AthleteHome /></ProtectedRoute>} />
 
         {/* Rutas públicas — sin auth, sin checks de coaches */}
         <Route path="/join/:token" element={<JoinPage />} />
