@@ -83,6 +83,13 @@ function unidadIntervals(unidad) {
   return unidad || ''
 }
 
+function defaultZona(disciplina) {
+  if (disciplina === 'swim') return ' Z1 Pace'
+  if (disciplina === 'run') return ' Z1 HR'
+  if (disciplina === 'bike') return ' Z1'
+  return ''
+}
+
 function objetivoStr(step, disciplina) {
   const tipo = step.objetivo_tipo
   const valor = step.objetivo_valor
@@ -116,11 +123,14 @@ function buildIntervalsDescription(session) {
 
   for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
-      partes.push('Warmup ' + bloque.cantidad + unidadIntervals(bloque.unidad) + objetivoStr(bloque, disciplina))
+      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
+      partes.push('Warmup ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
     } else if (bloque.tipo === 'cooldown') {
-      partes.push('Cooldown ' + bloque.cantidad + unidadIntervals(bloque.unidad) + objetivoStr(bloque, disciplina))
+      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
+      partes.push('Cooldown ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
     } else if (bloque.tipo === 'step') {
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + objetivoStr(bloque, disciplina))
+      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
     } else if (bloque.tipo === 'repeat') {
       const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
       for (const paso of (bloque.pasos || [])) {
