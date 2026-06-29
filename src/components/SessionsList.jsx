@@ -32,7 +32,6 @@ function hoyMadrid() {
   }).format(new Date())
 }
 
-// Devuelve { completada, actividadStrava } — busca por fecha Y disciplina
 function estadoSesion(sesion, actividades) {
   const act = (actividades || []).find(
     (a) => a.fecha === sesion.fecha && a.disciplina === sesion.disciplina
@@ -43,8 +42,10 @@ function estadoSesion(sesion, actividades) {
 }
 
 function tituloSesion(sesion) {
+  const nombre = sesion.workout_steps?.nombre
+  if (nombre && nombre.trim()) return nombre.trim()
   const desc = sesion.descripcion || ''
-  return desc.length > 50 ? desc.slice(0, 50) + '…' : desc
+  return desc.length > 40 ? desc.slice(0, 40) + '…' : desc || '—'
 }
 
 const accionBtnStyle = {
@@ -58,13 +59,68 @@ const accionBtnStyle = {
   fontFamily: "'Inter', sans-serif",
 }
 
+function WorkoutModal({ sesion, onClose }) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          zIndex: 299,
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          top: '8%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 520,
+          maxWidth: '92vw',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          background: '#0F1729',
+          border: `1px solid ${COLORS.cardBorder}`,
+          borderRadius: 12,
+          padding: 24,
+          zIndex: 300,
+          fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <span style={{ fontSize: 13, color: COLORS.textSecondary }}>
+            {formatFechaSesion(sesion.fecha)} · {DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina}
+          </span>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: COLORS.textSecondary,
+              fontSize: 20,
+              cursor: 'pointer',
+              lineHeight: 1,
+              padding: '0 4px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+      </div>
+    </>
+  )
+}
+
 export default function SessionsList({ coachId, athleteId, actividades, atletaNombre, onNewSession }) {
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [sesionEditando, setSesionEditando] = useState(null)
   const [reenviando, setReenviando] = useState(null)
-  const [expandidas, setExpandidas] = useState({})
+  const [sesionWorkout, setSesionWorkout] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
 
   const cargarSesiones = useCallback(async () => {
@@ -160,7 +216,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
           const estado = estadoSesion(sesion, actividades)
           const completada = !!estado.actividadStrava
           const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
-          const expandida = !!expandidas[sesion.id]
 
           return (
             <div key={sesion.id} style={cardStyle}>
@@ -207,7 +262,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  {/* Ver actividad Strava si completada */}
                   {completada && (
                     <button
                       onClick={() => setActividadDetalle(estado.actividadStrava)}
@@ -217,17 +271,15 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                     </button>
                   )}
 
-                  {/* Ver workout prescrito */}
                   {tieneWorkout && (
                     <button
-                      onClick={() => setExpandidas((prev) => ({ ...prev, [sesion.id]: !prev[sesion.id] }))}
-                      style={accionBtnStyle}
+                      onClick={() => setSesionWorkout(sesion)}
+                      style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
                     >
-                      {expandida ? 'Cerrar' : 'Workout'}
+                      Workout
                     </button>
                   )}
 
-                  {/* Garmin */}
                   <span
                     title={sesion.enviado_a_garmin ? 'Enviado a Garmin' : 'No enviado a Garmin'}
                     style={{ fontSize: 16 }}
@@ -238,7 +290,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                     <button
                       onClick={() => handleReenviarGarmin(sesion)}
                       disabled={reenviando === sesion.id}
-                      style={{ ...accionBtnStyle, color: COLORS.accent, opacity: reenviando === sesion.id ? 0.5 : 1 }}
+                      style={{ ...accionBtnStyle, opacity: reenviando === sesion.id ? 0.5 : 1 }}
                     >
                       {reenviando === sesion.id ? '...' : 'Enviar'}
                     </button>
@@ -254,11 +306,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                   </button>
                 </div>
               </div>
-
-              {/* Workout expandido */}
-              {expandida && tieneWorkout && (
-                <WorkoutDetail sesion={sesion} mostrarNotas={true} />
-              )}
             </div>
           )
         })}
@@ -276,7 +323,13 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
         />
       )}
 
-      {/* Modal ActivityDetail para sesiones completadas */}
+      {sesionWorkout && (
+        <WorkoutModal
+          sesion={sesionWorkout}
+          onClose={() => setSesionWorkout(null)}
+        />
+      )}
+
       {actividadDetalle && (
         <ActivityDetail
           activityId={actividadDetalle.id}

@@ -341,17 +341,14 @@ export default function AthleteView() {
         </nav>
 
         {activeTab === 'sesiones' && coachId && (
-          <>
-            <IntervalsOnboarding athleteId={id} />
-            <SessionsList
-              key={sesionesVersion}
-              coachId={coachId}
-              athleteId={id}
-              atletaNombre={datos?.atleta?.nombre}
-              actividades={actividades}
-              onNewSession={() => setSesionesVersion((v) => v + 1)}
-            />
-          </>
+          <SessionsList
+            key={sesionesVersion}
+            coachId={coachId}
+            athleteId={id}
+            atletaNombre={datos?.atleta?.nombre}
+            actividades={actividades}
+            onNewSession={() => setSesionesVersion((v) => v + 1)}
+          />
         )}
 
         {activeTab === 'analisis' && cargando && (

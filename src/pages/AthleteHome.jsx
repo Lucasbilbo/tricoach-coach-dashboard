@@ -74,8 +74,10 @@ function formatDuracion(duracionMin) {
 }
 
 function tituloSesion(sesion) {
+  const nombre = sesion.workout_steps?.nombre
+  if (nombre && nombre.trim()) return nombre.trim()
   const desc = sesion.descripcion || ''
-  return desc.length > 50 ? desc.slice(0, 50) + '…' : desc || '—'
+  return desc.length > 40 ? desc.slice(0, 40) + '…' : desc || '—'
 }
 
 function resumeRepeat(bloques) {
@@ -105,6 +107,14 @@ const tdStyle = {
   color: COLORS.textPrimary,
   borderBottom: `1px solid ${COLORS.cardBorder}`,
   whiteSpace: 'nowrap',
+}
+
+const DISC_LABELS_HOME = {
+  run: 'Running',
+  bike: 'Ciclismo',
+  swim: 'Natación',
+  strength: 'Fuerza',
+  other: 'Otro',
 }
 
 const badgeDisciplina = (disciplina) => ({
@@ -504,7 +514,7 @@ export default function AthleteHome() {
                                 {formatFechaLarga(sesion.fecha)}
                               </span>
                               <span style={badgeDisciplina(sesion.disciplina)}>
-                                {DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina}
+                                {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
                               </span>
                               <span
                                 style={{
@@ -645,7 +655,7 @@ export default function AthleteHome() {
                           <td style={tdStyle}>{formatFechaLarga(sesion.fecha)}</td>
                           <td style={tdStyle}>
                             <span style={badgeDisciplina(sesion.disciplina)}>
-                              {DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina}
+                              {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
                             </span>
                           </td>
                           <td
