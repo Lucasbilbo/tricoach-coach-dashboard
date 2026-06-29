@@ -128,10 +128,10 @@ function buildIntervalsDescription(session) {
   for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('Warmup ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + ' @Calentamiento')
     } else if (bloque.tipo === 'cooldown') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('Cooldown ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj)
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + ' @Vuelta a la calma')
     } else if (bloque.tipo === 'step') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
       partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(bloque.nombre))
