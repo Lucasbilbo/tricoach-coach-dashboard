@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { authHeaders } from '../lib/authHeaders'
 import { COLORS, cardStyle, pageStyle, buttonStyle } from '../lib/theme'
 
 const TSS_VERDE = '#00E5A0'
@@ -141,13 +142,11 @@ export default function Dashboard() {
           .maybeSingle()
         if (activo) setEsTambienAtleta(!!comoAtleta)
 
+        // El coach se deriva del JWT en el backend: no se manda coachId
         const res = await fetch('/.netlify/functions/coach-dashboard-data', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-          },
-          body: JSON.stringify({ coachId: userId }),
+          headers: await authHeaders(),
+          body: JSON.stringify({}),
         })
 
         const json = await res.json()

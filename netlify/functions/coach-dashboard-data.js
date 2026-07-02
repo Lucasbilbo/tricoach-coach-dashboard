@@ -1,17 +1,20 @@
 // coach-dashboard-data.js — Netlify Function (CommonJS)
-// POST { coachId } + header x-coach-secret
+// POST + header Authorization: Bearer <jwt de Supabase>
+// El coach se deriva del JWT verificado (nunca del body). Solo coaches.
 // Devuelve métricas de los últimos 7 días por atleta del coach:
 // [{ athlete_id, nombre, km_semana, horas_semana, tss_semana, ultima_actividad_dias }]
 
 const https = require('https')
+const { verifyAuth } = require('./lib/auth')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, x-coach-secret',
+  // x-coach-secret se mantiene solo para que el preflight de bundles antiguos
+  // en caché no falle con error de CORS (recibirán 401, no un fallo opaco)
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-coach-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const FC_MAX_DEFAULT = 185
 const DIA_MS = 86400000
 const VENTANA_DIAS = 7
@@ -229,40 +232,21 @@ exports.handler = async (event) => {
   // 1. Validar env vars
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const COACH_SECRET = process.env.COACH_FUNCTION_SECRET
   const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID
   const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET
-  if (!SUPABASE_URL || !SERVICE_KEY || !COACH_SECRET || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
     return respuesta(500, { error: 'Server misconfigured' })
   }
   const supabaseHost = SUPABASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
-  // 2. Verificar secret
-  const secret = event.headers['x-coach-secret']
-  if (secret !== COACH_SECRET) return respuesta(401, { error: 'Unauthorized' })
-
-  // 3. Parse + validación de input
-  let parsed
-  try {
-    parsed = JSON.parse(event.body || '{}')
-  } catch {
-    return respuesta(400, { error: 'JSON inválido' })
-  }
-  const { coachId } = parsed
-  if (!UUID_REGEX.test(coachId || '')) {
-    return respuesta(400, { error: 'coachId debe ser un UUID válido' })
-  }
+  // 2. Verificar JWT y derivar el coach del token (nunca del body)
+  const auth = await verifyAuth(event)
+  if (!auth) return respuesta(401, { error: 'Unauthorized' })
+  if (!auth.isCoach) return respuesta(403, { error: 'Solo coaches' })
+  const coachId = auth.uid
 
   try {
-    // 4. Verificar que es coach y leer sus atletas
-    const coachRes = await withTimeout(
-      supabaseGet(supabaseHost, `/rest/v1/coaches?id=eq.${coachId}&select=id`, SERVICE_KEY),
-      5000
-    )
-    if (!Array.isArray(coachRes.json) || coachRes.json.length === 0) {
-      return respuesta(403, { error: 'No es un coach válido' })
-    }
-
+    // 3. Leer sus atletas
     const relRes = await withTimeout(
       supabaseGet(
         supabaseHost,
@@ -274,7 +258,7 @@ exports.handler = async (event) => {
     const atletaIds = Array.isArray(relRes.json) ? relRes.json.map((r) => r.athlete_id) : []
     if (atletaIds.length === 0) return respuesta(200, [])
 
-    // 5. Procesar atletas en paralelo (cada uno con su propio try/catch)
+    // 4. Procesar atletas en paralelo (cada uno con su propio try/catch)
     const env = { supabaseHost, SERVICE_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET }
     const resultados = await Promise.all(atletaIds.map((id) => procesarAtleta(id, env)))
 

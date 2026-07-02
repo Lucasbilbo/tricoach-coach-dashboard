@@ -34,10 +34,25 @@ Constantes centralizadas en `src/lib/theme.js` — no hardcodear colores en comp
 ## Variables de entorno
 
 Frontend (`.env`, prefijo VITE_):
-- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_COACH_SECRET`
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
 Backend (Netlify env):
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `COACH_FUNCTION_SECRET`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
+
+## Autenticación de las Netlify Functions (desde S2, julio 2026)
+
+- Las funciones que devuelven datos (`coach-dashboard-data`, `coach-athlete-data`,
+  `coach-activity-detail`, `send-to-intervals`) exigen `Authorization: Bearer <jwt>`
+  de la sesión de Supabase. Verificación en `netlify/functions/lib/auth.js`
+  (GET /auth/v1/user + whitelist en `coaches`).
+- La identidad NUNCA se lee del body: el coach sale del JWT; `athleteId` puede venir
+  del body porque se verifica contra `coach_athletes` (o `uid === athleteId` si es
+  el propio atleta). En `send-to-intervals`, coach y atleta se derivan de la sesión.
+- En el frontend, usar `authHeaders()` de `src/lib/authHeaders.js` en todos los fetch.
+- `VITE_COACH_SECRET`/`COACH_FUNCTION_SECRET` están OBSOLETOS: el código ya no los
+  usa. Siguen definidos en Netlify solo por si hiciera falta un rollback — se pueden
+  borrar cuando este cambio lleve unos días estable. NUNCA reintroducir un secreto
+  compartido con prefijo VITE_ como mecanismo de autenticación.
 
 ## Estructura
 

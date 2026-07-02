@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { authHeaders } from '../lib/authHeaders'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '../lib/theme'
 import PolylineMap from './PolylineMap'
 
@@ -64,7 +65,7 @@ const seccionTituloStyle = {
   fontWeight: 600,
 }
 
-export default function ActivityDetail({ activityId, athleteId, coachId, onClose }) {
+export default function ActivityDetail({ activityId, athleteId, onClose }) {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -74,13 +75,12 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
 
     async function cargarDetalle() {
       try {
+        // La identidad (coach o el propio atleta) va en el JWT; el backend
+        // verifica el acceso a athleteId contra coach_athletes
         const res = await fetch('/.netlify/functions/coach-activity-detail', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-          },
-          body: JSON.stringify({ activityId, athleteId, coachId }),
+          headers: await authHeaders(),
+          body: JSON.stringify({ activityId, athleteId }),
         })
         const json = await res.json()
         if (!activo) return
@@ -100,7 +100,7 @@ export default function ActivityDetail({ activityId, athleteId, coachId, onClose
     return () => {
       activo = false
     }
-  }, [activityId, athleteId, coachId])
+  }, [activityId, athleteId])
 
   const act = datos?.actividad
   const vueltas = datos?.vueltas || []

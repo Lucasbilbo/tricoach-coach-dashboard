@@ -1,16 +1,20 @@
 // send-to-intervals.js — Netlify Function (CommonJS)
 // Envía un workout estructurado de coach_sessions a Intervals.icu (→ Garmin)
-// POST { sessionId, coachId, athleteId } + header x-coach-secret
+// POST { sessionId } + header Authorization: Bearer <jwt de Supabase>
+// Autorización: el coach dueño de la sesión (session.coach_id) o el atleta
+// destinatario (session.athlete_id). coach/atleta se derivan de la sesión y
+// del JWT, nunca del body.
 
 const https = require('https')
+const { verifyAuth } = require('./lib/auth')
 
-const FUNCTION_SECRET = process.env.COACH_FUNCTION_SECRET
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, x-coach-secret',
+  // x-coach-secret solo para que el preflight de bundles antiguos no falle por CORS
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-coach-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -183,38 +187,40 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
     if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' }
 
-    const secret = event.headers['x-coach-secret']
-    if (!FUNCTION_SECRET || secret !== FUNCTION_SECRET) {
-      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
-    }
-
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Supabase no configurado' }) }
+    }
+
+    // Verificar JWT (la identidad nunca viene del body)
+    const auth = await verifyAuth(event)
+    if (!auth) {
+      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
     }
 
     let parsed
     try { parsed = JSON.parse(event.body || '{}') }
     catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'JSON inválido' }) } }
 
-    const { sessionId, coachId, athleteId } = parsed
-    if (!sessionId || !coachId || !athleteId) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'sessionId, coachId y athleteId son requeridos' }) }
-    }
-    if (!UUID_REGEX.test(sessionId) || !UUID_REGEX.test(coachId) || !UUID_REGEX.test(athleteId)) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'IDs inválidos' }) }
+    const { sessionId } = parsed
+    if (!sessionId || !UUID_REGEX.test(sessionId)) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'sessionId (UUID) es requerido' }) }
     }
 
-    // Verificar relación coach-atleta
-    const relacion = await supabaseGet(
-      `coach_athletes?coach_id=eq.${coachId}&athlete_id=eq.${athleteId}&select=id`
-    )
-    if (!Array.isArray(relacion) || relacion.length === 0) {
-      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'No autorizado para este atleta' }) }
+    // Leer sesión completa: coach y atleta se derivan de ella, no del body
+    const sesiones = await supabaseGet(`coach_sessions?id=eq.${sessionId}&select=*`)
+    if (!Array.isArray(sesiones) || sesiones.length === 0) {
+      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Sesión no encontrada' }) }
+    }
+    const session = sesiones[0]
+
+    // Autorización: el coach dueño de la sesión o el atleta destinatario
+    if (auth.uid !== session.coach_id && auth.uid !== session.athlete_id) {
+      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'No autorizado para esta sesión' }) }
     }
 
-    // Leer perfil del atleta
+    // Leer perfil del atleta destinatario
     const perfiles = await supabaseGet(
-      `profiles?id=eq.${athleteId}&select=intervals_api_key,intervals_athlete_id`
+      `profiles?id=eq.${session.athlete_id}&select=intervals_api_key,intervals_athlete_id`
     )
     if (!Array.isArray(perfiles) || perfiles.length === 0) {
       return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Atleta no encontrado' }) }
@@ -223,15 +229,6 @@ exports.handler = async (event) => {
     if (!intervals_api_key || !intervals_athlete_id) {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'El atleta no tiene Intervals.icu configurado' }) }
     }
-
-    // Leer sesión completa
-    const sesiones = await supabaseGet(
-      `coach_sessions?id=eq.${sessionId}&coach_id=eq.${coachId}&select=*`
-    )
-    if (!Array.isArray(sesiones) || sesiones.length === 0) {
-      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Sesión no encontrada' }) }
-    }
-    const session = sesiones[0]
 
     console.log('session.workout_steps:', JSON.stringify(session.workout_steps))
 

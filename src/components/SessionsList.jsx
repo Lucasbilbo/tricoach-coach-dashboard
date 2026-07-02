@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { authHeaders } from '../lib/authHeaders'
 import { COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
 import { MESES_CORTOS } from '../lib/chartUtils'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -137,13 +138,11 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   async function handleReenviarGarmin(sesion) {
     setReenviando(sesion.id)
     try {
+      // coach/atleta se derivan de la sesión y del JWT en el backend
       const res = await fetch('/.netlify/functions/send-to-intervals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-        },
-        body: JSON.stringify({ sessionId: sesion.id, coachId, athleteId }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ sessionId: sesion.id }),
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok) {
@@ -294,7 +293,6 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
         <ActivityDetail
           activityId={actividadDetalle.id}
           athleteId={athleteId}
-          coachId={coachId}
           onClose={() => setActividadDetalle(null)}
         />
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { authHeaders } from '../lib/authHeaders'
 import { COLORS, inputStyle } from '../lib/theme'
 import { buildIntervalsText } from '../lib/intervalsText'
 
@@ -660,13 +661,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     try {
       const sid = await saveToSupabase()
 
+      // coach/atleta se derivan de la sesión y del JWT en el backend
       const res = await fetch('/.netlify/functions/send-to-intervals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-        },
-        body: JSON.stringify({ sessionId: sid, coachId, athleteId }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ sessionId: sid }),
       })
 
       const json = await res.json().catch(() => ({}))

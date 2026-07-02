@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { authHeaders } from '../lib/authHeaders'
 import { decimalToRitmo, formatDiaMes, hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
 import {
   COLORS,
@@ -132,7 +133,6 @@ export default function AthleteHome() {
 
   // Auth / IDs
   const [userId, setUserId] = useState(null)
-  const [coachId, setCoachId] = useState(null)
 
   // Perfil
   const [perfil, setPerfil] = useState(null)
@@ -157,7 +157,7 @@ export default function AthleteHome() {
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
 
-  // ── Paso 1: cargar userId + perfil + coach_id ─────────────────────────
+  // ── Paso 1: cargar userId + perfil ────────────────────────────────────
   useEffect(() => {
     let activo = true
 
@@ -171,23 +171,14 @@ export default function AthleteHome() {
       if (!activo) return
       setUserId(uid)
 
-      const [perfilRes, coachAtletaRes] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('nombre, intervals_api_key, intervals_athlete_id, strava_token')
-          .eq('id', uid)
-          .maybeSingle(),
-        supabase
-          .from('coach_athletes')
-          .select('coach_id')
-          .eq('athlete_id', uid)
-          .maybeSingle(),
-      ])
+      const perfilRes = await supabase
+        .from('profiles')
+        .select('nombre, intervals_api_key, intervals_athlete_id, strava_token')
+        .eq('id', uid)
+        .maybeSingle()
 
       if (!activo) return
       setPerfil(perfilRes.data)
-      // Si no tiene coach asignado usamos el propio uid como coachId
-      setCoachId(coachAtletaRes.data?.coach_id ?? uid)
     }
 
     cargarPerfil()
@@ -232,7 +223,7 @@ export default function AthleteHome() {
 
   // ── Paso 3: cargar datos Strava ───────────────────────────────────────
   useEffect(() => {
-    if (!userId || !coachId || activeTab !== 'analisis') return
+    if (!userId || activeTab !== 'analisis') return
     if (datos && datos._weeks === weeks && datos._userId === userId) return
     let activo = true
 
@@ -240,13 +231,12 @@ export default function AthleteHome() {
       setCargandoStrava(true)
       setErrorStrava('')
       try {
+        // El atleta pide SUS datos: el backend lo autoriza porque el uid del
+        // JWT coincide con athleteId
         const res = await fetch('/.netlify/functions/coach-athlete-data', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-          },
-          body: JSON.stringify({ athleteId: userId, coachId, weeks }),
+          headers: await authHeaders(),
+          body: JSON.stringify({ athleteId: userId, weeks }),
         })
         const json = await res.json()
         if (!activo) return
@@ -264,7 +254,7 @@ export default function AthleteHome() {
 
     cargarStrava()
     return () => { activo = false }
-  }, [userId, coachId, weeks, activeTab])
+  }, [userId, weeks, activeTab])
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -279,13 +269,11 @@ export default function AthleteHome() {
     setEnviandoGarmin((prev) => ({ ...prev, [sesion.id]: true }))
     setErroresGarmin((prev) => ({ ...prev, [sesion.id]: null }))
     try {
+      // El backend autoriza porque el uid del JWT es el atleta de la sesión
       const res = await fetch('/.netlify/functions/send-to-intervals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-        },
-        body: JSON.stringify({ sessionId: sesion.id, coachId: sesion.coach_id, athleteId: userId }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ sessionId: sesion.id }),
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok) {
@@ -1080,11 +1068,10 @@ export default function AthleteHome() {
           />
         )}
 
-        {selectedActivityId && userId && coachId && (
+        {selectedActivityId && userId && (
           <ActivityDetail
             activityId={selectedActivityId}
             athleteId={userId}
-            coachId={coachId}
             onClose={() => setSelectedActivityId(null)}
           />
         )}

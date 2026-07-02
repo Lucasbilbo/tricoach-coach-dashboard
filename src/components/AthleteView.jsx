@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { authHeaders } from '../lib/authHeaders'
 import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import {
   COLORS,
@@ -128,13 +129,12 @@ export default function AthleteView() {
         }
         setCoachId(usuarioId)
 
+        // El coach se deriva del JWT en el backend; athleteId se verifica
+        // allí contra coach_athletes
         const res = await fetch('/.netlify/functions/coach-athlete-data', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-coach-secret': import.meta.env.VITE_COACH_SECRET || '',
-          },
-          body: JSON.stringify({ athleteId: id, coachId: usuarioId, weeks }),
+          headers: await authHeaders(),
+          body: JSON.stringify({ athleteId: id, weeks }),
         })
 
         const json = await res.json()
@@ -534,11 +534,10 @@ export default function AthleteView() {
           />
         )}
 
-        {selectedActivityId && coachId && (
+        {selectedActivityId && (
           <ActivityDetail
             activityId={selectedActivityId}
             athleteId={id}
-            coachId={coachId}
             onClose={() => setSelectedActivityId(null)}
           />
         )}

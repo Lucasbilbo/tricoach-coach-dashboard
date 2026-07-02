@@ -1,13 +1,17 @@
 // coach-activity-detail.js — Netlify Function (CommonJS)
-// POST { activityId, athleteId, coachId } + header x-coach-secret
+// POST { activityId, athleteId } + header Authorization: Bearer <jwt de Supabase>
+// Autorización: el propio atleta (uid === athleteId) o un coach con relación
+// verificada en coach_athletes. Misma verificación que coach-athlete-data.
 // Devuelve { actividad, vueltas } con el detalle completo de una actividad
-// de Strava (splits, laps, polyline). Misma verificación que coach-athlete-data.
+// de Strava (splits, laps, polyline).
 
 const https = require('https')
+const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, x-coach-secret',
+  // x-coach-secret solo para que el preflight de bundles antiguos no falle por CORS
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-coach-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -237,17 +241,16 @@ exports.handler = async (event) => {
   // 1. Validar env vars
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const COACH_SECRET = process.env.COACH_FUNCTION_SECRET
   const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID
   const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET
-  if (!SUPABASE_URL || !SERVICE_KEY || !COACH_SECRET || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
     return respuesta(500, { error: 'Server misconfigured' })
   }
   const supabaseHost = SUPABASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
-  // 2. Verificar secret
-  const secret = event.headers['x-coach-secret']
-  if (secret !== COACH_SECRET) return respuesta(401, { error: 'Unauthorized' })
+  // 2. Verificar JWT (la identidad nunca viene del body)
+  const auth = await verifyAuth(event)
+  if (!auth) return respuesta(401, { error: 'Unauthorized' })
 
   // 3. Parse + validación de input
   let parsed
@@ -256,26 +259,19 @@ exports.handler = async (event) => {
   } catch {
     return respuesta(400, { error: 'JSON inválido' })
   }
-  const { activityId, athleteId, coachId } = parsed
+  const { activityId, athleteId } = parsed
   if (!ACTIVITY_ID_REGEX.test(String(activityId || ''))) {
     return respuesta(400, { error: 'activityId debe ser un id numérico de Strava' })
   }
-  if (!UUID_REGEX.test(athleteId || '') || !UUID_REGEX.test(coachId || '')) {
-    return respuesta(400, { error: 'athleteId y coachId deben ser UUID válidos' })
+  if (!UUID_REGEX.test(athleteId || '')) {
+    return respuesta(400, { error: 'athleteId debe ser un UUID válido' })
   }
 
   try {
-    // 4. Verificar relación coach-atleta
-    const rel = await withTimeout(
-      supabaseGet(
-        supabaseHost,
-        `/rest/v1/coach_athletes?coach_id=eq.${coachId}&athlete_id=eq.${athleteId}&select=id`,
-        SERVICE_KEY
-      ),
-      5000
-    )
-    if (!Array.isArray(rel.json) || rel.json.length === 0) {
-      return respuesta(403, { error: 'El atleta no pertenece a este coach' })
+    // 4. Autorización: el propio atleta o un coach con relación en coach_athletes
+    const permitido = await canAccessAthlete(auth, athleteId)
+    if (!permitido) {
+      return respuesta(403, { error: 'No autorizado para este atleta' })
     }
 
     // 5. Leer perfil del atleta (tokens Strava) con service key
