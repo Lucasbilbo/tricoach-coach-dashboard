@@ -5,8 +5,11 @@
 // Devuelve { actividad, vueltas } con el detalle completo de una actividad
 // de Strava (splits, laps, polyline).
 
-const https = require('https')
 const { verifyAuth, canAccessAthlete } = require('./lib/auth')
+const { withTimeout, httpsRequest } = require('./lib/http')
+const { supabaseGet } = require('./lib/supabase-rest')
+const { getStravaAccessToken } = require('./lib/strava')
+const { round, mapDisciplina, zonaFc } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -24,98 +27,6 @@ const RITMO_MAX_PLAUSIBLE_S = 20.0 * 60
 // Natación: min/100m plausibles (fuera de rango → null)
 const RITMO_SWIM_MIN_PLAUSIBLE_S = 0.8 * 60
 const RITMO_SWIM_MAX_PLAUSIBLE_S = 6.0 * 60
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms)),
-  ])
-}
-
-function httpsRequest({ hostname, path, method, headers, body }) {
-  return new Promise((resolve, reject) => {
-    const req = https.request({ hostname, path, method, headers }, (res) => {
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => {
-        try {
-          resolve({ status: res.statusCode, json: data ? JSON.parse(data) : null })
-        } catch {
-          resolve({ status: res.statusCode, json: null })
-        }
-      })
-    })
-    req.on('error', reject)
-    if (body) req.write(body)
-    req.end()
-  })
-}
-
-function supabaseGet(supabaseHost, path, key) {
-  return httpsRequest({
-    hostname: supabaseHost,
-    path,
-    method: 'GET',
-    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-  })
-}
-
-function supabasePatch(supabaseHost, path, key, payload) {
-  const body = JSON.stringify(payload)
-  return httpsRequest({
-    hostname: supabaseHost,
-    path,
-    method: 'PATCH',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(body),
-      Prefer: 'return=representation',
-    },
-    body,
-  })
-}
-
-function refreshStravaToken(clientId, clientSecret, refreshToken) {
-  const body = JSON.stringify({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-  })
-  return httpsRequest({
-    hostname: 'www.strava.com',
-    path: '/api/v3/oauth/token',
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-    body,
-  })
-}
-
-function mapDisciplina(tipo) {
-  const t = (tipo || '').toLowerCase()
-  if (t.includes('run')) return 'run'
-  if (t.includes('ride') || t.includes('bike') || t === 'velomobile') return 'bike'
-  if (t.includes('swim')) return 'swim'
-  if (t.includes('weight') || t.includes('crossfit') || t === 'workout') return 'strength'
-  return 'other'
-}
-
-function zonaFc(intensidadPct) {
-  if (intensidadPct == null) return null
-  if (intensidadPct < 60) return 'Z1'
-  if (intensidadPct < 70) return 'Z2'
-  if (intensidadPct < 80) return 'Z3'
-  if (intensidadPct < 90) return 'Z4'
-  return 'Z5'
-}
-
-function round(value, decimals) {
-  if (value == null || Number.isNaN(value)) return null
-  const factor = 10 ** decimals
-  return Math.round(value * factor) / factor
-}
 
 // Segundos por unidad de distancia (km o 100 m) → "M:SS"
 function formatRitmo(segundosPorUnidad) {
@@ -285,26 +196,12 @@ exports.handler = async (event) => {
       return respuesta(409, { error: 'El atleta no tiene Strava conectado' })
     }
 
-    // 6. Refrescar token si expirado (margen de 60s)
-    let accessToken = perfil.strava_token
-    const ahora = Math.floor(Date.now() / 1000)
-    if (!perfil.strava_token_expires_at || perfil.strava_token_expires_at <= ahora + 60) {
-      const refresh = await withTimeout(
-        refreshStravaToken(STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, perfil.strava_refresh_token),
-        5000
-      )
-      if (!refresh.json || !refresh.json.access_token) {
-        return respuesta(502, { error: 'No se pudo refrescar el token de Strava' })
-      }
-      accessToken = refresh.json.access_token
-      await withTimeout(
-        supabasePatch(supabaseHost, `/rest/v1/profiles?id=eq.${athleteId}`, SERVICE_KEY, {
-          strava_token: refresh.json.access_token,
-          strava_refresh_token: refresh.json.refresh_token,
-          strava_token_expires_at: refresh.json.expires_at,
-        }),
-        5000
-      )
+    // 6. Access token válido (refresca+persiste si expira). Vista de 1 atleta:
+    // si el refresh falla, 502.
+    const env = { supabaseHost, SERVICE_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET }
+    const accessToken = await getStravaAccessToken(perfil, env)
+    if (!accessToken) {
+      return respuesta(502, { error: 'No se pudo refrescar el token de Strava' })
     }
 
     // 7. Detalle de actividad + vueltas en paralelo

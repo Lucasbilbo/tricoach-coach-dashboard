@@ -4,8 +4,11 @@
 // Devuelve métricas de los últimos 7 días por atleta del coach:
 // [{ athlete_id, nombre, km_semana, horas_semana, tss_semana, ultima_actividad_dias }]
 
-const https = require('https')
 const { verifyAuth } = require('./lib/auth')
+const { withTimeout, httpsRequest } = require('./lib/http')
+const { supabaseGet } = require('./lib/supabase-rest')
+const { getStravaAccessToken } = require('./lib/strava')
+const { round } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,80 +22,6 @@ const FC_MAX_DEFAULT = 185
 const DIA_MS = 86400000
 const VENTANA_DIAS = 7
 const SEMANAS_SPARKLINE = 4
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms)),
-  ])
-}
-
-function httpsRequest({ hostname, path, method, headers, body }) {
-  return new Promise((resolve, reject) => {
-    const req = https.request({ hostname, path, method, headers }, (res) => {
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => {
-        try {
-          resolve({ status: res.statusCode, json: data ? JSON.parse(data) : null })
-        } catch {
-          resolve({ status: res.statusCode, json: null })
-        }
-      })
-    })
-    req.on('error', reject)
-    if (body) req.write(body)
-    req.end()
-  })
-}
-
-function supabaseGet(supabaseHost, path, key) {
-  return httpsRequest({
-    hostname: supabaseHost,
-    path,
-    method: 'GET',
-    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-  })
-}
-
-function supabasePatch(supabaseHost, path, key, payload) {
-  const body = JSON.stringify(payload)
-  return httpsRequest({
-    hostname: supabaseHost,
-    path,
-    method: 'PATCH',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(body),
-      Prefer: 'return=representation',
-    },
-    body,
-  })
-}
-
-function refreshStravaToken(clientId, clientSecret, refreshToken) {
-  const body = JSON.stringify({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-  })
-  return httpsRequest({
-    hostname: 'www.strava.com',
-    path: '/api/v3/oauth/token',
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-    body,
-  })
-}
-
-function round(value, decimals) {
-  if (value == null || Number.isNaN(value)) return null
-  const factor = 10 ** decimals
-  return Math.round(value * factor) / factor
-}
 
 // Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
 function lunesDeSemana(fechaLocal) {
@@ -126,28 +55,6 @@ function tssEstimado(act, fcMax) {
   return (duracionMin / 60) * (intensidadPct / 100) ** 2 * 100
 }
 
-// Devuelve un access token válido, refrescándolo y persistiéndolo si ha expirado
-async function obtenerAccessToken(perfil, env) {
-  const ahora = Math.floor(Date.now() / 1000)
-  if (perfil.strava_token_expires_at && perfil.strava_token_expires_at > ahora + 60) {
-    return perfil.strava_token
-  }
-  const refresh = await withTimeout(
-    refreshStravaToken(env.STRAVA_CLIENT_ID, env.STRAVA_CLIENT_SECRET, perfil.strava_refresh_token),
-    5000
-  )
-  if (!refresh.json || !refresh.json.access_token) return null
-  await withTimeout(
-    supabasePatch(env.supabaseHost, `/rest/v1/profiles?id=eq.${perfil.id}`, env.SERVICE_KEY, {
-      strava_token: refresh.json.access_token,
-      strava_refresh_token: refresh.json.refresh_token,
-      strava_token_expires_at: refresh.json.expires_at,
-    }),
-    5000
-  )
-  return refresh.json.access_token
-}
-
 // El perfil se pasa ya cargado (todos los perfiles se traen en UNA query batch
 // en el handler, en vez de una por atleta — evita el N+1 sobre profiles).
 async function procesarAtleta(athleteId, perfil, env) {
@@ -167,7 +74,7 @@ async function procesarAtleta(athleteId, perfil, env) {
     const conNombre = { ...base, nombre: perfil.nombre || perfil.email || 'Atleta' }
     if (!perfil.strava_token || !perfil.strava_refresh_token) return conNombre
 
-    const accessToken = await obtenerAccessToken(perfil, env)
+    const accessToken = await getStravaAccessToken(perfil, env)
     if (!accessToken) return conNombre
 
     // Una sola llamada sin filtro de fecha: sirve para los 7 días y para
