@@ -20,16 +20,51 @@ Dashboard web para entrenador de triatlón. Lee datos de atletas (Strava vía Su
 - DB/Auth: Supabase (cliente JS solo en frontend con anon key)
 - Datos: Strava API v3
 
-## Design system
+## Design system (dirección visual aprobada 2026-07)
 
-- Background: `#0A0F1E`
-- Cards: `#0F1729` con border `1px solid rgba(255,255,255,0.06)`
-- Accent: `#00D4FF`
-- Texto primario: `#F1F5F9`, secundario: `#64748B`
-- Fuente: Inter (Google Fonts en `index.html`)
-- Colores por disciplina — run: `#FF4D6D`, bike: `#00E5A0`, swim: `#00D4FF`, strength: `#7C3AED`
+Sistema de color **por disciplina** sobre fondo oscuro Void. Al mezclar 3 deportes
+en una misma vista de datos, el color deja de ser decoración y pasa a ser información.
 
-Constantes centralizadas en `src/lib/theme.js` — no hardcodear colores en componentes.
+### Tokens de color
+| Token | Hex | Uso |
+|---|---|---|
+| Void (background) | `#0B0D12` | Fondo de la vista |
+| Slate (card) | `#12151C` | Superficie de cards |
+| Border (cardBorder) | `#1B202C` | Bordes de cards, separadores |
+| Ink (textPrimary) | `#EDEEF2` | Texto primario, números neutros |
+| Mist (textSecondary) | `#8A90A0` | Texto secundario, labels |
+| Mist oscuro (textTertiary) | `#5C6270` | Texto terciario (subetiquetas) |
+| Swim · Neritic Teal | `#2FBFAF` | Natación · también `accent` de marca |
+| Bike · Asphalt Amber | `#E8934A` | Ciclismo |
+| Run · Exertion Coral | `#E85D5D` | Running · también `error` |
+| Load · Dusk Violet | `#8B7FD1` | TSS/carga (no es disciplina) |
+| Rest border | `#2A3040` | Borde punteado de días de descanso |
+
+`strength` → Load violet `#8B7FD1`; `other` → Mist oscuro `#5C6270`.
+Contraste verificado (WCAG sobre Void): Swim 8.51:1 (AAA), Bike 8.06:1 (AAA),
+Run 5.70:1 (AA), Load 5.60:1 (AA).
+
+### Tipografía (Google Fonts en `index.html`)
+- **JetBrains Mono** (400/500/600/700) — TODO valor numérico: km, ritmo, TSS,
+  potencia, FC, minutos, fechas. Tabular figures. `FONTS.mono` en theme.
+- **Archivo** (400/500/600/700) — nombres, labels, texto de sesión, botones. `FONTS.sans`.
+- Tamaños: 34px/700 nombre atleta (24px móvil) · 26px/600 stat hero (19px móvil)
+  · 15px/600 semana · 14px/400 nombre sesión · 13/12/11/10px labels y metadatos.
+
+### Spacing / Radius
+- Radius: card 12px (10px móvil), contenedor de página 16px.
+- Gap estándar entre cards 16px. Padding interno de card 18-24px.
+
+### Elemento de firma — Línea de Transición
+Franja de barras apiladas por día (7 columnas), cada barra segmentada por
+disciplina, con 3 estados que se distinguen por **relleno + borde** (no solo color):
+completado (relleno sólido, sin borde), programado (borde punteado color disciplina
++ relleno opacity 0.18), descanso (borde punteado `#2A3040`, altura mínima ~14%, sin
+relleno). Anima `height`/`width` con `transition: 180ms ease` al cambiar de semana
+(corto a propósito). Componente: `src/components/shared/TransitionLine.jsx`.
+
+Constantes centralizadas en `src/lib/theme.js` (COLORS, FONTS, DISCIPLINE_COLORS,
+cardStyle, etc.) — no hardcodear colores ni fuentes en componentes.
 
 ## Variables de entorno
 
