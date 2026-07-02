@@ -8,54 +8,8 @@ import { COLORS, FONTS, DISCIPLINE_COLORS } from '../../lib/theme'
 //   - descanso:   borde punteado gris (#2A3040), altura mínima, sin relleno
 // Anima height/opacity con transition 180ms al cambiar de props (corto a propósito).
 //
-// Es de presentación pura: recibe `columns` ya normalizadas. Usa los helpers
-// makeDoneColumn / makeRestColumn / makePrescribedColumn para construirlas desde
-// datos reales.
-
-const REST_HEIGHT_PCT = 14
-
-// Construye una columna "completada": relleno sólido segmentado por disciplina.
-// segments: [{ color, pct }] — pct = proporción (0-100) dentro de la columna.
-export function makeDoneColumn({ label, statusLabel = '', isToday = false, heightPct, segments }) {
-  return {
-    label,
-    isToday,
-    statusLabel,
-    heightPct,
-    borderStyle: 'solid',
-    borderWidth: '0px',
-    borderColor: 'transparent',
-    segments: segments.map((s) => ({ color: s.color, pct: s.pct, opacity: 1 })),
-  }
-}
-
-// Columna de descanso: borde punteado gris, altura mínima, sin relleno.
-export function makeRestColumn({ label, statusLabel = 'Descanso' }) {
-  return {
-    label,
-    isToday: false,
-    statusLabel,
-    heightPct: REST_HEIGHT_PCT,
-    borderStyle: 'dashed',
-    borderWidth: '1.5px',
-    borderColor: COLORS.restBorder,
-    segments: [{ color: 'transparent', pct: 100, opacity: 1 }],
-  }
-}
-
-// Columna programada/futura: borde punteado en color de disciplina, relleno 0.18.
-export function makePrescribedColumn({ label, color, heightPct, statusLabel = 'Programado' }) {
-  return {
-    label,
-    isToday: false,
-    statusLabel,
-    heightPct,
-    borderStyle: 'dashed',
-    borderWidth: '1.5px',
-    borderColor: color,
-    segments: [{ color, pct: 100, opacity: 0.18 }],
-  }
-}
+// Es de presentación pura: recibe `columns` ya normalizadas. Construye las
+// columnas con los helpers de lib/transitionColumns.js.
 
 const LEYENDA = [
   { label: 'Natación', color: DISCIPLINE_COLORS.swim },
