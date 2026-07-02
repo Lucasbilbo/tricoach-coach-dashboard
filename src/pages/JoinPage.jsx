@@ -48,7 +48,8 @@ export default function JoinPage() {
   const { token } = useParams()
   const navigate = useNavigate()
 
-  const [invitacion, setInvitacion] = useState(null)
+  // Email fijado por la invitación (si la invitación llevaba email, no se puede cambiar)
+  const [emailInvitacion, setEmailInvitacion] = useState(null)
   const [tokenValido, setTokenValido] = useState(null) // null = cargando
   const [coachNombre, setCoachNombre] = useState('')
 
@@ -66,24 +67,27 @@ export default function JoinPage() {
     let activo = true
 
     async function verificarToken() {
-      const { data } = await supabase
-        .from('athlete_invitations')
-        .select('*, coaches(nombre, email)')
-        .eq('token', token)
-        .is('used', false)
-        .maybeSingle()
+      // La tabla athlete_invitations ya no es legible con la anon key:
+      // la verificación pasa por un RPC que solo devuelve lo mínimo
+      // (válido, nombre del coach, email de la invitación).
+      const { data, error } = await supabase.rpc('verify_invitation_token', {
+        p_token: token,
+      })
 
       if (!activo) return
 
-      if (!data) {
+      const resultado = Array.isArray(data) ? data[0] : data
+      if (error || !resultado?.valid) {
         setTokenValido(false)
         return
       }
 
-      setInvitacion(data)
       setTokenValido(true)
-      if (data.email) setEmail(data.email)
-      setCoachNombre(data.coaches?.nombre || data.coaches?.email || 'tu entrenador')
+      if (resultado.invitation_email) {
+        setEmail(resultado.invitation_email)
+        setEmailInvitacion(resultado.invitation_email)
+      }
+      setCoachNombre(resultado.coach_nombre || 'tu entrenador')
     }
 
     verificarToken()
@@ -192,10 +196,10 @@ export default function JoinPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@email.com"
-            readOnly={!!invitacion?.email}
+            readOnly={!!emailInvitacion}
             style={{
               ...inputStyle,
-              opacity: invitacion?.email ? 0.7 : 1,
+              opacity: emailInvitacion ? 0.7 : 1,
             }}
             autoComplete="email"
           />
