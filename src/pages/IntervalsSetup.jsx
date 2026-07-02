@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { authHeaders } from '../lib/authHeaders'
 import { COLORS } from '../lib/theme'
 
 const PASOS_TOTAL = 5
@@ -159,9 +160,24 @@ export default function IntervalsSetup() {
     cargarPerfil()
   }, [])
 
-  function handleConectarStrava() {
+  async function handleConectarStrava() {
     if (!userId) return
-    window.location.href = `/.netlify/functions/strava-auth?action=redirect&userId=${userId}`
+    // Pedimos la authUrl a la función autenticada (state firmado, S4) y luego
+    // redirigimos el navegador a Strava.
+    try {
+      const res = await fetch('/.netlify/functions/strava-auth?action=start', {
+        method: 'POST',
+        headers: await authHeaders(),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.authUrl) {
+        window.location.href = json.authUrl
+      } else {
+        setStravaError(true)
+      }
+    } catch {
+      setStravaError(true)
+    }
   }
 
   async function verificarKey() {
@@ -175,7 +191,7 @@ export default function IntervalsSetup() {
     try {
       const res = await fetch('/.netlify/functions/verify-intervals-key', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ apiKey: apiKey.trim() }),
       })
       const json = await res.json().catch(() => ({}))

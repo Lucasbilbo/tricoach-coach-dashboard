@@ -242,10 +242,12 @@ exports.handler = async (event) => {
     const result = await intervalsPost(intervals_athlete_id, intervals_api_key, eventBody)
 
     if (result.status < 200 || result.status >= 300) {
+      // El detalle de Intervals se loguea server-side; al cliente solo genérico
+      console.error('send-to-intervals: error de Intervals', result.status, JSON.stringify(result.body))
       return {
         statusCode: 502,
         headers: CORS,
-        body: JSON.stringify({ error: 'Error enviando a Intervals.icu', details: result.body }),
+        body: JSON.stringify({ error: 'No se pudo enviar el entrenamiento a Intervals.icu', code: 'INTERVALS_ERROR' }),
       }
     }
 
@@ -281,11 +283,12 @@ exports.handler = async (event) => {
       body: JSON.stringify({ ok: true, intervals_event_id }),
     }
   } catch (err) {
+    // Detalle completo solo en el log del servidor; al cliente, mensaje genérico
     console.error('ERROR GLOBAL send-to-intervals:', err)
     return {
       statusCode: 500,
       headers: CORS,
-      body: JSON.stringify({ error: err.message, stack: err.stack }),
+      body: JSON.stringify({ error: 'Error interno', code: 'INTERNAL_ERROR' }),
     }
   }
 }

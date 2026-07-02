@@ -1,9 +1,16 @@
 // accept-invitation.js — Netlify Function (CommonJS)
-// Registra a un atleta vía token de invitación: crea usuario, perfil y relación coach-atleta.
-// POST { token, email, password, nombre }
-// No requiere x-coach-secret: la seguridad está en el token de invitación.
+// Registra a un atleta vía token de invitación.
+// POST { token, email, password, nombre } — sin JWT (el usuario aún no existe);
+// la seguridad está en el token + rate limit por IP.
+//
+// S5: el alta es atómica. GoTrue crea el usuario en auth.users; luego la RPC
+// accept_invitation (migración 005) valida el token, lo marca usado y crea
+// profile + coach_athletes en UNA transacción. Si la RPC no confirma (token ya
+// usado por una request concurrente, o un insert falla), se compensa borrando
+// el usuario Auth recién creado → nunca queda un usuario huérfano.
 
 const https = require('https')
+const { allowRequest, clientIp } = require('./lib/rate-limit')
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -14,43 +21,24 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-function supabaseGet(path) {
-  const hostname = new URL(SUPABASE_URL).hostname
-  return new Promise((resolve) => {
-    const options = {
-      hostname,
-      path: `/rest/v1/${path}`,
-      method: 'GET',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    }
-    const req = https.request(options, (res) => {
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => { try { resolve(JSON.parse(data)) } catch { resolve(null) } })
-    })
-    req.on('error', () => resolve(null))
-    req.end()
-  })
-}
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Límite: 10 intentos cada 10 min por IP
+const RL_MAX = 10
+const RL_WINDOW_S = 600
 
-function supabasePost(path, body, extraHeaders) {
+function request({ path, method, body, extraHeaders }) {
   const hostname = new URL(SUPABASE_URL).hostname
-  const bodyStr = JSON.stringify(body)
+  const bodyStr = body ? JSON.stringify(body) : null
   return new Promise((resolve) => {
     const options = {
       hostname,
-      path: `/rest/v1/${path}`,
-      method: 'POST',
+      path,
+      method,
       headers: {
         apikey: SUPABASE_KEY,
         Authorization: `Bearer ${SUPABASE_KEY}`,
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-        Prefer: 'return=representation',
+        ...(bodyStr ? { 'Content-Length': Buffer.byteLength(bodyStr) } : {}),
         ...(extraHeaders || {}),
       },
     }
@@ -58,71 +46,35 @@ function supabasePost(path, body, extraHeaders) {
       let data = ''
       res.on('data', (chunk) => { data += chunk })
       res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(data) }) }
-        catch { resolve({ status: res.statusCode, body: null }) }
+        let parsed
+        try { parsed = data ? JSON.parse(data) : null } catch { parsed = null }
+        resolve({ status: res.statusCode, body: parsed })
       })
     })
     req.on('error', () => resolve({ status: 500, body: null }))
-    req.write(bodyStr)
+    if (bodyStr) req.write(bodyStr)
     req.end()
   })
 }
 
-function supabasePatch(path, body) {
-  const hostname = new URL(SUPABASE_URL).hostname
-  const bodyStr = JSON.stringify(body)
-  return new Promise((resolve) => {
-    const options = {
-      hostname,
-      path: `/rest/v1/${path}`,
-      method: 'PATCH',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-        Prefer: 'return=representation',
-      },
-    }
-    const req = https.request(options, (res) => {
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => { try { resolve(JSON.parse(data)) } catch { resolve(null) } })
-    })
-    req.on('error', () => resolve(null))
-    req.write(bodyStr)
-    req.end()
-  })
+function rpc(fn, body) {
+  return request({ path: `/rest/v1/rpc/${fn}`, method: 'POST', body })
 }
 
-// Crea usuario en Supabase Auth (Admin API) con email ya confirmado
 function createAuthUser(email, password) {
-  const hostname = new URL(SUPABASE_URL).hostname
-  const bodyStr = JSON.stringify({ email, password, email_confirm: true })
-  return new Promise((resolve) => {
-    const options = {
-      hostname,
-      path: '/auth/v1/admin/users',
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-      },
-    }
-    const req = https.request(options, (res) => {
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(data) }) }
-        catch { resolve({ status: res.statusCode, body: null }) }
-      })
-    })
-    req.on('error', () => resolve({ status: 500, body: null }))
-    req.write(bodyStr)
-    req.end()
+  return request({
+    path: '/auth/v1/admin/users',
+    method: 'POST',
+    body: { email, password, email_confirm: true },
   })
+}
+
+function deleteAuthUser(id) {
+  return request({ path: `/auth/v1/admin/users/${id}`, method: 'DELETE' })
+}
+
+function json(statusCode, payload) {
+  return { statusCode, headers: { ...CORS, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
 }
 
 exports.handler = async (event) => {
@@ -130,59 +82,77 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' }
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Supabase no configurado' }) }
+    return json(500, { error: 'Supabase no configurado' })
+  }
+
+  // Rate limit por IP (S5c)
+  const permitido = await allowRequest('accept_invitation', clientIp(event), RL_MAX, RL_WINDOW_S)
+  if (!permitido) {
+    return json(429, { error: 'Demasiados intentos. Espera unos minutos.', code: 'RATE_LIMITED' })
   }
 
   let parsed
   try { parsed = JSON.parse(event.body || '{}') }
-  catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'JSON inválido' }) } }
+  catch { return json(400, { error: 'JSON inválido' }) }
 
   const { token, email, password, nombre } = parsed
   if (!token || !email || !password || !nombre) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'token, email, password y nombre son requeridos' }) }
+    return json(400, { error: 'token, email, password y nombre son requeridos' })
+  }
+  if (!EMAIL_REGEX.test(email)) {
+    return json(400, { error: 'Email no válido', code: 'INVALID_EMAIL' })
+  }
+  if (typeof password !== 'string' || password.length < 6) {
+    return json(400, { error: 'La contraseña debe tener al menos 6 caracteres', code: 'WEAK_PASSWORD' })
   }
 
-  // Verificar token de invitación
-  const invitaciones = await supabaseGet(
-    `athlete_invitations?token=eq.${encodeURIComponent(token)}&used=eq.false&select=*`
-  )
-  if (!Array.isArray(invitaciones) || invitaciones.length === 0) {
-    return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Token de invitación inválido o ya usado' }) }
+  // Pre-validación (feedback temprano sin crear el usuario). La RPC revalida de
+  // forma atómica igualmente.
+  const preRes = await rpc('verify_invitation_token', { p_token: token })
+  const pre = Array.isArray(preRes.body) ? preRes.body[0] : preRes.body
+  if (!pre?.valid) {
+    return json(404, { error: 'Token de invitación inválido o ya usado', code: 'INVALID_TOKEN' })
   }
-  const invitacion = invitaciones[0]
-
-  // Verificar email si la invitación lo tenía
-  if (invitacion.email && invitacion.email.toLowerCase() !== email.toLowerCase()) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'El email no coincide con la invitación' }) }
+  if (pre.invitation_email && pre.invitation_email.toLowerCase() !== email.toLowerCase()) {
+    return json(400, { error: 'El email no coincide con la invitación', code: 'EMAIL_MISMATCH' })
   }
 
-  // Crear usuario en Auth (auto-confirmado)
+  // Crear el usuario en Auth (GoTrue)
   const authResult = await createAuthUser(email, password)
   if (authResult.status !== 200 || !authResult.body?.id) {
-    const msg = authResult.body?.msg || authResult.body?.message || 'Error creando la cuenta'
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: msg }) }
+    // 422 de GoTrue típicamente = email ya registrado
+    const codigo = authResult.body?.error_code || authResult.body?.msg || ''
+    console.error('accept-invitation: createAuthUser fallo', authResult.status, codigo)
+    if (authResult.status === 422) {
+      return json(409, { error: 'Ya existe una cuenta con ese email', code: 'EMAIL_TAKEN' })
+    }
+    return json(400, { error: 'No se pudo crear la cuenta', code: 'AUTH_CREATE_FAILED' })
   }
   const athleteId = authResult.body.id
 
-  // Crear perfil
-  await supabasePost('profiles', { id: athleteId, nombre, email })
-
-  // Crear relación coach-atleta
-  await supabasePost('coach_athletes', {
-    coach_id: invitacion.coach_id,
-    athlete_id: athleteId,
+  // Alta atómica: token + profile + coach_athletes en una transacción
+  const acceptRes = await rpc('accept_invitation', {
+    p_token: token,
+    p_athlete_id: athleteId,
+    p_email: email,
+    p_nombre: nombre,
   })
+  const accept = Array.isArray(acceptRes.body) ? acceptRes.body[0] : acceptRes.body
 
-  // Marcar invitación como usada
-  await supabasePatch(`athlete_invitations?token=eq.${encodeURIComponent(token)}`, {
-    used: true,
-    athlete_id: athleteId,
-    used_at: new Date().toISOString(),
-  })
-
-  return {
-    statusCode: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ok: true, athleteId }),
+  if (!accept?.ok) {
+    // Compensación: sin registro válido, borrar el usuario Auth recién creado
+    await deleteAuthUser(athleteId)
+    const code = accept?.error_code
+    if (acceptRes.status >= 200 && acceptRes.status < 300 && code === 'EMAIL_MISMATCH') {
+      return json(400, { error: 'El email no coincide con la invitación', code: 'EMAIL_MISMATCH' })
+    }
+    if (acceptRes.status >= 200 && acceptRes.status < 300 && code === 'INVALID_TOKEN') {
+      return json(409, { error: 'Token de invitación inválido o ya usado', code: 'INVALID_TOKEN' })
+    }
+    // Excepción SQL (insert falló) u otro error: genérico
+    console.error('accept-invitation: accept_invitation no confirmó', acceptRes.status, JSON.stringify(acceptRes.body))
+    return json(500, { error: 'No se pudo completar el registro', code: 'ACCEPT_FAILED' })
   }
+
+  return json(200, { ok: true, athleteId })
 }

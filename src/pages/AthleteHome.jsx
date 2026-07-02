@@ -274,6 +274,26 @@ export default function AthleteHome() {
     setPasadas((prev) => prev.map((s) => s.id === id ? { ...s, enviado_a_garmin: true } : s))
   }
 
+  // Inicia el OAuth de Strava: pide la authUrl a la función autenticada
+  // (state firmado, S4) y redirige el navegador a Strava.
+  async function conectarStrava() {
+    if (!userId) return
+    try {
+      const res = await fetch('/.netlify/functions/strava-auth?action=start', {
+        method: 'POST',
+        headers: await authHeaders(),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.authUrl) {
+        window.location.href = json.authUrl
+      } else {
+        setErrorStrava('No se pudo iniciar la conexión con Strava. Inténtalo de nuevo.')
+      }
+    } catch {
+      setErrorStrava('Error de conexión con Strava. Inténtalo de nuevo.')
+    }
+  }
+
   async function enviarAGarmin(sesion) {
     setEnviandoGarmin((prev) => ({ ...prev, [sesion.id]: true }))
     setErroresGarmin((prev) => ({ ...prev, [sesion.id]: null }))
@@ -772,7 +792,7 @@ export default function AthleteHome() {
                         ❌ Strava no conectado
                       </p>
                       <button
-                        onClick={() => userId && (window.location.href = `/.netlify/functions/strava-auth?action=redirect&userId=${userId}`)}
+                        onClick={conectarStrava}
                         disabled={!userId}
                         style={{
                           background: '#FC4C02',
