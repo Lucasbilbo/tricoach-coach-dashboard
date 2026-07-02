@@ -180,8 +180,14 @@ export default function IntervalsSetup() {
       })
       const json = await res.json().catch(() => ({}))
       if (json.ok) {
+        // Solo avanzar si el guardado en el perfil se confirma; si no, el
+        // wizard diría "conectado" pero el coach no podría enviar nada (F4a)
+        const guardado = await guardarEnPerfil(apiKey.trim(), String(json.athleteId))
+        if (!guardado) {
+          setErrorKey('La key es válida pero no se pudo guardar en tu perfil. Inténtalo de nuevo.')
+          return
+        }
         setVerificado({ athleteId: json.athleteId, nombre: json.nombre })
-        await guardarEnPerfil(apiKey.trim(), String(json.athleteId))
         setPaso(4)
       } else {
         setErrorKey(json.error || 'API key inválido')
@@ -193,18 +199,20 @@ export default function IntervalsSetup() {
     }
   }
 
+  // Devuelve true si el perfil se actualizó correctamente, false si falló.
   async function guardarEnPerfil(key, athleteId) {
     setGuardando(true)
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const uid = sessionData?.session?.user?.id
-      if (!uid) return
-      await supabase
+      if (!uid) return false
+      const { error } = await supabase
         .from('profiles')
         .update({ intervals_api_key: key, intervals_athlete_id: athleteId })
         .eq('id', uid)
+      return !error
     } catch {
-      // no bloquear el wizard si falla
+      return false
     } finally {
       setGuardando(false)
     }

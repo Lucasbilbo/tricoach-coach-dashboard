@@ -150,6 +150,7 @@ export default function AthleteHome() {
   const [proximas, setProximas] = useState([])
   const [pasadas, setPasadas] = useState([])
   const [cargandoSesiones, setCargandoSesiones] = useState(true)
+  const [errorSesiones, setErrorSesiones] = useState(false)
   const [expandidas, setExpandidas] = useState({})
   const [enviandoGarmin, setEnviandoGarmin] = useState({})
   const [erroresGarmin, setErroresGarmin] = useState({})
@@ -212,8 +213,16 @@ export default function AthleteHome() {
       ])
 
       if (!activo) return
-      setProximas(proximasRes.data || [])
-      setPasadas(pasadasRes.data || [])
+      // Distinguir un error de carga de un "no hay entrenamientos" legítimo (F4b)
+      if (proximasRes.error || pasadasRes.error) {
+        setErrorSesiones(true)
+        setProximas([])
+        setPasadas([])
+      } else {
+        setErrorSesiones(false)
+        setProximas(proximasRes.data || [])
+        setPasadas(pasadasRes.data || [])
+      }
       setCargandoSesiones(false)
     }
 
@@ -456,6 +465,12 @@ export default function AthleteHome() {
 
               {cargandoSesiones ? (
                 <p style={{ color: COLORS.textSecondary }}>Cargando…</p>
+              ) : errorSesiones ? (
+                <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
+                  <p style={{ color: COLORS.error, margin: 0 }}>
+                    No se pudieron cargar tus entrenamientos. Recarga la página o inténtalo más tarde.
+                  </p>
+                </div>
               ) : proximas.length === 0 ? (
                 <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
                   <p style={{ color: COLORS.textSecondary, margin: 0 }}>
@@ -625,7 +640,7 @@ export default function AthleteHome() {
                 Entrenamientos pasados
               </h2>
 
-              {!cargandoSesiones && pasadas.length === 0 ? (
+              {errorSesiones ? null : !cargandoSesiones && pasadas.length === 0 ? (
                 <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
                   <p style={{ color: COLORS.textSecondary, margin: 0 }}>
                     Sin historial de entrenamientos

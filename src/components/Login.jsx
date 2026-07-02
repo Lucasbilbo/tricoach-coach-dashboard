@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { COLORS, cardStyle, pageStyle, inputStyle, buttonStyle } from '../lib/theme'
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  // Mensaje propagado desde una redirección (p.ej. cuenta de Google no vinculada, F2)
+  const [error, setError] = useState(location.state?.authError || '')
   const [cargando, setCargando] = useState(false)
 
   async function handleSubmit(e) {

@@ -671,7 +671,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       const json = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        if (json.error === 'El atleta no tiene Intervals.icu configurado') {
+        if (json.code === 'NO_INTERVALS') {
           setErrorIntervals(true)
         } else {
           setError(json.error || 'Error enviando a Garmin')
@@ -688,10 +688,15 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     }
   }
 
-  const preview = buildIntervalsText({
-    disciplina: form.disciplina,
-    workout_steps: { bloques: form.bloques, notas: form.notas },
-  })
+  // incluirNotas:true SOLO aquí (el coach debe ver que las escribió). El envío
+  // real a Garmin las omite siempre — ver send-to-intervals.js.
+  const preview = buildIntervalsText(
+    {
+      disciplina: form.disciplina,
+      workout_steps: { bloques: form.bloques, notas: form.notas },
+    },
+    { incluirNotas: true }
+  )
 
   // ── Render ──────────────────────────────────────────────────────────────
 

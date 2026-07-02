@@ -7,6 +7,9 @@
 
 const https = require('https')
 const { verifyAuth } = require('./lib/auth')
+const { buildIntervalsText } = require('./lib/intervals-text.cjs')
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)) }
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -72,85 +75,39 @@ function supabasePatch(path, body) {
     const req = https.request(options, (res) => {
       let data = ''
       res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => { try { resolve(JSON.parse(data)) } catch { resolve(null) } })
+      res.on('end', () => {
+        let parsed = null
+        try { parsed = JSON.parse(data) } catch { parsed = null }
+        resolve({ status: res.statusCode, body: parsed })
+      })
     })
-    req.on('error', () => resolve(null))
+    req.on('error', () => resolve({ status: 0, body: null }))
     req.write(bodyStr)
     req.end()
   })
 }
 
-// ── Intervals.icu helpers ────────────────────────────────────────────────────
-
-function unidadIntervals(unidad) {
-  if (unidad === 'min') return 'm'
-  return unidad || ''
-}
-
-function defaultZona(disciplina) {
-  if (disciplina === 'swim') return ' Z1 Pace'
-  if (disciplina === 'run') return ' Z1 HR'
-  if (disciplina === 'bike') return ' Z1'
-  return ''
-}
-
-const normalizarZona = (v) => v && v.includes('-') ? v.split('-')[0] : v
-const nombreStr = (nombre) => nombre ? ` @${nombre}` : ''
-
-function objetivoStr(step, disciplina) {
-  const tipo = step.objetivo_tipo
-  const valor = step.objetivo_valor
-  if (!tipo || !valor) return ''
-  if (tipo === 'zona') {
-    const zona = normalizarZona(valor)
-    if (disciplina === 'swim') return ` ${zona} Pace`
-    if (disciplina === 'run') return ` ${zona} HR`
-    return ` ${zona}`
-  }
-  if (tipo === 'fc') return ` ${valor}% HR`
-  if (tipo === 'potencia') return ` ${valor}%`
-  if (tipo === 'ritmo') {
-    if (disciplina === 'swim') return ` ${valor}/100m Pace`
-    if (disciplina === 'run') return ` ${valor}/km Pace`
-  }
-  return ''
-}
-
-function buildIntervalsDescription(session) {
-  const { disciplina } = session
-  const ws = session.workout_steps || {}
-  const bloques = ws.bloques || []
-  const material = ws.material || session.material || []
-  const notas = ws.notas || session.notas || ''
-
-  const partes = []
-
-  if (Array.isArray(material) && material.length > 0) {
-    partes.push('Material: ' + material.join(', '))
-  }
-
-  for (const bloque of bloques) {
-    if (bloque.tipo === 'warmup') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + ' @Calentamiento')
-    } else if (bloque.tipo === 'cooldown') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + ' @Vuelta a la calma')
-    } else if (bloque.tipo === 'step') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(bloque.nombre))
-    } else if (bloque.tipo === 'repeat') {
-      const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
-      for (const paso of (bloque.pasos || [])) {
-        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina) + nombreStr(paso.nombre))
-      }
-      partes.push(lines.join('\n'))
+// Persiste el resultado del envío en coach_sessions con reintentos + backoff.
+// Devuelve true si algún intento confirma (2xx). La mayoría de fallos del PATCH
+// son transitorios; reintentar evita el caso en que el evento ya está en
+// Intervals pero la sesión queda marcada como no-enviada (F4c).
+async function patchConReintentos(sessionId, payload, intentos = 3) {
+  let espera = 300
+  for (let i = 0; i < intentos; i++) {
+    const res = await supabasePatch(`coach_sessions?id=eq.${sessionId}`, payload)
+    if (res.status >= 200 && res.status < 300) return true
+    if (i < intentos - 1) {
+      await sleep(espera)
+      espera *= 2
     }
   }
-
-  return partes.join('\n\n')
+  return false
 }
 
+// ── Intervals.icu helpers ────────────────────────────────────────────────────
+// El texto del entrenamiento se genera con el módulo compartido
+// (lib/intervals-text). El envío usa incluirNotas:false SIEMPRE: las notas del
+// entrenador no llegan al reloj (congelan el Garmin).
 
 function intervalsPost(athleteId, apiKey, body) {
   const authHeader = 'Basic ' + Buffer.from('API_KEY:' + apiKey).toString('base64')
@@ -176,6 +133,27 @@ function intervalsPost(athleteId, apiKey, body) {
     })
     req.on('error', (e) => resolve({ status: 500, body: { error: e.message } }))
     req.write(bodyStr)
+    req.end()
+  })
+}
+
+// Borra un evento en Intervals. Se usa para el reenvío idempotente (borra el
+// evento previo antes de recrear) y para la compensación si el PATCH final no
+// se puede confirmar. Best-effort: un 404 (ya no existe) no es un fallo.
+function intervalsDelete(athleteId, apiKey, eventId) {
+  const authHeader = 'Basic ' + Buffer.from('API_KEY:' + apiKey).toString('base64')
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'intervals.icu',
+      path: `/api/v1/athlete/${athleteId}/events/${eventId}`,
+      method: 'DELETE',
+      headers: { Authorization: authHeader },
+    }
+    const req = https.request(options, (res) => {
+      res.on('data', () => {})
+      res.on('end', () => resolve({ status: res.statusCode }))
+    })
+    req.on('error', () => resolve({ status: 0 }))
     req.end()
   })
 }
@@ -227,18 +205,20 @@ exports.handler = async (event) => {
     }
     const { intervals_api_key, intervals_athlete_id } = perfiles[0]
     if (!intervals_api_key || !intervals_athlete_id) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'El atleta no tiene Intervals.icu configurado' }) }
+      // code estructurado para que el frontend no dependa del texto (F6)
+      return {
+        statusCode: 400,
+        headers: CORS,
+        body: JSON.stringify({ error: 'El atleta no tiene Intervals.icu configurado', code: 'NO_INTERVALS' }),
+      }
     }
 
-    console.log('session.workout_steps:', JSON.stringify(session.workout_steps))
-
     const tipoIntervals = DISCIPLINE_TYPE[session.disciplina] || 'Workout'
-    const description = buildIntervalsDescription(session)
+    // incluirNotas:false SIEMPRE — las notas del entrenador no llegan al reloj
+    const description = buildIntervalsText(session, { incluirNotas: false })
     const piscina = session.workout_steps?.piscina || '25'
     const isSwim = session.disciplina === 'swim'
     const isOpen = piscina === 'open'
-
-    console.log('DESCRIPTION COMPLETO:\n' + description)
 
     const eventBody = {
       category: 'WORKOUT',
@@ -253,9 +233,13 @@ exports.handler = async (event) => {
       eventBody.pool_length_unit = 'Meters'
     }
 
-    const result = await intervalsPost(intervals_athlete_id, intervals_api_key, eventBody)
+    // Reenvío idempotente: si ya se había enviado, borrar el evento anterior en
+    // Intervals antes de crear el nuevo para no duplicar el workout en el reloj.
+    if (session.intervals_event_id) {
+      await intervalsDelete(intervals_athlete_id, intervals_api_key, session.intervals_event_id)
+    }
 
-    console.log('intervals result:', result.status, JSON.stringify(result.body))
+    const result = await intervalsPost(intervals_athlete_id, intervals_api_key, eventBody)
 
     if (result.status < 200 || result.status >= 300) {
       return {
@@ -267,11 +251,29 @@ exports.handler = async (event) => {
 
     const intervals_event_id = result.body?.id ? String(result.body.id) : null
 
-    await supabasePatch(`coach_sessions?id=eq.${sessionId}`, {
+    // Persistir con reintentos. Si NO se puede confirmar en BD, deshacer el
+    // evento recién creado (compensación) para no dejar un workout huérfano en
+    // el reloj que el usuario reenviaría y duplicaría (F4c).
+    const persistido = await patchConReintentos(sessionId, {
       intervals_event_id,
       enviado_a_garmin: true,
       garmin_enviado_at: new Date().toISOString(),
     })
+
+    if (!persistido) {
+      if (intervals_event_id) {
+        await intervalsDelete(intervals_athlete_id, intervals_api_key, intervals_event_id)
+      }
+      console.error(`send-to-intervals: PATCH no confirmado para sesión ${sessionId}; evento revertido`)
+      return {
+        statusCode: 502,
+        headers: CORS,
+        body: JSON.stringify({
+          error: 'El entrenamiento se envió pero no se pudo confirmar. Se ha revertido; inténtalo de nuevo.',
+          code: 'PERSIST_FAILED',
+        }),
+      }
+    }
 
     return {
       statusCode: 200,

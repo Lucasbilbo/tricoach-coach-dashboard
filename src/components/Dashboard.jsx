@@ -111,13 +111,14 @@ export default function Dashboard() {
           return
         }
 
-        // El login con Google llega aquí sin pasar por la verificación de Login.jsx:
-        // solo usuarios presentes en `coaches` pueden usar el panel
-        const { data: coach, error: coachError } = await supabase
-          .from('coaches')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle()
+        // El login con Google llega aquí sin pasar por la verificación de Login.jsx.
+        // Comprobamos coach y perfil a la vez para enrutar correctamente (F2):
+        // solo coaches usan el panel; un atleta va a su /home en vez de ser
+        // deslogueado en silencio.
+        const [{ data: coach, error: coachError }, { data: profile }] = await Promise.all([
+          supabase.from('coaches').select('id').eq('id', userId).maybeSingle(),
+          supabase.from('profiles').select('id').eq('id', userId).maybeSingle(),
+        ])
 
         if (!activo) return
 
@@ -127,8 +128,19 @@ export default function Dashboard() {
         }
 
         if (!coach) {
+          if (profile) {
+            navigate('/home', { replace: true })
+            return
+          }
+          // Ni coach ni atleta: desloguear con un mensaje claro en la home
           await supabase.auth.signOut()
-          navigate('/')
+          navigate('/', {
+            replace: true,
+            state: {
+              authError:
+                'Esta cuenta no está vinculada a ningún perfil de GetRiCoach. Pide a tu entrenador un link de invitación.',
+            },
+          })
           return
         }
 
