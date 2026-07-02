@@ -90,19 +90,23 @@ BEGIN
     RETURN QUERY SELECT false, NULL::uuid, 'EMAIL_MISMATCH'; RETURN;
   END IF;
 
-  -- Marcado atómico: si dos requests concurrentes llegan aquí, solo una afecta
-  -- una fila (used pasa a true); la otra ve 0 filas y aborta.
+  -- Serialización de la carrera: marcar used SIN tocar athlete_id todavía
+  -- (athlete_invitations.athlete_id tiene FK a profiles, que aún no existe).
+  -- Si dos requests concurrentes llegan aquí, solo una afecta una fila; la
+  -- otra ve 0 filas y aborta sin haber escrito nada.
   UPDATE public.athlete_invitations
-     SET used = true, athlete_id = p_athlete_id, used_at = now()
+     SET used = true, used_at = now()
    WHERE token = p_token AND used = false;
   GET DIAGNOSTICS updated = ROW_COUNT;
   IF updated = 0 THEN
     RETURN QUERY SELECT false, NULL::uuid, 'INVALID_TOKEN'; RETURN;
   END IF;
 
-  -- Si cualquiera de estos falla, la excepción revierte también el UPDATE.
+  -- Crear el perfil (satisface el FK) y la relación. Si algo falla, la
+  -- excepción revierte toda la transacción, incluido el UPDATE de arriba.
   INSERT INTO public.profiles (id, nombre, email) VALUES (p_athlete_id, p_nombre, p_email);
   INSERT INTO public.coach_athletes (coach_id, athlete_id) VALUES (inv.coach_id, p_athlete_id);
+  UPDATE public.athlete_invitations SET athlete_id = p_athlete_id WHERE token = p_token;
 
   RETURN QUERY SELECT true, inv.coach_id, NULL::text;
 END;
