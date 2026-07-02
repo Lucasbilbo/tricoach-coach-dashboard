@@ -148,7 +148,9 @@ async function obtenerAccessToken(perfil, env) {
   return refresh.json.access_token
 }
 
-async function procesarAtleta(athleteId, env) {
+// El perfil se pasa ya cargado (todos los perfiles se traen en UNA query batch
+// en el handler, en vez de una por atleta — evita el N+1 sobre profiles).
+async function procesarAtleta(athleteId, perfil, env) {
   const base = {
     athlete_id: athleteId,
     nombre: 'Atleta',
@@ -160,11 +162,6 @@ async function procesarAtleta(athleteId, env) {
   }
 
   try {
-    const perfilRes = await withTimeout(
-      supabaseGet(env.supabaseHost, `/rest/v1/profiles?id=eq.${athleteId}&select=*`, env.SERVICE_KEY),
-      5000
-    )
-    const perfil = Array.isArray(perfilRes.json) ? perfilRes.json[0] : null
     if (!perfil) return base
 
     const conNombre = { ...base, nombre: perfil.nombre || perfil.email || 'Atleta' }
@@ -258,9 +255,25 @@ exports.handler = async (event) => {
     const atletaIds = Array.isArray(relRes.json) ? relRes.json.map((r) => r.athlete_id) : []
     if (atletaIds.length === 0) return respuesta(200, [])
 
-    // 4. Procesar atletas en paralelo (cada uno con su propio try/catch)
+    // 4. Traer TODOS los perfiles en una sola query (filtro in) — evita el N+1
+    const perfilesRes = await withTimeout(
+      supabaseGet(
+        supabaseHost,
+        `/rest/v1/profiles?id=in.(${atletaIds.join(',')})&select=*`,
+        SERVICE_KEY
+      ),
+      5000
+    )
+    const perfilPorId = new Map()
+    if (Array.isArray(perfilesRes.json)) {
+      for (const p of perfilesRes.json) perfilPorId.set(p.id, p)
+    }
+
+    // 5. Procesar atletas en paralelo (cada uno con su propio try/catch)
     const env = { supabaseHost, SERVICE_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET }
-    const resultados = await Promise.all(atletaIds.map((id) => procesarAtleta(id, env)))
+    const resultados = await Promise.all(
+      atletaIds.map((id) => procesarAtleta(id, perfilPorId.get(id) || null, env))
+    )
 
     return respuesta(200, resultados)
   } catch (err) {
