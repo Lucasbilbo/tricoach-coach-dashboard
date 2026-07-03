@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { decimalToRitmo, formatDiaMes } from '../../lib/chartUtils'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../../lib/theme'
 import { FILTROS_DISCIPLINA, descargarCsv } from '../../lib/activityFormat'
 import {
@@ -56,6 +57,7 @@ export default function StravaAnalysis({
 }) {
   const [filtroDisciplina, setFiltroDisciplina] = useState('todos')
   const [selectedActivityId, setSelectedActivityId] = useState(null)
+  const isMobile = useIsMobile()
 
   const actividadesFiltradas =
     filtroDisciplina === 'todos'
@@ -84,41 +86,48 @@ export default function StravaAnalysis({
 
   return (
     <>
-      {/* Fila de 5 stats */}
+      {/* Fila de stats — desktop: 5 en fila; móvil: 2×2 con los 4 principales */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: isMobile ? 10 : 16,
+          marginBottom: isMobile ? 14 : 24,
         }}
       >
-        {statCards.map((s) => (
+        {(isMobile ? statCards.slice(0, 4) : statCards).map((s) => (
           <div
             key={s.label}
             style={{
               background: COLORS.card,
               border: `1px solid ${COLORS.cardBorder}`,
-              borderRadius: 12,
-              padding: '18px 20px',
+              borderRadius: isMobile ? 10 : 12,
+              padding: isMobile ? 14 : '18px 20px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 6,
+              gap: isMobile ? 4 : 6,
             }}
           >
-            <span style={{ fontSize: 12, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>{s.label}</span>
-            <span style={{ fontFamily: FONTS.mono, fontSize: 26, fontWeight: 600, color: s.color }}>{s.valor}</span>
-            <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{s.nota}</span>
+            <span style={{ fontSize: isMobile ? 10.5 : 12, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>{s.label}</span>
+            <span style={{ fontFamily: FONTS.mono, fontSize: isMobile ? 19 : 26, fontWeight: 600, color: s.color }}>{s.valor}</span>
+            {!isMobile && <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{s.nota}</span>}
           </div>
         ))}
       </div>
 
       {/* Línea de Transición (volumen semanal segmentado por disciplina) */}
       {columnas.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: isMobile ? 14 : 24 }}>
           <TransitionLine
             columns={columnas}
-            titulo="LÍNEA DE TRANSICIÓN — volumen y disciplina por semana"
+            titulo={isMobile ? 'LÍNEA DE TRANSICIÓN' : 'LÍNEA DE TRANSICIÓN — volumen y disciplina por semana'}
+            barsHeight={isMobile ? 110 : 180}
+            gap={isMobile ? 6 : 14}
+            maxBarWidth={isMobile ? null : 52}
+            barRadius={isMobile ? 4 : 6}
+            showLegend={!isMobile}
+            showStatusLabel={!isMobile}
+            dowFontSize={isMobile ? 10 : 11}
           />
         </div>
       )}
@@ -130,14 +139,14 @@ export default function StravaAnalysis({
         {zonas.length > 0 && (
           <div style={cardStyle}>
             <div style={seccionLabel}>DISTRIBUCIÓN DE ZONAS FC</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
               {zonas.map((z) => (
-                <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ width: 26, fontSize: 12, color: COLORS.textSecondary, fontFamily: FONTS.mono }}>{z.label}</span>
-                  <div style={{ flex: 1, background: COLORS.background, borderRadius: 4, height: 16, overflow: 'hidden' }}>
+                <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
+                  <span style={{ width: isMobile ? 22 : 26, fontSize: isMobile ? 11 : 12, color: COLORS.textSecondary, fontFamily: FONTS.mono }}>{z.label}</span>
+                  <div style={{ flex: 1, background: COLORS.background, borderRadius: 4, height: isMobile ? 12 : 16, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${z.pct}%`, background: z.color, borderRadius: 4, transition: 'width 180ms ease' }} />
                   </div>
-                  <span style={{ width: 52, textAlign: 'right', fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>
+                  <span style={{ width: isMobile ? 42 : 52, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 13, color: COLORS.textPrimary }}>
                     {z.minutesLabel}
                   </span>
                 </div>
@@ -228,82 +237,134 @@ export default function StravaAnalysis({
         </button>
       </div>
 
-      {/* Tabla de sesiones (layout del spec: 7 columnas) */}
-      <div style={{ ...cardStyle, padding: '8px 0' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: TABLA_COLS,
-            gap: 10,
-            padding: '12px 24px',
-            fontSize: 11,
-            color: COLORS.textTertiary,
-            letterSpacing: '0.04em',
-          }}
-        >
-          <span>FECHA</span><span>SESIÓN</span><span>DISTANCIA</span><span>RITMO / POTENCIA</span><span>FC MEDIA</span><span>TSS</span><span>ESTADO</span>
-        </div>
-
-        {actividadesFiltradas.length === 0 && (
-          <div style={{ padding: '16px 24px', borderTop: `1px solid ${COLORS.cardBorder}`, color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' }}>
-            {filtroDisciplina === 'todos'
-              ? 'Sin actividades en este rango'
-              : 'Sin actividades de esta disciplina en este rango'}
-          </div>
-        )}
-
-        {actividadesFiltradas.map((act, i) => {
-          const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
-          return (
-            <div
-              key={act.id || `${act.fecha}-${i}`}
-              onClick={() => act.id && setSelectedActivityId(act.id)}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: TABLA_COLS,
-                gap: 10,
-                padding: '14px 24px',
-                alignItems: 'center',
-                borderTop: `1px solid ${COLORS.cardBorder}`,
-                cursor: act.id ? 'pointer' : 'default',
-              }}
-            >
-              <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
-                {act.fecha ? formatDiaMes(act.fecha) : '—'}
-              </span>
-              <span style={{ fontSize: 14, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
-              </span>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>
-                {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
-              </span>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
-                {act.fc_media != null ? `${act.fc_media}` : '—'}
-              </span>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.load }}>
-                {act.tss_estimado != null ? act.tss_estimado : '—'}
-              </span>
-              <span
+      {/* Sesiones — desktop: tabla de 7 columnas; móvil: lista de cards */}
+      {isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {actividadesFiltradas.length === 0 && (
+            <div style={{ ...cardStyle, textAlign: 'center', color: COLORS.textSecondary, fontSize: 13 }}>
+              {filtroDisciplina === 'todos'
+                ? 'Sin actividades en este rango'
+                : 'Sin actividades de esta disciplina en este rango'}
+            </div>
+          )}
+          {actividadesFiltradas.map((act, i) => {
+            const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
+            return (
+              <div
+                key={act.id || `${act.fecha}-${i}`}
+                onClick={() => act.id && setSelectedActivityId(act.id)}
                 style={{
-                  fontSize: 12,
-                  color,
-                  border: `1px solid ${color}`,
-                  borderRadius: 20,
-                  padding: '3px 10px',
-                  textAlign: 'center',
-                  width: 'fit-content',
-                  fontFamily: FONTS.sans,
+                  background: COLORS.card,
+                  border: `1px solid ${COLORS.cardBorder}`,
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  cursor: act.id ? 'pointer' : 'default',
                 }}
               >
-                {DISCIPLINE_LABELS[act.disciplina] || 'Sesión'}
-              </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary }}>
+                    {act.fecha ? formatDiaMes(act.fecha) : '—'}
+                  </span>
+                  <span style={{ fontSize: 11, color, border: `1px solid ${color}`, borderRadius: 20, padding: '2px 9px', fontFamily: FONTS.sans }}>
+                    {DISCIPLINE_LABELS[act.disciplina] || 'Sesión'}
+                  </span>
+                </div>
+                <span style={{ fontSize: 14, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
+                </span>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textPrimary }}>
+                    {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
+                  </span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.load }}>
+                    TSS {act.tss_estimado != null ? act.tss_estimado : '—'}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div style={{ ...cardStyle, padding: '8px 0' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: TABLA_COLS,
+              gap: 10,
+              padding: '12px 24px',
+              fontSize: 11,
+              color: COLORS.textTertiary,
+              letterSpacing: '0.04em',
+            }}
+          >
+            <span>FECHA</span><span>SESIÓN</span><span>DISTANCIA</span><span>RITMO / POTENCIA</span><span>FC MEDIA</span><span>TSS</span><span>ESTADO</span>
+          </div>
+
+          {actividadesFiltradas.length === 0 && (
+            <div style={{ padding: '16px 24px', borderTop: `1px solid ${COLORS.cardBorder}`, color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' }}>
+              {filtroDisciplina === 'todos'
+                ? 'Sin actividades en este rango'
+                : 'Sin actividades de esta disciplina en este rango'}
             </div>
-          )
-        })}
-      </div>
+          )}
+
+          {actividadesFiltradas.map((act, i) => {
+            const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
+            return (
+              <div
+                key={act.id || `${act.fecha}-${i}`}
+                onClick={() => act.id && setSelectedActivityId(act.id)}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: TABLA_COLS,
+                  gap: 10,
+                  padding: '14px 24px',
+                  alignItems: 'center',
+                  borderTop: `1px solid ${COLORS.cardBorder}`,
+                  cursor: act.id ? 'pointer' : 'default',
+                }}
+              >
+                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
+                  {act.fecha ? formatDiaMes(act.fecha) : '—'}
+                </span>
+                <span style={{ fontSize: 14, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
+                </span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>
+                  {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
+                </span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
+                  {act.fc_media != null ? `${act.fc_media}` : '—'}
+                </span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.load }}>
+                  {act.tss_estimado != null ? act.tss_estimado : '—'}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color,
+                    border: `1px solid ${color}`,
+                    borderRadius: 20,
+                    padding: '3px 10px',
+                    textAlign: 'center',
+                    width: 'fit-content',
+                    fontFamily: FONTS.sans,
+                  }}
+                >
+                  {DISCIPLINE_LABELS[act.disciplina] || 'Sesión'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {selectedActivityId && athleteId && (
         <ActivityDetail
