@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
 import {
   COLORS,
@@ -69,6 +70,7 @@ const badgeDisciplina = (disciplina) => ({
 
 export default function AthleteHome() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   // Auth / IDs
   const [userId, setUserId] = useState(null)
@@ -275,12 +277,20 @@ export default function AthleteHome() {
           }}
         >
           <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
-              {perfil?.nombre ? (
-                <>Hola, <span style={{ color: COLORS.accent }}>{perfil.nombre}</span></>
-              ) : (
-                'Mi panel'
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS.accent, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>GetRiCoach</span>
+            </div>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: isMobile ? 24 : 34,
+                fontWeight: 700,
+                letterSpacing: '-0.01em',
+                color: COLORS.textPrimary,
+              }}
+            >
+              {perfil?.nombre || 'Mi panel'}
             </h1>
           </div>
 

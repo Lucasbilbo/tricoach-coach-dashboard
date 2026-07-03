@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { hoyMadrid } from '../lib/chartUtils'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { COLORS, pageStyle, buttonStyle } from '../lib/theme'
 import WorkoutBuilder from './WorkoutBuilder'
 import SessionsList from './SessionsList'
@@ -23,6 +24,7 @@ export default function AthleteView() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     let activo = true
@@ -101,7 +103,24 @@ export default function AthleteView() {
             >
               ← Volver al panel
             </button>
-            <h1 style={{ margin: '6px 0 0', fontSize: 24, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS.accent, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>
+                GetRiCoach · Panel de Jon
+              </span>
+            </div>
+            <h1
+              style={{
+                margin: '6px 0 0',
+                fontSize: isMobile ? 24 : 34,
+                fontWeight: 700,
+                letterSpacing: '-0.01em',
+                color: COLORS.textPrimary,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {datos?.atleta?.nombre || 'Atleta'}
             </h1>
           </div>
