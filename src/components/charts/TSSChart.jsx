@@ -17,9 +17,9 @@ const VENTANA_ATL_DIAS = 7
 const VENTANA_CTL_DIAS = 28
 const DIA_MS = 86400000
 
-const ATL_COLOR = '#00D4FF'
-const CTL_COLOR = '#00E5A0'
-const BAR_COLOR = DISCIPLINE_COLORS.strength
+const ATL_COLOR = '#2FBFAF' // Swim teal (fatiga aguda)
+const CTL_COLOR = '#E8934A' // Bike amber (fitness crónico)
+const BAR_COLOR = DISCIPLINE_COLORS.strength // Load violet (TSS)
 
 function sumarDias(fecha, dias) {
   const [y, m, d] = fecha.split('-').map(Number)

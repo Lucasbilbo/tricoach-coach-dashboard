@@ -28,3 +28,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# preview harness temporal (rediseño visual)
+dist-preview/
+.env.preview
+vite.preview.config.mjs
+preview.html
+src/preview/
