@@ -71,7 +71,7 @@ const btnSecondary = {
 const btnOmitirStyle = {
   background: 'none',
   border: 'none',
-  color: '#64748B',
+  color: '#8A90A0',
   fontSize: 13,
   cursor: 'pointer',
   fontFamily: "'Archivo', sans-serif",
@@ -103,7 +103,7 @@ function ProgressDots({ paso }) {
               i === paso
                 ? COLORS.accent
                 : i < paso
-                ? 'rgba(0,212,255,0.4)'
+                ? 'rgba(47,191,175,0.4)'
                 : 'rgba(255,255,255,0.1)',
             transition: 'all 0.2s',
           }}
@@ -263,8 +263,8 @@ export default function IntervalsSetup() {
             {stravaError && (
               <div
                 style={{
-                  background: 'rgba(255,77,109,0.1)',
-                  border: '1px solid rgba(255,77,109,0.3)',
+                  background: 'rgba(232,93,93,0.1)',
+                  border: '1px solid rgba(232,93,93,0.3)',
                   borderRadius: 8,
                   padding: '10px 14px',
                   marginBottom: 16,
@@ -279,8 +279,8 @@ export default function IntervalsSetup() {
             {stravaConectado ? (
               <div
                 style={{
-                  background: 'rgba(0,229,160,0.08)',
-                  border: '1px solid rgba(0,229,160,0.3)',
+                  background: 'rgba(47,191,175,0.08)',
+                  border: '1px solid rgba(47,191,175,0.3)',
                   borderRadius: 8,
                   padding: '12px 16px',
                   marginBottom: 16,

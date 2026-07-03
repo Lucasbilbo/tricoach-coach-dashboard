@@ -19,7 +19,7 @@ export function MaterialChips({ material, disciplina, onChange }) {
               type="button"
               onClick={() => onChange(activo ? sel.filter((m) => m !== item) : [...sel, item])}
               style={{
-                background: activo ? 'rgba(0,212,255,0.1)' : 'transparent',
+                background: activo ? 'rgba(47,191,175,0.1)' : 'transparent',
                 color: activo ? COLORS.accent : COLORS.textSecondary,
                 border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
                 borderRadius: 4,

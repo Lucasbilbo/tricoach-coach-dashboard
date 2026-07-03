@@ -503,8 +503,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           {exitoGarmin && (
             <div
               style={{
-                background: 'rgba(0,229,160,0.1)',
-                border: '1px solid rgba(0,229,160,0.3)',
+                background: 'rgba(47,191,175,0.1)',
+                border: '1px solid rgba(47,191,175,0.3)',
                 borderRadius: 8,
                 padding: 12,
                 marginBottom: 12,
@@ -519,8 +519,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           {errorIntervals && (
             <div
               style={{
-                background: 'rgba(255,77,109,0.1)',
-                border: '1px solid rgba(255,77,109,0.3)',
+                background: 'rgba(232,93,93,0.1)',
+                border: '1px solid rgba(232,93,93,0.3)',
                 borderRadius: 8,
                 padding: 12,
                 marginBottom: 12,

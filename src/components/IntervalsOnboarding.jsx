@@ -77,7 +77,7 @@ export default function IntervalsOnboarding({ athleteId }) {
             <button
               onClick={copiarLink}
               style={{
-                background: copiado ? 'rgba(0,229,160,0.1)' : 'transparent',
+                background: copiado ? 'rgba(47,191,175,0.1)' : 'transparent',
                 color: copiado ? '#2FBFAF' : COLORS.textSecondary,
                 border: `1px solid ${COLORS.cardBorder}`,
                 borderRadius: 6,

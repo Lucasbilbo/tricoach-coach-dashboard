@@ -358,7 +358,7 @@ export default function Dashboard() {
                     key={atleta.athlete_id}
                     onClick={() => navigate(`/athlete/${atleta.athlete_id}`)}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(0,212,255,0.3)'
+                      e.currentTarget.style.borderColor = 'rgba(47,191,175,0.3)'
                       e.currentTarget.style.transform = 'translateY(-2px)'
                     }}
                     onMouseLeave={(e) => {
@@ -385,8 +385,8 @@ export default function Dashboard() {
                       </div>
                       <span
                         style={{
-                          color: activo ? TSS_VERDE : COLORS.textSecondary,
-                          background: activo ? 'rgba(0,229,160,0.1)' : 'rgba(255,255,255,0.06)',
+                          color: activo ? COLORS.accent : COLORS.textSecondary,
+                          background: activo ? 'rgba(47,191,175,0.12)' : 'rgba(255,255,255,0.06)',
                           borderRadius: 4,
                           padding: '2px 8px',
                           fontSize: 11,

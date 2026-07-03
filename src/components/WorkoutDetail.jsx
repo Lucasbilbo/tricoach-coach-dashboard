@@ -11,7 +11,7 @@ function bloqueColor(tipo, esDescanso) {
 }
 
 function bloqueBg(tipo) {
-  if (tipo === 'repeat') return 'rgba(124,58,237,0.08)'
+  if (tipo === 'repeat') return 'rgba(139,127,209,0.08)'
   return 'transparent'
 }
 
@@ -184,7 +184,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
           style={{
             marginTop: 10,
             padding: '10px 12px',
-            background: 'rgba(0,212,255,0.06)',
+            background: 'rgba(47,191,175,0.06)',
             border: `1px solid ${COLORS.accent}`,
             borderRadius: 8,
           }}
