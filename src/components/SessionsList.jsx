@@ -1,20 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
-import { COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
 import { MESES_CORTOS } from '../lib/chartUtils'
 import { useIsMobile } from '../hooks/useIsMobile'
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
 
-const BADGE_COLORS = {
-  swim: '#00D4FF',
-  bike: '#00E5A0',
-  run: '#FF4D6D',
-  strength: '#7C3AED',
-  other: '#94A3B8',
-}
+const BADGE_COLORS = DISCIPLINE_COLORS
 
 const DISC_LABELS = {
   run: 'Running',
@@ -46,7 +40,7 @@ function estadoSesion(sesion, actividades) {
   const act = (actividades || []).find(
     (a) => a.fecha === sesion.fecha && a.disciplina === sesion.disciplina
   )
-  if (act) return { texto: '✓ Completada', color: '#00E5A0', actividadStrava: act }
+  if (act) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: act }
   if (sesion.fecha > hoyMadrid()) return { texto: 'Programada', color: COLORS.accent, actividadStrava: null }
   return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
 }
@@ -66,7 +60,7 @@ const accionBtnStyle = {
   padding: '8px 10px',
   fontSize: 12,
   cursor: 'pointer',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   minHeight: 36,
   lineHeight: 1,
 }
@@ -225,7 +219,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
                   {completada && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setActividadDetalle(estado.actividadStrava) }}
-                      style={{ ...accionBtnStyle, color: '#00E5A0', borderColor: '#00E5A0' }}
+                      style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
                     >
                       Ver actividad →
                     </button>

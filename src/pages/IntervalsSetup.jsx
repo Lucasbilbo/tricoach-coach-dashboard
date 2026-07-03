@@ -10,7 +10,7 @@ const pageStyle = {
   minHeight: '100vh',
   background: COLORS.background,
   color: COLORS.textPrimary,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -18,7 +18,7 @@ const pageStyle = {
 }
 
 const cardStyle = {
-  background: '#0F1729',
+  background: '#12151C',
   border: `1px solid rgba(255,255,255,0.06)`,
   borderRadius: 16,
   padding: 40,
@@ -35,7 +35,7 @@ const inputStyle = {
   padding: '10px 12px',
   color: COLORS.textPrimary,
   fontSize: 14,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   outline: 'none',
   marginTop: 6,
 }
@@ -50,7 +50,7 @@ const btnPrimary = {
   fontSize: 14,
   fontWeight: 600,
   cursor: 'pointer',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   marginTop: 16,
 }
 
@@ -64,7 +64,7 @@ const btnSecondary = {
   fontSize: 14,
   fontWeight: 600,
   cursor: 'pointer',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   marginTop: 8,
 }
 
@@ -74,7 +74,7 @@ const btnOmitirStyle = {
   color: '#64748B',
   fontSize: 13,
   cursor: 'pointer',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   marginTop: 20,
   width: '100%',
   textAlign: 'center',
@@ -285,7 +285,7 @@ export default function IntervalsSetup() {
                   padding: '12px 16px',
                   marginBottom: 16,
                   fontSize: 14,
-                  color: '#00E5A0',
+                  color: '#2FBFAF',
                   fontWeight: 600,
                 }}
               >
@@ -339,7 +339,7 @@ export default function IntervalsSetup() {
                 fontSize: 14,
                 fontWeight: 600,
                 textDecoration: 'none',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
               }}
             >
               Ir a intervals.icu/signup ↗
@@ -386,7 +386,7 @@ export default function IntervalsSetup() {
             )}
 
             {verificado && (
-              <p style={{ color: '#00E5A0', fontSize: 13, margin: '8px 0 0' }}>
+              <p style={{ color: '#2FBFAF', fontSize: 13, margin: '8px 0 0' }}>
                 ✅ Conectado como {verificado.nombre}
               </p>
             )}
@@ -438,7 +438,7 @@ export default function IntervalsSetup() {
                 fontSize: 14,
                 fontWeight: 600,
                 textDecoration: 'none',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
               }}
             >
               Ir a intervals.icu/settings ↗

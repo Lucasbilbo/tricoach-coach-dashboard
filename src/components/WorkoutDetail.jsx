@@ -5,9 +5,9 @@ const DISC_EMOJI = { swim: '🏊', bike: '🚴', run: '🏃', strength: '💪', 
 
 function bloqueColor(tipo, esDescanso) {
   if (esDescanso) return null
-  if (tipo === 'warmup' || tipo === 'cooldown') return '#00D4FF'
-  if (tipo === 'repeat') return '#7C3AED'
-  return '#00E5A0'
+  if (tipo === 'warmup' || tipo === 'cooldown') return '#2FBFAF'
+  if (tipo === 'repeat') return '#8B7FD1'
+  return '#E8934A'
 }
 
 function bloqueBg(tipo) {
@@ -99,7 +99,7 @@ function BloqueCard({ bloque, disciplina }) {
             <span style={{ fontSize: 13 }}>{bloqueIcono(bloque.tipo)}</span>
             <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
               {bloque.nombre || 'Serie'}{' '}
-              <span style={{ color: '#7C3AED', fontWeight: 700 }}>×{bloque.repeticiones}</span>
+              <span style={{ color: '#8B7FD1', fontWeight: 700 }}>×{bloque.repeticiones}</span>
             </span>
           </div>
           {(bloque.pasos || []).map((paso, pi) => (

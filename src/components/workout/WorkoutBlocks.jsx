@@ -220,7 +220,7 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#7C3AED' }}>🔁 Serie</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#8B7FD1' }}>🔁 Serie</span>
           <input
             type="text"
             value={bloque.nombre || ''}

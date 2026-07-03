@@ -7,7 +7,7 @@ const pageStyle = {
   minHeight: '100vh',
   background: COLORS.background,
   color: COLORS.textPrimary,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -15,7 +15,7 @@ const pageStyle = {
 }
 
 const cardStyle = {
-  background: '#0F1729',
+  background: '#12151C',
   border: `1px solid rgba(255,255,255,0.06)`,
   borderRadius: 16,
   padding: 40,
@@ -32,7 +32,7 @@ const inputStyle = {
   padding: '10px 12px',
   color: COLORS.textPrimary,
   fontSize: 14,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   outline: 'none',
   marginTop: 6,
   marginBottom: 14,
@@ -231,7 +231,7 @@ export default function JoinPage() {
               fontSize: 14,
               fontWeight: 600,
               cursor: registrando ? 'wait' : 'pointer',
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "'Archivo', sans-serif",
               opacity: registrando ? 0.7 : 1,
             }}
           >

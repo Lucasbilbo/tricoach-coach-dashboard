@@ -117,7 +117,7 @@ export default function PrescribeModal({ athleteId, coachId, onClose, onSaved, s
           maxHeight: '90vh',
           overflowY: 'auto',
           padding: 32,
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Archivo', sans-serif",
         }}
       >
         <h2 style={{ margin: '0 0 24px', fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>

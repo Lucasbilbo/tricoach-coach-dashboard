@@ -17,7 +17,7 @@ export const miniBtn = {
   padding: '3px 7px',
   fontSize: 12,
   cursor: 'pointer',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
 }
 
 export const addBtnStyle = {
@@ -28,7 +28,7 @@ export const addBtnStyle = {
   padding: '6px 12px',
   fontSize: 12,
   cursor: 'pointer',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Archivo', sans-serif",
   width: '100%',
 }
 

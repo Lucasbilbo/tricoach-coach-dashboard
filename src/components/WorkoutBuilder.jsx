@@ -241,12 +241,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           height: '100dvh',
           width: 520,
           maxWidth: '100vw',
-          background: '#0F1729',
+          background: '#12151C',
           borderLeft: `1px solid ${COLORS.cardBorder}`,
           zIndex: 200,
           display: 'flex',
           flexDirection: 'column',
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Archivo', sans-serif",
         }}
       >
         {/* Header */}
@@ -298,14 +298,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   onClick={() => setForm((prev) => ({ ...prev, disciplina: d.value, bloques: [] }))}
                   style={{
                     background: form.disciplina === d.value ? COLORS.accent : 'transparent',
-                    color: form.disciplina === d.value ? '#0A0F1E' : COLORS.textSecondary,
+                    color: form.disciplina === d.value ? '#0B0D12' : COLORS.textSecondary,
                     border: `1px solid ${form.disciplina === d.value ? COLORS.accent : COLORS.cardBorder}`,
                     borderRadius: 6,
                     padding: '6px 14px',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: 'pointer',
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "'Archivo', sans-serif",
                   }}
                 >
                   {d.label}
@@ -325,14 +325,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     onClick={() => setForm((prev) => ({ ...prev, piscina: p.value }))}
                     style={{
                       background: form.piscina === p.value ? COLORS.accent : 'transparent',
-                      color: form.piscina === p.value ? '#0A0F1E' : COLORS.textSecondary,
+                      color: form.piscina === p.value ? '#0B0D12' : COLORS.textSecondary,
                       border: `1px solid ${form.piscina === p.value ? COLORS.accent : COLORS.cardBorder}`,
                       borderRadius: 6,
                       padding: '5px 14px',
                       fontSize: 13,
                       fontWeight: form.piscina === p.value ? 700 : 400,
                       cursor: 'pointer',
-                      fontFamily: "'Inter', sans-serif",
+                      fontFamily: "'Archivo', sans-serif",
                     }}
                   >
                     {p.label}
@@ -369,7 +369,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                       fontSize: 11,
                       fontWeight: sel ? 700 : 400,
                       cursor: 'pointer',
-                      fontFamily: "'Inter', sans-serif",
+                      fontFamily: "'Archivo', sans-serif",
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
                     }}
@@ -389,7 +389,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   fontSize: 12,
                   cursor: 'pointer',
                   padding: 0,
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'Archivo', sans-serif",
                 }}
               >
                 {mostrarInputFecha ? '▲ Ocultar' : '▼ Otra fecha'}
@@ -483,7 +483,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           <div style={separadorSection}>Preview Intervals.icu</div>
           <pre
             style={{
-              background: '#0A0F1E',
+              background: '#0B0D12',
               border: `1px solid ${COLORS.cardBorder}`,
               borderRadius: 8,
               padding: 12,
@@ -509,7 +509,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 padding: 12,
                 marginBottom: 12,
                 fontSize: 13,
-                color: '#00E5A0',
+                color: '#2FBFAF',
               }}
             >
               ✅ Entrenamiento enviado al Garmin de {atletaNombre || 'el atleta'}
@@ -551,7 +551,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: guardando ? 'wait' : 'pointer',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
                 opacity: guardando || enviando ? 0.6 : 1,
               }}
             >
@@ -563,14 +563,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               style={{
                 flex: 1,
                 background: COLORS.accent,
-                color: '#0A0F1E',
+                color: '#0B0D12',
                 border: 'none',
                 borderRadius: 8,
                 padding: '10px 16px',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: enviando ? 'wait' : 'pointer',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
                 opacity: guardando || enviando ? 0.6 : 1,
               }}
             >

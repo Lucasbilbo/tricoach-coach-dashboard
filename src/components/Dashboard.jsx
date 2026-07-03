@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
-import { COLORS, cardStyle, pageStyle, buttonStyle } from '../lib/theme'
+import { COLORS, FONTS, DISCIPLINE_COLORS, cardStyle, pageStyle, buttonStyle } from '../lib/theme'
+import TransitionLine from './shared/TransitionLine'
 
-const TSS_VERDE = '#00E5A0'
-const TSS_AMARILLO = '#FDE68A'
-const TSS_ROJO = '#FF4D6D'
+const TSS_BAJO = DISCIPLINE_COLORS.swim // teal
+const TSS_MEDIO = DISCIPLINE_COLORS.bike // amber
+const TSS_ALTO = DISCIPLINE_COLORS.run // coral
 
 function colorTss(tss) {
   if (tss == null) return COLORS.textSecondary
-  if (tss < 300) return TSS_VERDE
-  if (tss <= 450) return TSS_AMARILLO
-  return TSS_ROJO
+  if (tss < 300) return TSS_BAJO
+  if (tss <= 450) return TSS_MEDIO
+  return TSS_ALTO
 }
 
 function textoUltimaActividad(dias) {
@@ -41,36 +42,38 @@ function BarraProgreso({ valor, max, color }) {
   )
 }
 
-const SPARKLINE_ALTO = 32
-const SPARKLINE_BARRA_ANCHO = 18
-const SPARKLINE_COLOR = 'rgba(124,58,237,0.6)'
-
-function SparklineTss({ semanas }) {
+// Mini Línea de Transición para la card del atleta: una barra por semana
+// reciente (color según carga). Sin composición por disciplina — coach-dashboard-data
+// solo devuelve tss_total por semana.
+function MiniTransicion({ semanas }) {
   if (!semanas || semanas.length === 0) return null
   const maxTss = Math.max(...semanas.map((s) => s.tss_total || 0))
   if (maxTss <= 0) return null
 
+  const columnas = semanas.map((s) => ({
+    label: '',
+    statusLabel: '',
+    isToday: false,
+    heightPct: Math.max(((s.tss_total || 0) / maxTss) * 100, 4),
+    borderStyle: 'solid',
+    borderWidth: '0px',
+    borderColor: 'transparent',
+    segments: [{ color: colorTss(s.tss_total), pct: 100, opacity: 1 }],
+  }))
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 4,
-        height: SPARKLINE_ALTO,
-        marginTop: 16,
-      }}
-    >
-      {semanas.map((s) => (
-        <div
-          key={s.semana}
-          style={{
-            width: SPARKLINE_BARRA_ANCHO,
-            height: Math.max(((s.tss_total || 0) / maxTss) * SPARKLINE_ALTO, 2),
-            background: SPARKLINE_COLOR,
-            borderRadius: 2,
-          }}
-        />
-      ))}
+    <div style={{ marginTop: 16 }}>
+      <TransitionLine
+        bare
+        columns={columnas}
+        titulo=""
+        showLegend={false}
+        showLabels={false}
+        barsHeight={32}
+        gap={4}
+        maxBarWidth={18}
+        barRadius={2}
+      />
     </div>
   )
 }
@@ -78,7 +81,7 @@ function SparklineTss({ semanas }) {
 function MetricaConBarra({ etiqueta, valor, max, color }) {
   return (
     <div style={{ flex: 1 }}>
-      <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color }}>
+      <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 18, fontWeight: 700, color }}>
         {valor != null ? valor : '—'}
       </p>
       <p style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary }}>{etiqueta}</p>
@@ -416,7 +419,7 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <SparklineTss semanas={atleta.semanas_recientes} />
+                    <MiniTransicion semanas={atleta.semanas_recientes} />
                   </div>
                 )
               })
@@ -442,7 +445,7 @@ export default function Dashboard() {
 
           <div
             style={{
-              background: '#0F1729',
+              background: '#12151C',
               border: `1px solid ${COLORS.cardBorder}`,
               borderRadius: 12,
               padding: 20,
@@ -474,7 +477,7 @@ export default function Dashboard() {
                     padding: '10px 12px',
                     color: COLORS.textPrimary,
                     fontSize: 14,
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "'Archivo', sans-serif",
                     outline: 'none',
                   }}
                 />
@@ -491,7 +494,7 @@ export default function Dashboard() {
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: generando ? 'wait' : 'pointer',
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'Archivo', sans-serif",
                   opacity: generando ? 0.7 : 1,
                   whiteSpace: 'nowrap',
                 }}
@@ -538,7 +541,7 @@ export default function Dashboard() {
                           style={{
                             fontSize: 12,
                             fontWeight: 600,
-                            color: inv.used ? '#00E5A0' : COLORS.textSecondary,
+                            color: inv.used ? '#2FBFAF' : COLORS.textSecondary,
                           }}
                         >
                           {inv.used ? '✅ Usada' : 'Pendiente'}
@@ -549,7 +552,7 @@ export default function Dashboard() {
                               style={{
                                 fontSize: 11,
                                 color: COLORS.accent,
-                                background: '#0A0F1E',
+                                background: '#0B0D12',
                                 padding: '3px 8px',
                                 borderRadius: 4,
                                 flex: 1,
@@ -567,13 +570,13 @@ export default function Dashboard() {
                               onClick={() => copiarLink(inv)}
                               style={{
                                 background: 'transparent',
-                                color: copiados[inv.id] ? '#00E5A0' : COLORS.textSecondary,
+                                color: copiados[inv.id] ? '#2FBFAF' : COLORS.textSecondary,
                                 border: `1px solid ${COLORS.cardBorder}`,
                                 borderRadius: 6,
                                 padding: '4px 10px',
                                 fontSize: 12,
                                 cursor: 'pointer',
-                                fontFamily: "'Inter', sans-serif",
+                                fontFamily: "'Archivo', sans-serif",
                                 whiteSpace: 'nowrap',
                               }}
                             >
@@ -589,7 +592,7 @@ export default function Dashboard() {
                                 padding: '4px 8px',
                                 fontSize: 12,
                                 cursor: 'pointer',
-                                fontFamily: "'Inter', sans-serif",
+                                fontFamily: "'Archivo', sans-serif",
                               }}
                             >
                               🗑

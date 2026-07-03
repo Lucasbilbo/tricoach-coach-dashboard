@@ -298,7 +298,7 @@ export default function AthleteHome() {
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'Archivo', sans-serif",
                 }}
               >
                 {rango} sem
@@ -337,7 +337,7 @@ export default function AthleteHome() {
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
               }}
             >
               {tab.etiqueta}
@@ -424,7 +424,7 @@ export default function AthleteHome() {
                                 style={{
                                   fontSize: 12,
                                   fontWeight: 600,
-                                  color: sesion.enviado_a_garmin ? '#00E5A0' : COLORS.textSecondary,
+                                  color: sesion.enviado_a_garmin ? '#2FBFAF' : COLORS.textSecondary,
                                 }}
                               >
                                 {sesion.enviado_a_garmin ? '✅ En tu Garmin' : '⏳ Pendiente Garmin'}
@@ -470,7 +470,7 @@ export default function AthleteHome() {
                                 padding: '5px 12px',
                                 fontSize: 12,
                                 cursor: 'pointer',
-                                fontFamily: "'Inter', sans-serif",
+                                fontFamily: "'Archivo', sans-serif",
                                 whiteSpace: 'nowrap',
                               }}
                             >
@@ -502,7 +502,7 @@ export default function AthleteHome() {
                                     fontSize: 13,
                                     fontWeight: 600,
                                     cursor: enviandoGarmin[sesion.id] ? 'wait' : 'pointer',
-                                    fontFamily: "'Inter', sans-serif",
+                                    fontFamily: "'Archivo', sans-serif",
                                     opacity: enviandoGarmin[sesion.id] ? 0.6 : 1,
                                   }}
                                 >
@@ -512,7 +512,7 @@ export default function AthleteHome() {
                             )}
 
                             {sesion.enviado_a_garmin && (
-                              <p style={{ color: '#00E5A0', fontSize: 13, fontWeight: 600, marginTop: 8 }}>
+                              <p style={{ color: '#2FBFAF', fontSize: 13, fontWeight: 600, marginTop: 8 }}>
                                 ✅ Enviado a Garmin
                               </p>
                             )}
@@ -578,7 +578,7 @@ export default function AthleteHome() {
                           <td
                             style={{
                               ...tdStyle,
-                              color: sesion.enviado_a_garmin ? '#00E5A0' : COLORS.textSecondary,
+                              color: sesion.enviado_a_garmin ? '#2FBFAF' : COLORS.textSecondary,
                               fontWeight: 600,
                               fontSize: 12,
                             }}
@@ -602,7 +602,7 @@ export default function AthleteHome() {
                                   padding: '3px 10px',
                                   fontSize: 12,
                                   cursor: 'pointer',
-                                  fontFamily: "'Inter', sans-serif",
+                                  fontFamily: "'Archivo', sans-serif",
                                 }}
                               >
                                 {expandidas[sesion.id] ? '▲' : '▼'}
@@ -658,7 +658,7 @@ export default function AthleteHome() {
                           border: `1px solid ${COLORS.cardBorder}`,
                           borderRadius: 6,
                           padding: '4px 10px',
-                          fontFamily: "'Inter', sans-serif",
+                          fontFamily: "'Archivo', sans-serif",
                         }}
                       >
                         Reconfigurar →
@@ -681,7 +681,7 @@ export default function AthleteHome() {
                           fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
-                          fontFamily: "'Inter', sans-serif",
+                          fontFamily: "'Archivo', sans-serif",
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -719,7 +719,7 @@ export default function AthleteHome() {
                           border: `1px solid ${COLORS.cardBorder}`,
                           borderRadius: 6,
                           padding: '4px 10px',
-                          fontFamily: "'Inter', sans-serif",
+                          fontFamily: "'Archivo', sans-serif",
                         }}
                       >
                         Reconfigurar →
@@ -739,7 +739,7 @@ export default function AthleteHome() {
                           border: `1px solid ${COLORS.accent}`,
                           borderRadius: 6,
                           padding: '4px 10px',
-                          fontFamily: "'Inter', sans-serif",
+                          fontFamily: "'Archivo', sans-serif",
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -781,7 +781,7 @@ export default function AthleteHome() {
                       fontSize: 13,
                       fontWeight: 600,
                       cursor: 'pointer',
-                      fontFamily: "'Inter', sans-serif",
+                      fontFamily: "'Archivo', sans-serif",
                     }}
                   >
                     Comparar semanas

@@ -96,7 +96,7 @@ export default function AthleteView() {
                 cursor: 'pointer',
                 fontSize: 13,
                 padding: 0,
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
               }}
             >
               ← Volver al panel
@@ -122,7 +122,7 @@ export default function AthleteView() {
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: 'pointer',
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "'Archivo', sans-serif",
                   }}
                 >
                   {rango} sem
@@ -141,7 +141,7 @@ export default function AthleteView() {
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'Archivo', sans-serif",
                 }}
               >
                 Comparar semanas
@@ -180,7 +180,7 @@ export default function AthleteView() {
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
               }}
             >
               {tab.etiqueta}

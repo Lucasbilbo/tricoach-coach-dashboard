@@ -26,7 +26,7 @@ export function MaterialChips({ material, disciplina, onChange }) {
                 padding: '2px 8px',
                 fontSize: 11,
                 cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
               }}
             >
               {item}
@@ -57,7 +57,7 @@ export function ZonasChips({ valor, onSelect }) {
               fontSize: 11,
               fontWeight: 700,
               cursor: 'pointer',
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "'Archivo', sans-serif",
             }}
           >
             {z}

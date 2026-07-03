@@ -26,41 +26,46 @@ export default function TransitionLine({
   barRadius = 6,
   showLegend = true,
   showStatusLabel = true,
+  showLabels = true, // etiqueta de columna (día/semana) bajo la barra
   dowFontSize = 11,
   animate = true,
+  bare = false, // sin card wrapper (para mini-indicadores dentro de otra card)
 }) {
   const transitionBar = animate ? 'height 180ms ease' : 'none'
   const transitionSeg = animate ? 'height 180ms ease, opacity 180ms ease' : 'none'
+  const mostrarHeader = !!titulo || showLegend
 
   return (
-    <div style={{ ...cardStyleLocal }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 18,
-          flexWrap: 'wrap',
-          gap: 8,
-        }}
-      >
-        <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>
-          {titulo}
-        </span>
-        {showLegend && (
-          <div style={{ display: 'flex', gap: 16 }}>
-            {LEYENDA.map((l) => (
-              <span
-                key={l.label}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: COLORS.textSecondary }}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, display: 'inline-block' }} />
-                {l.label}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+    <div style={bare ? undefined : { ...cardStyleLocal }}>
+      {mostrarHeader && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 18,
+            flexWrap: 'wrap',
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>
+            {titulo}
+          </span>
+          {showLegend && (
+            <div style={{ display: 'flex', gap: 16 }}>
+              {LEYENDA.map((l) => (
+                <span
+                  key={l.label}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: COLORS.textSecondary }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, display: 'inline-block' }} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         role="img"
@@ -114,17 +119,19 @@ export default function TransitionLine({
                 />
               ))}
             </div>
-            <div
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: dowFontSize,
-                color: col.isToday ? COLORS.textPrimary : COLORS.textSecondary,
-                textAlign: 'center',
-              }}
-            >
-              {col.label}
-            </div>
-            {showStatusLabel && (
+            {showLabels && (
+              <div
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: dowFontSize,
+                  color: col.isToday ? COLORS.textPrimary : COLORS.textSecondary,
+                  textAlign: 'center',
+                }}
+              >
+                {col.label}
+              </div>
+            )}
+            {showStatusLabel && showLabels && (
               <div style={{ fontSize: 10, color: COLORS.textTertiary, textAlign: 'center', lineHeight: 1.3 }}>
                 {col.statusLabel}
               </div>

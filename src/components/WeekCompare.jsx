@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { COLORS, inputStyle } from '../lib/theme'
 import { formatFechaCorta, sumarDias } from '../lib/chartUtils'
 
-const VERDE = '#00E5A0'
-const ROJO = '#FF4D6D'
+const VERDE = '#2FBFAF'
+const ROJO = '#E85D5D'
 
 const FILAS = [
   { clave: 'km_run', label: 'Km carrera' },
@@ -67,7 +67,7 @@ export default function WeekCompare({ semanas, onClose }) {
         boxSizing: 'border-box',
         overflowY: 'auto',
         zIndex: 90,
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Archivo', sans-serif",
         boxShadow: '-8px 0 24px rgba(0,0,0,0.4)',
       }}
     >

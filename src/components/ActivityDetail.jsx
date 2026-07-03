@@ -3,8 +3,8 @@ import { authHeaders } from '../lib/authHeaders'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '../lib/theme'
 import PolylineMap from './PolylineMap'
 
-const COLOR_RAPIDO = [0, 229, 160] // #00E5A0
-const COLOR_LENTO = [255, 77, 109] // #FF4D6D
+const COLOR_RAPIDO = [47, 191, 175] // swim teal (rápido)
+const COLOR_LENTO = [232, 93, 93] // run coral (lento)
 
 // t=0 → más rápido (verde), t=1 → más lento (rojo)
 function colorRitmo(t) {
@@ -162,7 +162,7 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
           height: '90vh',
           overflowY: 'auto',
           padding: 32,
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Archivo', sans-serif",
           position: 'relative',
           boxSizing: 'border-box',
         }}

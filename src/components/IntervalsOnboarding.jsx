@@ -43,7 +43,7 @@ export default function IntervalsOnboarding({ athleteId }) {
           Configuración Garmin
         </span>
         {configurado ? (
-          <span style={{ fontSize: 13, color: '#00E5A0', fontWeight: 600 }}>
+          <span style={{ fontSize: 13, color: '#2FBFAF', fontWeight: 600 }}>
             ✅ {perfil.intervals_athlete_id} — {perfil.nombre || 'atleta'}
           </span>
         ) : (
@@ -61,7 +61,7 @@ export default function IntervalsOnboarding({ athleteId }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <code
               style={{
-                background: '#0A0F1E',
+                background: '#0B0D12',
                 border: `1px solid ${COLORS.cardBorder}`,
                 borderRadius: 6,
                 padding: '6px 10px',
@@ -78,13 +78,13 @@ export default function IntervalsOnboarding({ athleteId }) {
               onClick={copiarLink}
               style={{
                 background: copiado ? 'rgba(0,229,160,0.1)' : 'transparent',
-                color: copiado ? '#00E5A0' : COLORS.textSecondary,
+                color: copiado ? '#2FBFAF' : COLORS.textSecondary,
                 border: `1px solid ${COLORS.cardBorder}`,
                 borderRadius: 6,
                 padding: '6px 12px',
                 fontSize: 12,
                 cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Archivo', sans-serif",
                 whiteSpace: 'nowrap',
               }}
             >
