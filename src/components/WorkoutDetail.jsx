@@ -1,7 +1,7 @@
 import { COLORS } from '../lib/theme'
+import { ICONO_POR_DISCIPLINA } from './workout/constants'
 
 const PISCINA_LABEL = { '25': 'Piscina 25m', '50': 'Piscina 50m', open: 'Aguas abiertas' }
-const DISC_EMOJI = { swim: '🏊', bike: '🚴', run: '🏃', strength: '💪', other: '🏋' }
 
 function bloqueColor(tipo, esDescanso) {
   if (esDescanso) return null
@@ -158,7 +158,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
           borderLeft: `3px solid ${COLORS.accent}`,
         }}
       >
-        <span style={{ fontSize: 16 }}>{DISC_EMOJI[disciplina] || '🏋'}</span>
+        <span style={{ fontSize: 16 }}>{ICONO_POR_DISCIPLINA[disciplina] || '🏋'}</span>
         <div>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
             {sesion.descripcion || '—'}
