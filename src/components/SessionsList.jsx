@@ -100,6 +100,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   const [reenviando, setReenviando] = useState(null)
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
+  const [historicoAbierto, setHistoricoAbierto] = useState(false)
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -179,131 +180,178 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
 
   if (cargando) return <p style={{ color: COLORS.textSecondary }}>Cargando sesiones…</p>
 
+  // Card individual de sesión (JSX intacto; solo extraído para reutilizarlo en
+  // semana actual / futuras / histórico).
+  const renderSesion = (sesion) => {
+    const estado = estadoSesion(sesion, actividades)
+    const completada = !!estado.actividadStrava
+    const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
+    const expandida = expandidaId === sesion.id
+
+    return (
+      <div
+        key={sesion.id}
+        onClick={() => tieneWorkout && toggleExpandida(sesion.id)}
+        style={{ ...cardStyle, cursor: tieneWorkout ? 'pointer' : 'default' }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                {formatFechaSesion(sesion.fecha)}
+              </span>
+              <span
+                style={{
+                  background: BADGE_COLORS[sesion.disciplina] || BADGE_COLORS.other,
+                  color: '#FFFFFF',
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                {DISC_LABELS[sesion.disciplina] || sesion.disciplina}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: estado.color }}>
+                {estado.texto}
+              </span>
+            </div>
+
+            <p style={{ margin: '8px 0 0', fontSize: 14, color: COLORS.textPrimary }}>
+              {tituloSesion(sesion)}
+            </p>
+
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', ...(isMobile && { width: '100%', marginTop: 8 }) }}>
+            {completada && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setActividadDetalle(estado.actividadStrava) }}
+                style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
+              >
+                Ver actividad →
+              </button>
+            )}
+
+            {tieneWorkout && (
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleExpandida(sesion.id) }}
+                style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
+              >
+                {expandida ? '▼ Workout' : '▶ Workout'}
+              </button>
+            )}
+
+            <span
+              title={sesion.enviado_a_garmin ? 'Enviado a Garmin' : 'No enviado a Garmin'}
+              style={{ fontSize: 16 }}
+            >
+              {sesion.enviado_a_garmin ? '✅' : '⏳'}
+            </span>
+            {!sesion.enviado_a_garmin && tieneWorkout && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleReenviarGarmin(sesion) }}
+                disabled={reenviando === sesion.id}
+                style={{ ...accionBtnStyle, opacity: reenviando === sesion.id ? 0.5 : 1 }}
+              >
+                {reenviando === sesion.id ? '...' : 'Enviar'}
+              </button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); setSesionEditando(sesion) }} style={accionBtnStyle}>
+              Editar
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleEliminar(sesion) }}
+              style={{ ...accionBtnStyle, color: COLORS.error }}
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+
+        {expandida && tieneWorkout && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Cabecera de semana + sus sesiones. La semana actual (esActual) muestra un
+  // mensaje si no tiene sesiones, en vez de omitirse.
+  const renderSemana = (lunes, sesionesGrupo, esActual) => (
+    <div key={lunes}>
+      <div style={cabeceraSemanaStyle}>
+        {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
+      </div>
+      {sesionesGrupo.length === 0 && esActual ? (
+        <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 13 }}>
+          Sin sesiones esta semana
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {sesionesGrupo.map(renderSesion)}
+        </div>
+      )}
+    </div>
+  )
+
+  // Ancla a la semana actual: actual arriba (siempre), luego futuras
+  // ascendentes, y las pasadas colapsadas bajo "Ver histórico" (descendentes).
+  const grupos = agruparPorSemana(sesiones)
+  const semanaActual = lunesDeSemana(hoyMadrid())
+  const grupoActual = grupos.find((g) => g.lunes === semanaActual)
+  const futuras = grupos.filter((g) => g.lunes > semanaActual)
+  const pasadas = grupos.filter((g) => g.lunes < semanaActual).reverse()
+
   return (
     <div>
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
 
-      {!error && sesiones.length === 0 && (
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 48 }}>
-          <p style={{ color: COLORS.textSecondary, margin: 0 }}>
-            No hay sesiones prescritas para este atleta.
-          </p>
-        </div>
-      )}
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {agruparPorSemana(sesiones).map((grupo) => (
-          <div key={grupo.lunes}>
-            <div style={cabeceraSemanaStyle}>
-              {grupo.lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(grupo.lunes)}`}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {grupo.sesiones.map((sesion) => {
-          const estado = estadoSesion(sesion, actividades)
-          const completada = !!estado.actividadStrava
-          const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
-          const expandida = expandidaId === sesion.id
+        {/* Semana actual: siempre visible, con mensaje si no hay sesiones */}
+        {renderSemana(semanaActual, grupoActual ? grupoActual.sesiones : [], true)}
 
-          return (
-            <div
-              key={sesion.id}
-              onClick={() => tieneWorkout && toggleExpandida(sesion.id)}
-              style={{ ...cardStyle, cursor: tieneWorkout ? 'pointer' : 'default' }}
+        {/* Semanas futuras: ascendente (más próxima primero) */}
+        {futuras.map((g) => renderSemana(g.lunes, g.sesiones, false))}
+
+        {/* Histórico (semanas pasadas): colapsado por defecto, descendente */}
+        {pasadas.length > 0 && (
+          <div>
+            <button
+              onClick={() => setHistoricoAbierto((v) => !v)}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${COLORS.cardBorder}`,
+                borderRadius: 8,
+                color: COLORS.textSecondary,
+                padding: '10px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "'Archivo', sans-serif",
+                width: '100%',
+                textAlign: 'left',
+              }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: 12,
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
-                      {formatFechaSesion(sesion.fecha)}
-                    </span>
-                    <span
-                      style={{
-                        background: BADGE_COLORS[sesion.disciplina] || BADGE_COLORS.other,
-                        color: '#FFFFFF',
-                        borderRadius: 4,
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {DISC_LABELS[sesion.disciplina] || sesion.disciplina}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: estado.color }}>
-                      {estado.texto}
-                    </span>
-                  </div>
-
-                  <p style={{ margin: '8px 0 0', fontSize: 14, color: COLORS.textPrimary }}>
-                    {tituloSesion(sesion)}
-                  </p>
-
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', ...(isMobile && { width: '100%', marginTop: 8 }) }}>
-                  {completada && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setActividadDetalle(estado.actividadStrava) }}
-                      style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
-                    >
-                      Ver actividad →
-                    </button>
-                  )}
-
-                  {tieneWorkout && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleExpandida(sesion.id) }}
-                      style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
-                    >
-                      {expandida ? '▼ Workout' : '▶ Workout'}
-                    </button>
-                  )}
-
-                  <span
-                    title={sesion.enviado_a_garmin ? 'Enviado a Garmin' : 'No enviado a Garmin'}
-                    style={{ fontSize: 16 }}
-                  >
-                    {sesion.enviado_a_garmin ? '✅' : '⏳'}
-                  </span>
-                  {!sesion.enviado_a_garmin && tieneWorkout && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleReenviarGarmin(sesion) }}
-                      disabled={reenviando === sesion.id}
-                      style={{ ...accionBtnStyle, opacity: reenviando === sesion.id ? 0.5 : 1 }}
-                    >
-                      {reenviando === sesion.id ? '...' : 'Enviar'}
-                    </button>
-                  )}
-                  <button onClick={(e) => { e.stopPropagation(); setSesionEditando(sesion) }} style={accionBtnStyle}>
-                    Editar
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleEliminar(sesion) }}
-                    style={{ ...accionBtnStyle, color: COLORS.error }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
+              {historicoAbierto ? '▼' : '▶'} Ver histórico ({pasadas.length})
+            </button>
+            {historicoAbierto && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 12 }}>
+                {pasadas.map((g) => renderSemana(g.lunes, g.sesiones, false))}
               </div>
-
-              {expandida && tieneWorkout && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <WorkoutDetail sesion={sesion} mostrarNotas={true} />
-                </div>
-              )}
-            </div>
-          )
-              })}
-            </div>
+            )}
           </div>
-        ))}
+        )}
       </div>
 
       {sesionEditando && (
