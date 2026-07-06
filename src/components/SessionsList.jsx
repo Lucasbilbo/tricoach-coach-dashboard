@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
-import { MESES_CORTOS } from '../lib/chartUtils'
+import { MESES_CORTOS, lunesDeSemana, formatDiaMes } from '../lib/chartUtils'
 import { useIsMobile } from '../hooks/useIsMobile'
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
@@ -63,6 +63,32 @@ const accionBtnStyle = {
   fontFamily: "'Archivo', sans-serif",
   minHeight: 36,
   lineHeight: 1,
+}
+
+const cabeceraSemanaStyle = {
+  margin: '0 0 8px',
+  fontSize: 12,
+  fontWeight: 600,
+  color: COLORS.textSecondary,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+}
+
+// Agrupa las sesiones por semana (lunes, mismo helper que los charts) preservando
+// el orden de entrada. Sesiones sin fecha (no debería haber: fecha es NOT NULL)
+// caen en un grupo aparte al final del recorrido.
+function agruparPorSemana(sesiones) {
+  const grupos = []
+  const indicePorLunes = {}
+  for (const sesion of sesiones) {
+    const lunes = sesion.fecha ? lunesDeSemana(sesion.fecha) : 'sin-fecha'
+    if (indicePorLunes[lunes] == null) {
+      indicePorLunes[lunes] = grupos.length
+      grupos.push({ lunes, sesiones: [] })
+    }
+    grupos[indicePorLunes[lunes]].sesiones.push(sesion)
+  }
+  return grupos
 }
 
 export default function SessionsList({ coachId, athleteId, actividades, atletaNombre, onNewSession }) {
@@ -165,8 +191,14 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {sesiones.map((sesion) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {agruparPorSemana(sesiones).map((grupo) => (
+          <div key={grupo.lunes}>
+            <div style={cabeceraSemanaStyle}>
+              {grupo.lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(grupo.lunes)}`}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {grupo.sesiones.map((sesion) => {
           const estado = estadoSesion(sesion, actividades)
           const completada = !!estado.actividadStrava
           const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
@@ -268,7 +300,10 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
               )}
             </div>
           )
-        })}
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {sesionEditando && (
