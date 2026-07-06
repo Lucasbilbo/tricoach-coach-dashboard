@@ -90,14 +90,16 @@ export function defaultUnidad(disciplina) {
 
 export function initForm(sesion) {
   if (!sesion) {
-    return { fecha: '', disciplina: 'swim', piscina: '25', nombre: '', bloques: [], notas: '' }
+    // Sin default de disciplina: se fuerza elegirla antes de mostrar campos
+    // específicos (piscina/material/objetivos/unidades).
+    return { fecha: '', disciplina: null, piscina: '25', nombre: '', bloques: [], notas: '' }
   }
   const ws = sesion.workout_steps
   const bloques = Array.isArray(ws) ? ws : (ws?.bloques || [])
   const notas = ws?.notas ?? sesion.notas ?? ''
   return {
     fecha: sesion.fecha || '',
-    disciplina: sesion.disciplina || 'swim',
+    disciplina: sesion.disciplina || null,
     piscina: ws?.piscina || '25',
     nombre: sesion.descripcion || '',
     bloques,

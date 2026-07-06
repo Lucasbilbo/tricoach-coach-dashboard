@@ -314,6 +314,15 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </div>
           </div>
 
+          {/* Sin disciplina elegida: no se muestra ningún campo específico */}
+          {!form.disciplina && (
+            <p style={{ color: COLORS.textSecondary, fontSize: 13, margin: '0 0 8px' }}>
+              Elige una disciplina para empezar a construir el entrenamiento.
+            </p>
+          )}
+
+          {form.disciplina && (
+            <>
           {/* Piscina — solo natación */}
           {form.disciplina === 'swim' && (
             <div style={{ marginBottom: 14 }}>
@@ -577,6 +586,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               {enviando ? 'Enviando...' : '✈ Enviar a Garmin'}
             </button>
           </div>
+            </>
+          )}
         </div>
       </div>
     </>
