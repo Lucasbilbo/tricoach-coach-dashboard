@@ -2,7 +2,7 @@
 // Son de presentación pura: reciben el bloque y callbacks; la manipulación del
 // estado vive en el WorkoutBuilder.
 import { COLORS, inputStyle } from '../../lib/theme'
-import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER } from './constants'
+import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER, ICONO_POR_DISCIPLINA } from './constants'
 import { labelSm, miniBtn, addBtnStyle } from './styles'
 import { MaterialChips, ZonasChips } from './WorkoutChips'
 
@@ -10,8 +10,9 @@ export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemov
   const unidades = UNIDADES[disciplina] || UNIDADES.other
   const objetivos = OBJETIVOS[disciplina] || []
 
-  const titulo = bloque.tipo === 'warmup' ? '🌊 Calentamiento'
-    : bloque.tipo === 'cooldown' ? '🌊 Vuelta calma'
+  const icono = ICONO_POR_DISCIPLINA[disciplina] || ICONO_POR_DISCIPLINA.other
+  const titulo = bloque.tipo === 'warmup' ? `${icono} Calentamiento`
+    : bloque.tipo === 'cooldown' ? `${icono} Vuelta calma`
     : '▸ Paso libre'
 
   return (

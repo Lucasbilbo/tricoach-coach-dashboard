@@ -16,6 +16,16 @@ export const MATERIAL_POR_DISCIPLINA = {
   other: [],
 }
 
+// Icono por disciplina (mismos emojis que DISC_EMOJI en WorkoutDetail, para
+// consistencia en todo el dashboard).
+export const ICONO_POR_DISCIPLINA = {
+  swim: '🏊',
+  bike: '🚴',
+  run: '🏃',
+  strength: '💪',
+  other: '🏋',
+}
+
 export const UNIDADES = {
   swim: ['mtr', 'km', 'min', 's'],
   bike: ['km', 'min', 'h'],
