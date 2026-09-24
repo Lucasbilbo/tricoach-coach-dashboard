@@ -10,44 +10,14 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { COLORS, DISCIPLINE_COLORS } from '../../lib/theme'
-import { formatFechaCorta, tickStyle, gridStroke, tooltipBoxStyle } from '../../lib/chartUtils'
+import { formatFechaCorta, tickStyle, gridStroke, tooltipBoxStyle, sumarDias, hoyMadrid } from '../../lib/chartUtils'
+import { computeCargaDiaria } from '../../lib/carga'
 
 const SEMANAS_MINIMAS_LINEAS = 8
-const VENTANA_ATL_DIAS = 7
-const VENTANA_CTL_DIAS = 28
-const DIA_MS = 86400000
 
 const ATL_COLOR = '#2FBFAF' // Swim teal (fatiga aguda)
 const CTL_COLOR = '#E8934A' // Bike amber (fitness crónico)
 const BAR_COLOR = DISCIPLINE_COLORS.strength // Load violet (TSS)
-
-function sumarDias(fecha, dias) {
-  const [y, m, d] = fecha.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d) + dias * DIA_MS).toISOString().slice(0, 10)
-}
-
-// ATL/CTL por día: media móvil del TSS diario (días sin actividad cuentan 0)
-function calcularCargaDiaria(actividades, desde, hasta) {
-  const tssPorDia = actividades.reduce((acc, act) => {
-    if (!act.fecha || act.tss_estimado == null) return acc
-    return { ...acc, [act.fecha]: (acc[act.fecha] || 0) + act.tss_estimado }
-  }, {})
-
-  const dias = []
-  for (let fecha = desde; fecha <= hasta; fecha = sumarDias(fecha, 1)) {
-    dias.push({ fecha, tss: tssPorDia[fecha] || 0 })
-  }
-
-  return dias.map((dia, i) => {
-    const tramoAtl = dias.slice(Math.max(0, i - VENTANA_ATL_DIAS + 1), i + 1)
-    const tramoCtl = dias.slice(Math.max(0, i - VENTANA_CTL_DIAS + 1), i + 1)
-    return {
-      fecha: dia.fecha,
-      atl: tramoAtl.reduce((acc, d) => acc + d.tss, 0) / VENTANA_ATL_DIAS,
-      ctl: tramoCtl.reduce((acc, d) => acc + d.tss, 0) / VENTANA_CTL_DIAS,
-    }
-  })
-}
 
 function TSSTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null
@@ -71,24 +41,24 @@ export default function TSSChart({ actividades, semanas }) {
 
   const mostrarLineas = semanas.length >= SEMANAS_MINIMAS_LINEAS
 
-  let cargaPorFinDeSemana = {}
+  // EWMA 7/42 anclada a hoy (Europe/Madrid): la carga decae hasta hoy aunque la
+  // última actividad sea anterior. Cada semana toma el valor de su domingo (o el
+  // último día disponible si el domingo aún no ha llegado).
+  let cargaPorFecha = {}
+  let ultimoDia = null
   if (mostrarLineas) {
-    const desde = semanas[0].semana
-    const hasta = sumarDias(semanas[semanas.length - 1].semana, 6)
-    const cargaDiaria = calcularCargaDiaria(actividades || [], desde, hasta)
-    cargaPorFinDeSemana = cargaDiaria.reduce(
-      (acc, dia) => ({ ...acc, [dia.fecha]: dia }),
-      {}
-    )
+    const cargaDiaria = computeCargaDiaria(actividades || [], hoyMadrid())
+    cargaPorFecha = cargaDiaria.reduce((acc, dia) => ({ ...acc, [dia.fecha]: dia }), {})
+    ultimoDia = cargaDiaria[cargaDiaria.length - 1] || null
   }
 
   const data = semanas.map((s) => {
-    const finDeSemana = cargaPorFinDeSemana[sumarDias(s.semana, 6)]
+    const dia = cargaPorFecha[sumarDias(s.semana, 6)] || ultimoDia
     return {
       label: formatFechaCorta(s.semana),
       tss_total: s.tss_total || 0,
-      atl: mostrarLineas && finDeSemana ? finDeSemana.atl : null,
-      ctl: mostrarLineas && finDeSemana ? finDeSemana.ctl : null,
+      atl: mostrarLineas && dia ? dia.atl : null,
+      ctl: mostrarLineas && dia ? dia.ctl : null,
     }
   })
 

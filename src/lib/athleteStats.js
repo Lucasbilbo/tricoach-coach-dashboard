@@ -3,7 +3,8 @@
 // distribución de zonas FC, la progresión de ritmo y las columnas de la Línea
 // de Transición, a partir de las `actividades`/`semanas` que ya devuelve
 // coach-athlete-data. No toca endpoints ni añade datos nuevos.
-import { decimalToRitmo, formatHorasMin, formatFechaCorta, lunesDeSemana } from './chartUtils'
+import { decimalToRitmo, formatHorasMin, formatFechaCorta, lunesDeSemana, hoyMadrid } from './chartUtils'
+import { computeCargaHoy } from './carga'
 import { DISCIPLINE_COLORS } from './theme'
 
 // Colores de zona FC (frío→caliente): teal → ámbar → coral, como el spec.
@@ -15,8 +16,6 @@ const ZONA_COLORS = {
   Z5: '#E85D5D',
 }
 const ZONAS = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
-const VENTANA_ATL_DIAS = 7
-const VENTANA_CTL_DIAS = 28
 // B1: 'other' (golf, paseos…) queda fuera del volumen y de la Línea de Transición.
 const DISCIPLINAS_ORDEN = ['swim', 'bike', 'run', 'strength']
 
@@ -27,39 +26,6 @@ function horasTotales(actividades) {
   )
 }
 
-// TSS acumulado por día (YYYY-MM-DD → suma)
-function tssPorDia(actividades) {
-  return actividades.reduce((acc, a) => {
-    if (!a.fecha || a.tss_estimado == null) return acc
-    acc[a.fecha] = (acc[a.fecha] || 0) + a.tss_estimado
-    return acc
-  }, {})
-}
-
-// CTL (28d) y ATL (7d) al final del rango: media diaria de TSS (días sin
-// actividad cuentan 0), coherente con el TSSChart. TSB = CTL - ATL.
-function computeLoad(actividades) {
-  const porDia = tssPorDia(actividades)
-  const fechas = Object.keys(porDia).sort()
-  if (fechas.length === 0) return { ctl: null, atl: null, tsb: null }
-  const hasta = fechas[fechas.length - 1]
-  const [hy, hm, hd] = hasta.split('-').map(Number)
-  const hastaMs = Date.UTC(hy, hm - 1, hd)
-
-  const sumaVentana = (dias) => {
-    let suma = 0
-    for (const f of fechas) {
-      const [y, m, d] = f.split('-').map(Number)
-      const diff = (hastaMs - Date.UTC(y, m - 1, d)) / 86400000
-      if (diff >= 0 && diff < dias) suma += porDia[f]
-    }
-    return suma
-  }
-  const ctl = Math.round(sumaVentana(VENTANA_CTL_DIAS) / VENTANA_CTL_DIAS)
-  const atl = Math.round(sumaVentana(VENTANA_ATL_DIAS) / VENTANA_ATL_DIAS)
-  return { ctl, atl, tsb: ctl - atl }
-}
-
 // Las 5 stats del handoff.
 export function computeResumenStats(actividades) {
   const runs = actividades
@@ -67,7 +33,8 @@ export function computeResumenStats(actividades) {
     .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
   const ritmoUltima = runs.length > 0 ? decimalToRitmo(runs[0].ritmo_min_km) : '—'
   const tssAcum = actividades.reduce((acc, a) => acc + (a.tss_estimado || 0), 0)
-  const { ctl, atl, tsb } = computeLoad(actividades)
+  // EWMA 7/42 anclado a hoy (Europe/Madrid), no a la última actividad.
+  const { ctl, atl, tsb } = computeCargaHoy(actividades, hoyMadrid())
   return {
     volumen: formatHorasMin(horasTotales(actividades)),
     ritmoUltima,
