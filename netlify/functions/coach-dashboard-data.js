@@ -8,7 +8,7 @@ const { verifyAuth } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, tssEstimado } = require('./lib/metrics')
+const { round, tssEstimado, fechaMadrid } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -36,8 +36,9 @@ function lunesDeSemana(fechaLocal) {
 // Últimas N semanas con TSS agregado, ordenadas de más antigua a más reciente
 function semanasRecientes(actividades, fcMax, n) {
   const porLunes = actividades.reduce((acc, a) => {
-    if (!a.start_date_local) return acc
-    const lunes = lunesDeSemana(a.start_date_local.slice(0, 10))
+    if (!a.start_date) return acc
+    // Semana en Europe/Madrid a partir del instante UTC (no de start_date_local)
+    const lunes = lunesDeSemana(fechaMadrid(new Date(a.start_date)))
     return { ...acc, [lunes]: (acc[lunes] || 0) + (tssEstimado(a.moving_time, a.average_heartrate, fcMax) || 0) }
   }, {})
 

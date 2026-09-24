@@ -9,7 +9,7 @@ const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, fechaMadrid } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +19,6 @@ const CORS = {
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const TIMEZONE = 'Europe/Madrid'
 const FC_MAX_DEFAULT = 185
 const WEEKS_DEFAULT = 8
 const WEEKS_MAX = 52
@@ -59,16 +58,6 @@ const PR_SPLITS_SWIM_ACTIVIDADES = 5
 const SPLIT_RUN = { minM: 800, maxM: 1200, metrosUnidad: 1000, ritmoMin: RITMO_MIN_PLAUSIBLE, ritmoMax: RITMO_MAX_PLAUSIBLE }
 const SPLIT_SWIM = { minM: 80, maxM: 120, metrosUnidad: 100, ritmoMin: 0.8, ritmoMax: 6.0 }
 
-// Fecha local (YYYY-MM-DD) en Europe/Madrid para un instante dado
-function fechaMadrid(date) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
-}
-
 // Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
 function lunesDeSemana(fechaLocal) {
   const [y, m, d] = fechaLocal.split('-').map(Number)
@@ -102,7 +91,9 @@ function transformarActividad(act, fcMax) {
     disciplina,
     distancia_km: distanciaKm,
     duracion_min: duracionMin,
-    fecha: act.start_date_local ? act.start_date_local.slice(0, 10) : fechaMadrid(new Date(act.start_date)),
+    // Siempre en Europe/Madrid a partir del instante UTC (no de start_date_local,
+    // que viene en la TZ de la actividad). Fallback si faltara start_date.
+    fecha: act.start_date ? fechaMadrid(new Date(act.start_date)) : (act.start_date_local ? act.start_date_local.slice(0, 10) : null),
     ritmo_min_km: ritmoMinKm,
     fc_media: fcMedia,
     fc_maxima_actividad: act.max_heartrate ? round(act.max_heartrate, 0) : null,

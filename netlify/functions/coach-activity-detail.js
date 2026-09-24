@@ -9,7 +9,7 @@ const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, fechaMadrid } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -110,7 +110,7 @@ function transformarActividad(act, fcMax) {
     nombre: act.name || null,
     tipo: act.sport_type || act.type || null,
     disciplina,
-    fecha: act.start_date_local ? act.start_date_local.slice(0, 10) : null,
+    fecha: act.start_date ? fechaMadrid(new Date(act.start_date)) : (act.start_date_local ? act.start_date_local.slice(0, 10) : null),
     distancia_km: distanciaKm,
     duracion_min: act.elapsed_time ? round(act.elapsed_time / 60, 1) : null,
     duracion_mov_min: duracionMovMin,

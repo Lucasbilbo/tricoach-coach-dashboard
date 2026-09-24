@@ -3,6 +3,20 @@
 // en coach-athlete-data y coach-activity-detail (round también en dashboard).
 
 const FC_MAX_DEFAULT = 185
+const TIMEZONE = 'Europe/Madrid'
+
+// Fecha local (YYYY-MM-DD) en Europe/Madrid para un instante dado. Toda fecha de
+// actividad y toda agrupación semanal debe pasar por aquí: Strava entrega
+// start_date_local en la TZ DE LA ACTIVIDAD (no la del entrenador), así que
+// agrupar por start_date_local desplaza la semana cuando el atleta viaja.
+function fechaMadrid(date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
 
 function round(value, decimals) {
   if (value == null || Number.isNaN(value)) return null
@@ -52,4 +66,4 @@ function tssEstimado(movingTimeSec, fcMedia, fcMax) {
   return horas * (intensidad / 100) ** 2 * 100
 }
 
-module.exports = { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, FC_MAX_DEFAULT }
+module.exports = { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, fechaMadrid, FC_MAX_DEFAULT }
