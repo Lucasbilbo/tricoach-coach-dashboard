@@ -66,4 +66,25 @@ function tssEstimado(movingTimeSec, fcMedia, fcMax) {
   return horas * (intensidad / 100) ** 2 * 100
 }
 
-module.exports = { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, fechaMadrid, FC_MAX_DEFAULT }
+// TSS/hora aproximado por disciplina cuando NO hay FC (B2). Valores orientativos
+// de una sesión típica de resistencia; ajustables. 'other' no entrena → sin carga.
+const TSS_POR_HORA_SIN_FC = { swim: 55, bike: 50, run: 65, strength: 40 }
+
+// Carga (TSS) de una actividad con su procedencia:
+//  - con FC        → hrTSS (estimado:false)
+//  - sin FC + disciplina de entrenamiento → duración × TSS/hora (estimado:true)
+//  - 'other' o sin datos → { tss:null }
+// El llamante redondea. `estimado` permite marcarlo en el UI.
+function cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina) {
+  if (disciplina === 'other') return { tss: null, estimado: false }
+  const hr = tssEstimado(movingTimeSec, fcMedia, fcMax)
+  if (hr != null) return { tss: hr, estimado: false }
+  const factor = TSS_POR_HORA_SIN_FC[disciplina]
+  if (factor && movingTimeSec) return { tss: (movingTimeSec / 3600) * factor, estimado: true }
+  return { tss: null, estimado: false }
+}
+
+module.exports = {
+  round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, cargaActividad,
+  fechaMadrid, TSS_POR_HORA_SIN_FC, FC_MAX_DEFAULT,
+}

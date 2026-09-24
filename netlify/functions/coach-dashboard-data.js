@@ -8,7 +8,7 @@ const { verifyAuth } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, tssEstimado, fechaMadrid, mapDisciplina } = require('./lib/metrics')
+const { round, cargaActividad, fechaMadrid, mapDisciplina } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,10 +37,11 @@ function lunesDeSemana(fechaLocal) {
 function semanasRecientes(actividades, fcMax, n) {
   const porLunes = actividades.reduce((acc, a) => {
     if (!a.start_date) return acc
-    if (mapDisciplina(a.sport_type || a.type) === 'other') return acc // B1: excluir no-tri
+    const disc = mapDisciplina(a.sport_type || a.type)
+    if (disc === 'other') return acc // B1: excluir no-tri
     // Semana en Europe/Madrid a partir del instante UTC (no de start_date_local)
     const lunes = lunesDeSemana(fechaMadrid(new Date(a.start_date)))
-    return { ...acc, [lunes]: (acc[lunes] || 0) + (tssEstimado(a.moving_time, a.average_heartrate, fcMax) || 0) }
+    return { ...acc, [lunes]: (acc[lunes] || 0) + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, disc).tss || 0) }
   }, {})
 
   return Object.keys(porLunes)
@@ -98,7 +99,7 @@ async function procesarAtleta(athleteId, perfil, env) {
       (acc, a) => ({
         km: acc.km + (a.distance || 0) / 1000,
         horas: acc.horas + (a.moving_time || 0) / 3600,
-        tss: acc.tss + (tssEstimado(a.moving_time, a.average_heartrate, fcMax) || 0),
+        tss: acc.tss + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, mapDisciplina(a.sport_type || a.type)).tss || 0),
       }),
       { km: 0, horas: 0, tss: 0 }
     )

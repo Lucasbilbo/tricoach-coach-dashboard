@@ -9,7 +9,7 @@ const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, fechaMadrid } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -97,7 +97,8 @@ function transformarActividad(act, fcMax) {
   const fcMedia = act.average_heartrate ? round(act.average_heartrate, 0) : null
   // Intensidad SIN redondear para clasificar zona (helper único, ver lib/metrics).
   const intensidad = intensidadPct(act.average_heartrate, fcMax)
-  const tss = round(tssEstimado(act.moving_time, act.average_heartrate, fcMax), 0)
+  // Carga: hrTSS si hay FC; si no, estimación por disciplina (B2). 'other' → null.
+  const carga = cargaActividad(act.moving_time, act.average_heartrate, fcMax, disciplina)
 
   const splits = transformarSplits(act.splits_metric, disciplina)
   const desnivelNeg = splits.reduce(
@@ -133,7 +134,8 @@ function transformarActividad(act, fcMax) {
     descripcion: act.description || null,
     zona_fc: zonaFc(intensidad),
     intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
-    tss_estimado: tss,
+    tss_estimado: round(carga.tss, 0),
+    tss_estimado_sin_fc: carga.estimado,
     polyline: act.map?.polyline || act.map?.summary_polyline || null,
     splits_km: splits,
   }

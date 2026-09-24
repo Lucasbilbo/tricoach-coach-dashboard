@@ -33,6 +33,12 @@ function formatEffort(act) {
   return '—'
 }
 
+// TSS con marca "~" cuando es estimado sin FC (B2).
+function tssTexto(act) {
+  if (act.tss_estimado == null) return '—'
+  return act.tss_estimado_sin_fc ? `~${act.tss_estimado}` : `${act.tss_estimado}`
+}
+
 const seccionLabel = {
   fontSize: 13,
   color: COLORS.textSecondary,
@@ -280,8 +286,11 @@ export default function StravaAnalysis({
                     {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
                   </span>
                   <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.load }}>
-                    TSS {act.tss_estimado != null ? act.tss_estimado : '—'}
+                  <span
+                    title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined}
+                    style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.load }}
+                  >
+                    TSS {tssTexto(act)}
                   </span>
                 </div>
               </div>
@@ -343,8 +352,11 @@ export default function StravaAnalysis({
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
                   {act.fc_media != null ? `${act.fc_media}` : '—'}
                 </span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.load }}>
-                  {act.tss_estimado != null ? act.tss_estimado : '—'}
+                <span
+                  title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined}
+                  style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.load }}
+                >
+                  {tssTexto(act)}
                 </span>
                 <span
                   style={{
@@ -364,6 +376,12 @@ export default function StravaAnalysis({
             )
           })}
         </div>
+      )}
+
+      {actividadesFiltradas.some((a) => a.tss_estimado_sin_fc) && (
+        <p style={{ margin: '8px 2px 0', fontSize: 11, color: COLORS.textTertiary, fontFamily: FONTS.sans }}>
+          ~ TSS estimado por duración y disciplina (actividad sin frecuencia cardiaca).
+        </p>
       )}
 
       {selectedActivityId && athleteId && (
