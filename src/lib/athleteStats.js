@@ -17,10 +17,14 @@ const ZONA_COLORS = {
 const ZONAS = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
 const VENTANA_ATL_DIAS = 7
 const VENTANA_CTL_DIAS = 28
-const DISCIPLINAS_ORDEN = ['swim', 'bike', 'run', 'strength', 'other']
+// B1: 'other' (golf, paseos…) queda fuera del volumen y de la Línea de Transición.
+const DISCIPLINAS_ORDEN = ['swim', 'bike', 'run', 'strength']
 
 function horasTotales(actividades) {
-  return actividades.reduce((acc, a) => acc + (a.duracion_min || 0) / 60, 0)
+  return actividades.reduce(
+    (acc, a) => acc + (a.disciplina !== 'other' ? (a.duracion_min || 0) / 60 : 0),
+    0
+  )
 }
 
 // TSS acumulado por día (YYYY-MM-DD → suma)
@@ -139,10 +143,10 @@ export function buildTransitionColumns(actividades, semanas) {
   const horas = {}
   for (const a of actividades) {
     if (!a.fecha || !a.duracion_min) continue
+    if (!DISCIPLINAS_ORDEN.includes(a.disciplina)) continue // B1: excluir 'other'
     const lunes = lunesDeSemana(a.fecha)
-    const disc = DISCIPLINAS_ORDEN.includes(a.disciplina) ? a.disciplina : 'other'
     if (!horas[lunes]) horas[lunes] = {}
-    horas[lunes][disc] = (horas[lunes][disc] || 0) + a.duracion_min / 60
+    horas[lunes][a.disciplina] = (horas[lunes][a.disciplina] || 0) + a.duracion_min / 60
   }
 
   const totalPorSemana = semanas.map((s) => {

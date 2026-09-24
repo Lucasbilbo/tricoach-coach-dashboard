@@ -203,6 +203,8 @@ function agruparSemanas(actividades) {
   const porLunes = {}
   for (const act of actividades) {
     if (!act.fecha) continue
+    // B1: 'other' (golf, paseos, workout genérico) no cuenta en el volumen.
+    if (act.disciplina === 'other') continue
     const lunes = lunesDeSemana(act.fecha)
     if (!porLunes[lunes]) {
       porLunes[lunes] = {

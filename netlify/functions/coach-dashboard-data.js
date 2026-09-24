@@ -8,7 +8,7 @@ const { verifyAuth } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, tssEstimado, fechaMadrid } = require('./lib/metrics')
+const { round, tssEstimado, fechaMadrid, mapDisciplina } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +37,7 @@ function lunesDeSemana(fechaLocal) {
 function semanasRecientes(actividades, fcMax, n) {
   const porLunes = actividades.reduce((acc, a) => {
     if (!a.start_date) return acc
+    if (mapDisciplina(a.sport_type || a.type) === 'other') return acc // B1: excluir no-tri
     // Semana en Europe/Madrid a partir del instante UTC (no de start_date_local)
     const lunes = lunesDeSemana(fechaMadrid(new Date(a.start_date)))
     return { ...acc, [lunes]: (acc[lunes] || 0) + (tssEstimado(a.moving_time, a.average_heartrate, fcMax) || 0) }
@@ -89,7 +90,8 @@ async function procesarAtleta(athleteId, perfil, env) {
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
 
     const semana = actividades.filter(
-      (a) => a.start_date && new Date(a.start_date).getTime() >= corteSemana
+      (a) => a.start_date && new Date(a.start_date).getTime() >= corteSemana &&
+        mapDisciplina(a.sport_type || a.type) !== 'other' // B1: excluir no-tri del volumen
     )
 
     const totales = semana.reduce(
