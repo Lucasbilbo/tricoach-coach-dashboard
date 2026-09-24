@@ -29,6 +29,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Auditoría: datos personales (actividades reales con FC). No versionar.
+# recompute.mjs sí se versiona; necesita este fichero local para ejecutarse.
+audit/real-data.mjs
+
 # preview harness temporal (rediseño visual)
 dist-preview/
 .env.preview
