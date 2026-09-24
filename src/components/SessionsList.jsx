@@ -390,6 +390,17 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     <div>
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
 
+      {sesiones.length === 0 ? (
+        // B4: estado vacío claro para el coach (en vez de solo "Sin sesiones esta semana").
+        <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
+          <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
+            Aún no has prescrito sesiones a este atleta
+          </p>
+          <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+            Usa «Prescribir entrenamiento» para crear la primera.
+          </p>
+        </div>
+      ) : (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Semana actual: siempre visible, con mensaje si no hay sesiones */}
         {renderSemana(semanaActual, grupoActual ? grupoActual.sesiones : [], true)}
@@ -426,6 +437,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           </div>
         )}
       </div>
+      )}
 
       {sesionEditando && (
         <WorkoutBuilder
