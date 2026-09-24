@@ -36,18 +36,19 @@ function TSSTooltip({ active, payload, label }) {
   )
 }
 
-export default function TSSChart({ actividades, semanas }) {
+export default function TSSChart({ actividades, actividadesCarga, semanas }) {
   if (!semanas || semanas.length === 0) return null
 
   const mostrarLineas = semanas.length >= SEMANAS_MINIMAS_LINEAS
 
   // EWMA 7/42 anclada a hoy (Europe/Madrid): la carga decae hasta hoy aunque la
-  // última actividad sea anterior. Cada semana toma el valor de su domingo (o el
-  // último día disponible si el domingo aún no ha llegado).
+  // última actividad sea anterior. Se calienta con la serie larga (26 semanas)
+  // si el padre la pasa; el selector solo recorta las barras, no el cálculo.
+  // Cada semana toma el valor de su domingo (o el último día si aún no llegó).
   let cargaPorFecha = {}
   let ultimoDia = null
   if (mostrarLineas) {
-    const cargaDiaria = computeCargaDiaria(actividades || [], hoyMadrid())
+    const cargaDiaria = computeCargaDiaria(actividadesCarga || actividades || [], hoyMadrid())
     cargaPorFecha = cargaDiaria.reduce((acc, dia) => ({ ...acc, [dia.fecha]: dia }), {})
     ultimoDia = cargaDiaria[cargaDiaria.length - 1] || null
   }

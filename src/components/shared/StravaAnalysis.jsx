@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { decimalToRitmo, formatDiaMes } from '../../lib/chartUtils'
+import { useEffect, useRef, useState } from 'react'
+import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../../lib/chartUtils'
+import { authHeaders } from '../../lib/authHeaders'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../../lib/theme'
 import { FILTROS_DISCIPLINA, descargarCsv } from '../../lib/activityFormat'
@@ -9,6 +10,12 @@ import {
   computePaceTrend,
   buildTransitionColumns,
 } from '../../lib/athleteStats'
+import { computeCargaHoy } from '../../lib/carga'
+
+// Semanas de histórico para CALENTAR la EWMA de ATL/CTL. La carga se calcula
+// SIEMPRE sobre esta ventana (independiente del selector, que solo recorta lo
+// que se dibuja), para que el valor de hoy no cambie con 4/8/12/24 semanas.
+const SEMANAS_CARGA = 26
 import TransitionLine from './TransitionLine'
 import PRsBlock from '../PRsBlock'
 import ChartCard from '../charts/ChartCard'
@@ -63,7 +70,37 @@ export default function StravaAnalysis({
 }) {
   const [filtroDisciplina, setFiltroDisciplina] = useState('todos')
   const [selectedActivityId, setSelectedActivityId] = useState(null)
+  // Serie de 26 semanas SOLO para calentar la carga (ATL/CTL/TSB). Cacheada por
+  // atleta. Si aún no llegó o falla, se usa `actividades` (comportamiento previo).
+  const [actividadesCarga, setActividadesCarga] = useState(null)
+  const cargaRef = useRef(null)
   const isMobile = useIsMobile()
+
+  useEffect(() => {
+    if (!athleteId || cargaRef.current === athleteId) return
+    let activo = true
+    async function cargarSerie() {
+      try {
+        const res = await fetch('/.netlify/functions/coach-athlete-data', {
+          method: 'POST',
+          headers: await authHeaders(),
+          body: JSON.stringify({ athleteId, weeks: SEMANAS_CARGA }),
+        })
+        if (!res.ok) return
+        const json = await res.json().catch(() => null)
+        if (activo && json?.actividades) {
+          cargaRef.current = athleteId
+          setActividadesCarga(json.actividades)
+        }
+      } catch {
+        /* silencioso: cae en `actividades` del rango del selector */
+      }
+    }
+    cargarSerie()
+    return () => { activo = false }
+  }, [athleteId])
+
+  const actsCarga = actividadesCarga || actividades
 
   const actividadesFiltradas =
     filtroDisciplina === 'todos'
@@ -71,6 +108,8 @@ export default function StravaAnalysis({
       : actividades.filter((a) => a.disciplina === filtroDisciplina)
 
   const stats = computeResumenStats(actividades)
+  // CTL/ATL/TSB de hoy sobre la serie de 26 semanas (no sobre el rango dibujado).
+  const carga = computeCargaHoy(actsCarga, hoyMadrid())
   const zonas = computeZonas(actividades)
   const paceTrend = computePaceTrend(actividades)
   const columnas = buildTransitionColumns(actividades, semanas)
@@ -82,8 +121,8 @@ export default function StravaAnalysis({
     { label: 'Volumen', valor: stats.volumen, color: COLORS.textPrimary, nota: `últimas ${weeks} semanas` },
     { label: 'Ritmo running (últ.)', valor: stats.ritmoUltima, color: DISCIPLINE_COLORS.run, nota: 'min/km' },
     { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.load, nota: `últimas ${weeks} semanas` },
-    { label: 'CTL / ATL', valor: `${stats.ctl} / ${stats.atl}`, color: COLORS.textPrimary, nota: 'carga crónica / aguda' },
-    { label: 'TSB', valor: stats.tsb, color: COLORS.textPrimary, nota: 'forma actual' },
+    { label: 'CTL / ATL', valor: `${carga.ctl ?? '—'} / ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: 'carga crónica / aguda' },
+    { label: 'TSB', valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—', color: COLORS.textPrimary, nota: 'forma actual' },
   ]
 
   function exportarCSV() {
@@ -193,7 +232,7 @@ export default function StravaAnalysis({
 
       {semanas.length > 0 && (
         <ChartCard title="Carga semanal (TSS · ATL · CTL)">
-          <TSSChart actividades={actividades} semanas={semanas} />
+          <TSSChart actividades={actividades} actividadesCarga={actsCarga} semanas={semanas} />
         </ChartCard>
       )}
 
