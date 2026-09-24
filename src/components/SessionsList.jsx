@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
@@ -101,6 +101,10 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
   const [historicoAbierto, setHistoricoAbierto] = useState(false)
+  // Actividades para calcular Completada/Pendiente, dimensionadas a la sesión más
+  // antigua y NO al selector de semanas del análisis (A1). Cacheadas por ventana.
+  const [actividadesEstado, setActividadesEstado] = useState(null)
+  const estadoCacheRef = useRef({ key: null })
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -120,7 +124,34 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
         return
       }
       setError('')
-      setSesiones(data || [])
+      const lista = data || []
+      setSesiones(lista)
+
+      // A1: el estado Completada/Pendiente no debe depender del rango del selector.
+      // Traemos las actividades que cubren desde la sesión más antigua hasta hoy en
+      // UNA llamada dedicada, cacheada por ventana (no se repite al cambiar el
+      // selector ni al recargar si la sesión más antigua no cambia).
+      const fechas = lista.map((s) => s.fecha).filter(Boolean)
+      if (fechas.length > 0) {
+        const masAntigua = fechas.reduce((min, f) => (f < min ? f : min), fechas[0])
+        const dias = Math.ceil((Date.now() - new Date(`${masAntigua}T00:00:00Z`).getTime()) / 86400000)
+        const weeks = Math.min(Math.max(Math.ceil(dias / 7) + 1, 1), 52)
+        const key = `${athleteId}:${weeks}`
+        if (estadoCacheRef.current.key !== key) {
+          const res = await fetch('/.netlify/functions/coach-athlete-data', {
+            method: 'POST',
+            headers: await authHeaders(),
+            body: JSON.stringify({ athleteId, weeks }),
+          })
+          if (res.ok) {
+            const json = await res.json().catch(() => null)
+            if (json?.actividades) {
+              estadoCacheRef.current = { key }
+              setActividadesEstado(json.actividades)
+            }
+          }
+        }
+      }
     } catch {
       setError('Error de conexión cargando las sesiones')
     } finally {
@@ -182,8 +213,12 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
 
   // Card individual de sesión (JSX intacto; solo extraído para reutilizarlo en
   // semana actual / futuras / histórico).
+  // Usa las actividades dedicadas (cubren toda la historia de sesiones); mientras
+  // cargan, cae en las del análisis para no mostrar vacío.
+  const actsParaEstado = actividadesEstado || actividades
+
   const renderSesion = (sesion) => {
-    const estado = estadoSesion(sesion, actividades)
+    const estado = estadoSesion(sesion, actsParaEstado)
     const completada = !!estado.actividadStrava
     const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
     const expandida = expandidaId === sesion.id
