@@ -8,7 +8,7 @@ const { verifyAuth } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round } = require('./lib/metrics')
+const { round, tssEstimado } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -38,21 +38,13 @@ function semanasRecientes(actividades, fcMax, n) {
   const porLunes = actividades.reduce((acc, a) => {
     if (!a.start_date_local) return acc
     const lunes = lunesDeSemana(a.start_date_local.slice(0, 10))
-    return { ...acc, [lunes]: (acc[lunes] || 0) + tssEstimado(a, fcMax) }
+    return { ...acc, [lunes]: (acc[lunes] || 0) + (tssEstimado(a.moving_time, a.average_heartrate, fcMax) || 0) }
   }, {})
 
   return Object.keys(porLunes)
     .sort()
     .slice(-n)
     .map((lunes) => ({ semana: lunes, tss_total: round(porLunes[lunes], 0) }))
-}
-
-function tssEstimado(act, fcMax) {
-  const fcMedia = act.average_heartrate
-  const duracionMin = act.moving_time ? act.moving_time / 60 : null
-  if (!fcMedia || !duracionMin) return 0
-  const intensidadPct = (fcMedia / fcMax) * 100
-  return (duracionMin / 60) * (intensidadPct / 100) ** 2 * 100
 }
 
 // El perfil se pasa ya cargado (todos los perfiles se traen en UNA query batch
@@ -103,7 +95,7 @@ async function procesarAtleta(athleteId, perfil, env) {
       (acc, a) => ({
         km: acc.km + (a.distance || 0) / 1000,
         horas: acc.horas + (a.moving_time || 0) / 3600,
-        tss: acc.tss + tssEstimado(a, fcMax),
+        tss: acc.tss + (tssEstimado(a.moving_time, a.average_heartrate, fcMax) || 0),
       }),
       { km: 0, horas: 0, tss: 0 }
     )

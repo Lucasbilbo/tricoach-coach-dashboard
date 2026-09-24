@@ -9,7 +9,7 @@ const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, zonaFc } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -92,12 +92,9 @@ function transformarActividad(act, fcMax) {
       ? round(ritmoBruto, 2)
       : null
 
-  const intensidadPct = fcMedia ? round((fcMedia / fcMax) * 100, 0) : null
-
-  const tssEstimado =
-    fcMedia && duracionMin
-      ? round((duracionMin / 60) * (intensidadPct / 100) ** 2 * 100, 0)
-      : null
+  // Intensidad SIN redondear para clasificar zona (helper único, ver lib/metrics).
+  const intensidad = intensidadPct(act.average_heartrate, fcMax)
+  const tss = round(tssEstimado(act.moving_time, act.average_heartrate, fcMax), 0)
 
   return {
     id: act.id,
@@ -112,9 +109,9 @@ function transformarActividad(act, fcMax) {
     potencia_media: act.average_watts ? round(act.average_watts, 0) : null,
     cadencia_media: act.average_cadence ? round(act.average_cadence, 0) : null,
     desnivel_m: act.total_elevation_gain ? round(act.total_elevation_gain, 0) : null,
-    intensidad_pct: intensidadPct,
-    zona_fc: zonaFc(intensidadPct),
-    tss_estimado: tssEstimado,
+    intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
+    zona_fc: zonaFc(intensidad),
+    tss_estimado: tss,
     nombre_actividad: act.name || null,
   }
 }

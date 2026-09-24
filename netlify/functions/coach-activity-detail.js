@@ -9,7 +9,7 @@ const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, zonaFc } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, tssEstimado } = require('./lib/metrics')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -95,11 +95,9 @@ function transformarActividad(act, fcMax) {
   const distanciaKm = act.distance ? round(act.distance / 1000, 2) : null
   const duracionMovMin = act.moving_time ? round(act.moving_time / 60, 1) : null
   const fcMedia = act.average_heartrate ? round(act.average_heartrate, 0) : null
-  const intensidadPct = fcMedia ? round((fcMedia / fcMax) * 100, 0) : null
-  const tssEstimado =
-    fcMedia && duracionMovMin
-      ? round((duracionMovMin / 60) * (intensidadPct / 100) ** 2 * 100, 0)
-      : null
+  // Intensidad SIN redondear para clasificar zona (helper único, ver lib/metrics).
+  const intensidad = intensidadPct(act.average_heartrate, fcMax)
+  const tss = round(tssEstimado(act.moving_time, act.average_heartrate, fcMax), 0)
 
   const splits = transformarSplits(act.splits_metric, disciplina)
   const desnivelNeg = splits.reduce(
@@ -133,9 +131,9 @@ function transformarActividad(act, fcMax) {
     altitud_min_m: act.elev_low != null ? round(act.elev_low, 0) : null,
     calorias: act.calories != null ? round(act.calories, 0) : null,
     descripcion: act.description || null,
-    zona_fc: zonaFc(intensidadPct),
-    intensidad_pct: intensidadPct,
-    tss_estimado: tssEstimado,
+    zona_fc: zonaFc(intensidad),
+    intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
+    tss_estimado: tss,
     polyline: act.map?.polyline || act.map?.summary_polyline || null,
     splits_km: splits,
   }
