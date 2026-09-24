@@ -36,12 +36,28 @@ function hoyMadrid() {
   }).format(new Date())
 }
 
-function estadoSesion(sesion, actividades) {
+// Fecha (YYYY-MM-DD, Europe/Madrid) de hace `weeks` semanas: inicio de la
+// ventana de actividades disponibles.
+function fechaMadridHace(weeks) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(Date.now() - weeks * 7 * 86400000))
+}
+
+function estadoSesion(sesion, actividades, coberturaDesde) {
   const act = (actividades || []).find(
     (a) => a.fecha === sesion.fecha && a.disciplina === sesion.disciplina
   )
   if (act) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: act }
   if (sesion.fecha > hoyMadrid()) return { texto: 'Programada', color: COLORS.accent, actividadStrava: null }
+  // Más antigua que las actividades disponibles: no se puede saber si se hizo →
+  // nunca un falso "Pendiente".
+  if (coberturaDesde && sesion.fecha < coberturaDesde) {
+    return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
+  }
   return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
 }
 
@@ -91,7 +107,9 @@ function agruparPorSemana(sesiones) {
   return grupos
 }
 
-export default function SessionsList({ coachId, athleteId, actividades, atletaNombre, onNewSession }) {
+const ESTADO_MAX_SEMANAS = 26 // tope de la ventana de actividades para el estado
+
+export default function SessionsList({ coachId, athleteId, actividades, weeks = 8, atletaNombre, onNewSession }) {
   const isMobile = useIsMobile()
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -101,9 +119,10 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
   const [historicoAbierto, setHistoricoAbierto] = useState(false)
-  // Actividades para calcular Completada/Pendiente, dimensionadas a la sesión más
-  // antigua y NO al selector de semanas del análisis (A1). Cacheadas por ventana.
+  // Actividades para calcular Completada/Pendiente, y el inicio de su cobertura.
+  // El estado NO depende del selector de semanas del análisis (A1). Cacheadas.
   const [actividadesEstado, setActividadesEstado] = useState(null)
+  const [coberturaDesde, setCoberturaDesde] = useState(null)
   const estadoCacheRef = useRef({ key: null })
 
   function toggleExpandida(id) {
@@ -127,29 +146,40 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
       const lista = data || []
       setSesiones(lista)
 
-      // A1: el estado Completada/Pendiente no debe depender del rango del selector.
-      // Traemos las actividades que cubren desde la sesión más antigua hasta hoy en
-      // UNA llamada dedicada, cacheada por ventana (no se repite al cambiar el
-      // selector ni al recargar si la sesión más antigua no cambia).
-      const fechas = lista.map((s) => s.fecha).filter(Boolean)
-      if (fechas.length > 0) {
-        const masAntigua = fechas.reduce((min, f) => (f < min ? f : min), fechas[0])
-        const dias = Math.ceil((Date.now() - new Date(`${masAntigua}T00:00:00Z`).getTime()) / 86400000)
-        const weeks = Math.min(Math.max(Math.ceil(dias / 7) + 1, 1), 52)
-        const key = `${athleteId}:${weeks}`
-        if (estadoCacheRef.current.key !== key) {
-          const res = await fetch('/.netlify/functions/coach-athlete-data', {
-            method: 'POST',
-            headers: await authHeaders(),
-            body: JSON.stringify({ athleteId, weeks }),
-          })
-          if (res.ok) {
-            const json = await res.json().catch(() => null)
-            if (json?.actividades) {
-              estadoCacheRef.current = { key }
-              setActividadesEstado(json.actividades)
-            }
-          }
+      // Estado Completada/Pendiente: solo las sesiones PASADAS definen la ventana
+      // de actividades que necesitamos.
+      const hoy = hoyMadrid()
+      const fechasPasadas = lista.map((s) => s.fecha).filter((f) => f && f <= hoy)
+      if (fechasPasadas.length === 0) return // solo futuras → todas "Programada"
+      const masAntigua = fechasPasadas.reduce((min, f) => (f < min ? f : min), fechasPasadas[0])
+
+      // 1) Si la ventana del selector ya cubre la sesión pasada más antigua,
+      //    reutilizamos esas actividades: sin llamada extra.
+      if (masAntigua >= fechaMadridHace(weeks)) {
+        estadoCacheRef.current = { key: null }
+        setActividadesEstado(null) // actsParaEstado cae en la prop `actividades`
+        setCoberturaDesde(fechaMadridHace(weeks))
+        return
+      }
+
+      // 2) Si no, UNA llamada dedicada dimensionada a la sesión más antigua, con
+      //    tope de 26 semanas; lo más antiguo que el tope mostrará "sin datos en
+      //    el rango" (nunca un falso Pendiente). Cacheada por ventana.
+      const dias = Math.ceil((Date.now() - new Date(`${masAntigua}T00:00:00Z`).getTime()) / 86400000)
+      const semanas = Math.min(Math.max(Math.ceil(dias / 7) + 1, 1), ESTADO_MAX_SEMANAS)
+      setCoberturaDesde(fechaMadridHace(semanas))
+      const key = `${athleteId}:${semanas}`
+      if (estadoCacheRef.current.key === key) return // ya cargado para esta ventana
+      const res = await fetch('/.netlify/functions/coach-athlete-data', {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ athleteId, weeks: semanas }),
+      })
+      if (res.ok) {
+        const json = await res.json().catch(() => null)
+        if (json?.actividades) {
+          estadoCacheRef.current = { key }
+          setActividadesEstado(json.actividades)
         }
       }
     } catch {
@@ -157,7 +187,13 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
     } finally {
       setCargando(false)
     }
-  }, [coachId, athleteId])
+  }, [coachId, athleteId, weeks])
+
+  // Invalida la caché de actividades del estado (crear/editar/eliminar sesión):
+  // la próxima carga volverá a decidir reutilizar o pedir la ventana.
+  function invalidarEstado() {
+    estadoCacheRef.current = { key: null }
+  }
 
   useEffect(() => {
     cargarSesiones()
@@ -178,11 +214,13 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
       setError('No se pudo eliminar la sesión')
       return
     }
+    invalidarEstado()
     cargarSesiones()
   }
 
   function handleEditGuardado() {
     setSesionEditando(null)
+    invalidarEstado()
     cargarSesiones()
     if (onNewSession) onNewSession()
   }
@@ -218,7 +256,7 @@ export default function SessionsList({ coachId, athleteId, actividades, atletaNo
   const actsParaEstado = actividadesEstado || actividades
 
   const renderSesion = (sesion) => {
-    const estado = estadoSesion(sesion, actsParaEstado)
+    const estado = estadoSesion(sesion, actsParaEstado, coberturaDesde)
     const completada = !!estado.actividadStrava
     const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
     const expandida = expandidaId === sesion.id

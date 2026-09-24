@@ -214,6 +214,7 @@ export default function AthleteView() {
             athleteId={id}
             atletaNombre={datos?.atleta?.nombre}
             actividades={actividades}
+            weeks={weeks}
             onNewSession={() => setSesionesVersion((v) => v + 1)}
           />
         )}
