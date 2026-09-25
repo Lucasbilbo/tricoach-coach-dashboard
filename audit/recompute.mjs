@@ -168,6 +168,25 @@ const fuerte = semOrden.reduce((a, b) => (tssSemana[b] > tssSemana[a] ? b : a), 
 const porCarga = [...semOrden].sort((a, b) => tssSemana[a] - tssSemana[b])
 const normal = porCarga[Math.floor(porCarga.length / 2)]
 
+// ── 1.1 Calentamiento: CTL/TSB de hoy según el selector, ANTES (EWMA calentada
+//    solo con lo que trae el selector) vs DESPUÉS (calentada con 26 semanas). ──
+function ewmaFiltrado(porDia, desdeFecha, hasta) {
+  const filt = Object.fromEntries(Object.entries(porDia).filter(([f]) => f >= desdeFecha))
+  return ewmaAsOf(filt, hasta)
+}
+h('1.1 CALENTAMIENTO — CTL/TSB de hoy por selector (misma serie de 83 act.)')
+{
+  const porDia11 = tssPorDiaReal()
+  const cutoff = (w) => sumarDias(HOY, -w * 7)
+  const despues = ewmaFiltrado(porDia11, cutoff(26), HOY) // tope 26 semanas
+  line('selector | ANTES (calienta solo el rango) | DESPUÉS (calienta 26 sem)')
+  for (const w of [4, 8, 12, 24]) {
+    const antes = ewmaFiltrado(porDia11, cutoff(w), HOY)
+    line(`${String(w).padStart(2)} sem   | CTL ${String(antes.ctl).padStart(3)}  TSB ${antes.tsb > 0 ? '+' : ''}${antes.tsb}`.padEnd(42) + ` | CTL ${despues.ctl}  TSB ${despues.tsb > 0 ? '+' : ''}${despues.tsb}`)
+  }
+  line('(DESPUÉS es idéntico para todos los selectores → hoy ya no depende del rango)')
+}
+
 h('B3. ATL/CTL/TSB — ANTES (SMA7/28@últ.act) vs DESPUÉS (EWMA7/42@hoy)')
 line('OJO: el conector no expone FC en bloque → TSS estimado (B2) en la mayoría de las 83')
 line('actividades. Magnitudes APROXIMADAS; lo comparable es la forma de cada modelo.')
