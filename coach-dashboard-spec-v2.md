@@ -1,3 +1,22 @@
+> # ⚠️ DOCUMENTO HISTÓRICO (2026-06-10) — NO es la fuente de verdad
+> La fuente de verdad del proyecto es **`CLAUDE.md`** + el código. Este spec quedó
+> desactualizado. Partes OBSOLETAS respecto al código actual:
+> - **Auth:** describe el secreto compartido `x-coach-secret`/`VITE_COACH_SECRET`.
+>   Obsoleto: hoy es JWT de Supabase (`verifyAuth`), identidad derivada del token.
+> - **Charts:** lista `VolumeChart`/`ZonesChart`/`PaceChart` como componentes. Ya no
+>   existen; volumen/zonas/ritmo se calculan en `lib/athleteStats.js` y se pintan en
+>   `StravaAnalysis`. Solo quedan `ChartCard`/`PowerChart`/`TSSChart` en `charts/`.
+> - **Prescripción:** menciona `PrescribeModal`. Sustituido por `WorkoutBuilder`
+>   (PrescribeModal se eliminó como código muerto).
+> - **Carga:** el TSS estimado y el modelo ATL/CTL han cambiado — ahora fuente única
+>   en `lib/metrics.js` + `lib/carga.js` (EWMA 7/42 anclado a hoy, zona sin redondear,
+>   TSS estimado sin FC, exclusión de 'other'). Ver `CLAUDE.md`.
+> - No cubre: Intervals.icu/Garmin, invitaciones (`accept-invitation`/JoinPage),
+>   rate limit, `oauth-state`, AthleteHome, IntervalsSetup, code-splitting.
+>
+> Lo que SIGUE vigente: nombres de env (`SUPABASE_SERVICE_ROLE_KEY`), columnas de
+> `profiles`, el pin de Vite, y la dirección visual base.
+
 # Coach Dashboard — Spec v2 (estado real del proyecto)
 
 Dashboard web para entrenador de triatlón. React + Vite (JS sin TypeScript),
