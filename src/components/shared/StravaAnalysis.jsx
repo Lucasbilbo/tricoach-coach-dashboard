@@ -46,6 +46,12 @@ function tssTexto(act) {
   return act.tss_estimado_sin_fc ? `~${act.tss_estimado}` : `${act.tss_estimado}`
 }
 
+// Etiqueta de la columna ESTADO. 'other' (golf, paseos) no computa (B1).
+function etiquetaActividad(act) {
+  if (act.disciplina === 'other') return 'no computa'
+  return DISCIPLINE_LABELS[act.disciplina] || 'Sesión'
+}
+
 const seccionLabel = {
   fontSize: 13,
   color: COLORS.textSecondary,
@@ -314,7 +320,7 @@ export default function StravaAnalysis({
                     {act.fecha ? formatDiaMes(act.fecha) : '—'}
                   </span>
                   <span style={{ fontSize: 11, color, border: `1px solid ${color}`, borderRadius: 20, padding: '2px 9px', fontFamily: FONTS.sans }}>
-                    {DISCIPLINE_LABELS[act.disciplina] || 'Sesión'}
+                    {etiquetaActividad(act)}
                   </span>
                 </div>
                 <span style={{ fontSize: 14, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -409,7 +415,7 @@ export default function StravaAnalysis({
                     fontFamily: FONTS.sans,
                   }}
                 >
-                  {DISCIPLINE_LABELS[act.disciplina] || 'Sesión'}
+                  {etiquetaActividad(act)}
                 </span>
               </div>
             )

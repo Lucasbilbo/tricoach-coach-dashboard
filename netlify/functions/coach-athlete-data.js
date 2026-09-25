@@ -102,7 +102,8 @@ function transformarActividad(act, fcMax) {
     cadencia_media: act.average_cadence ? round(act.average_cadence, 0) : null,
     desnivel_m: act.total_elevation_gain ? round(act.total_elevation_gain, 0) : null,
     intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
-    zona_fc: zonaFc(intensidad),
+    // 'other' (golf, paseos) no computa: sin zona ni TSS.
+    zona_fc: disciplina === 'other' ? null : zonaFc(intensidad),
     tss_estimado: round(carga.tss, 0),
     tss_estimado_sin_fc: carga.estimado,
     nombre_actividad: act.name || null,

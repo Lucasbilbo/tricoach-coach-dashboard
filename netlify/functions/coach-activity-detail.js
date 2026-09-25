@@ -132,7 +132,7 @@ function transformarActividad(act, fcMax) {
     altitud_min_m: act.elev_low != null ? round(act.elev_low, 0) : null,
     calorias: act.calories != null ? round(act.calories, 0) : null,
     descripcion: act.description || null,
-    zona_fc: zonaFc(intensidad),
+    zona_fc: disciplina === 'other' ? null : zonaFc(intensidad),
     intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
     tss_estimado: round(carga.tss, 0),
     tss_estimado_sin_fc: carga.estimado,
