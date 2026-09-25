@@ -76,7 +76,7 @@ function supabasePatch(path, body) {
       let data = ''
       res.on('data', (chunk) => { data += chunk })
       res.on('end', () => {
-        let parsed = null
+        let parsed
         try { parsed = JSON.parse(data) } catch { parsed = null }
         resolve({ status: res.statusCode, body: parsed })
       })
