@@ -226,6 +226,7 @@ export default function AthleteView() {
 
         {activeTab === 'analisis' && !cargando && !error && (
           <StravaAnalysis
+            key={id}
             actividades={actividades}
             semanas={semanas}
             records={datos?.records}
