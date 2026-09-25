@@ -45,7 +45,7 @@ function formatObjetivo(tipo, valor) {
 const labelSecundario = { fontSize: 12, color: COLORS.textSecondary }
 const materialStyle = { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 }
 
-function PasoRow({ paso, esPrimero, esUltimo }) {
+function PasoRow({ paso, esUltimo }) {
   const esDescanso = !paso.objetivo_tipo
   const mat = Array.isArray(paso.material) && paso.material.length > 0 ? paso.material.join(', ') : null
   const obj = formatObjetivo(paso.objetivo_tipo, paso.objetivo_valor)
@@ -76,7 +76,7 @@ function PasoRow({ paso, esPrimero, esUltimo }) {
   )
 }
 
-function BloqueCard({ bloque, disciplina }) {
+function BloqueCard({ bloque }) {
   const esDescanso = bloque.tipo === 'step' && !bloque.objetivo_tipo
   const borde = bloqueColor(bloque.tipo, esDescanso)
   const bg = bloqueBg(bloque.tipo)
@@ -106,7 +106,6 @@ function BloqueCard({ bloque, disciplina }) {
             <PasoRow
               key={pi}
               paso={paso}
-              esPrimero={pi === 0}
               esUltimo={pi === (bloque.pasos || []).length - 1}
             />
           ))}
@@ -174,7 +173,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
       {/* Bloques */}
       <div>
         {ws.bloques.map((bloque, idx) => (
-          <BloqueCard key={idx} bloque={bloque} disciplina={disciplina} />
+          <BloqueCard key={idx} bloque={bloque} />
         ))}
       </div>
 
