@@ -6,7 +6,7 @@ import { COLORS, FONTS } from '../lib/theme'
 const PISCINA_LABEL = { '25': 'Piscina de 25 m', '50': 'Piscina de 50 m', open: 'Aguas abiertas' }
 
 // Intensidad 1–5 → color (de suave a máximo, con la paleta del panel).
-const COLOR_NIVEL = { 1: '#3E4656', 2: '#2FBFAF', 3: '#E8934A', 4: '#E8704F', 5: '#E85D5D' }
+const COLOR_NIVEL = { 1: '#4E6475', 2: '#2FBFAF', 3: '#E8934A', 4: '#E8704F', 5: '#E85D5D' }
 
 function nivelPaso(paso) {
   const v = paso.objetivo_valor
