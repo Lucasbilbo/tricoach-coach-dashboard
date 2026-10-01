@@ -51,7 +51,7 @@ export const pageStyle = {
   background: COLORS.background,
   color: COLORS.textPrimary,
   fontFamily: FONTS.sans,
-  padding: 24,
+  padding: '20px clamp(16px, 4vw, 32px) 64px',
 }
 
 export const inputStyle = {
@@ -77,4 +77,45 @@ export const buttonStyle = {
   fontWeight: 600,
   fontFamily: FONTS.sans,
   cursor: 'pointer',
+}
+
+// ── Sistema de UI (2026-10) ───────────────────────────────────────────────
+// Radios por jerarquía: controles pequeños, tarjetas, contenedores grandes.
+export const RADIUS = { sm: 6, md: 10, lg: 14 }
+
+// Filo de color por disciplina: el sello visual del panel. Se usa igual en
+// sesiones, actividades y pruebas de la temporada.
+export function railStyle(disciplina, grosor = 3) {
+  return { boxShadow: `inset ${grosor}px 0 0 ${DISCIPLINE_COLORS[disciplina] || DISCIPLINE_COLORS.other}` }
+}
+
+export const ghostButtonStyle = {
+  ...buttonStyle,
+  background: 'transparent',
+  color: COLORS.textPrimary,
+  border: `1px solid ${COLORS.cardBorder}`,
+  fontWeight: 500,
+}
+
+export const iconButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 36,
+  height: 36,
+  borderRadius: 8,
+  background: 'transparent',
+  border: `1px solid ${COLORS.cardBorder}`,
+  color: COLORS.textSecondary,
+  cursor: 'pointer',
+  flexShrink: 0,
+}
+
+// Título de sección: frase normal, sin mayúsculas forzadas.
+export const sectionTitleStyle = {
+  margin: '0 0 12px',
+  fontSize: 15,
+  fontWeight: 600,
+  color: COLORS.textPrimary,
+  letterSpacing: 0,
 }

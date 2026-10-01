@@ -285,7 +285,7 @@ export default function IntervalsSetup() {
                   fontWeight: 600,
                 }}
               >
-                ✅ Strava conectado
+                Strava conectado
               </div>
             ) : (
               <button
@@ -316,7 +316,7 @@ export default function IntervalsSetup() {
               Paso 2 de {PASOS_TOTAL}
             </p>
             <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
-              📱 Crea tu cuenta en Intervals.icu
+              Crea tu cuenta en Intervals.icu
             </h2>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.6, margin: '0 0 24px' }}>
               Intervals.icu conecta a tu entrenador con tu Garmin. Es gratuita.
@@ -357,7 +357,7 @@ export default function IntervalsSetup() {
               Paso 3 de {PASOS_TOTAL}
             </p>
             <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
-              🔑 Obtén tu API key
+              Copia tu clave de API
             </h2>
             <ol style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.8, margin: '0 0 20px', paddingLeft: 20 }}>
               <li>Entra en intervals.icu</li>
@@ -383,7 +383,7 @@ export default function IntervalsSetup() {
 
             {verificado && (
               <p style={{ color: '#2FBFAF', fontSize: 13, margin: '8px 0 0' }}>
-                ✅ Conectado como {verificado.nombre}
+                Conectado como {verificado.nombre}
               </p>
             )}
 
@@ -408,7 +408,7 @@ export default function IntervalsSetup() {
               Paso 4 de {PASOS_TOTAL}
             </p>
             <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
-              ⌚ Conecta tu Garmin
+              Conecta tu reloj
             </h2>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.6, margin: '0 0 16px' }}>
               Para que los entrenamientos lleguen a tu reloj:
@@ -440,7 +440,7 @@ export default function IntervalsSetup() {
               Ir a intervals.icu/settings ↗
             </a>
             <button onClick={() => setPaso(5)} style={btnPrimary}>
-              ✅ Ya he conectado mi Garmin → Siguiente
+              Ya lo he conectado, siguiente
             </button>
             <BtnOmitir navigate={navigate} />
           </div>

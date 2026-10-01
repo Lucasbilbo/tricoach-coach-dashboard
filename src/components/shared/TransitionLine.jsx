@@ -19,7 +19,7 @@ const LEYENDA = [
 
 export default function TransitionLine({
   columns = [],
-  titulo = 'LÍNEA DE TRANSICIÓN — volumen y disciplina por día',
+  titulo = 'Volumen por día y disciplina',
   barsHeight = 180,
   gap = 14,
   maxBarWidth = 52, // en móvil, pasar null para que la barra use el 100%
@@ -48,7 +48,7 @@ export default function TransitionLine({
             gap: 8,
           }}
         >
-          <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
             {titulo}
           </span>
           {showLegend && (

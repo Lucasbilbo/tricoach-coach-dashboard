@@ -2,18 +2,36 @@
 // Son de presentación pura: reciben el bloque y callbacks; la manipulación del
 // estado vive en el WorkoutBuilder.
 import { COLORS, inputStyle } from '../../lib/theme'
-import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER, ICONO_POR_DISCIPLINA } from './constants'
+import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER } from './constants'
+import Icon from '../ui/Icon'
 import { labelSm, miniBtn, addBtnStyle } from './styles'
 import { MaterialChips, ZonasChips } from './WorkoutChips'
+
+// Subir / bajar / quitar un bloque, con iconos (antes ↑ ↓ 🗑).
+function BotonesBloque({ idx, total, onMove, onRemove }) {
+  const btn = { ...miniBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, padding: 0 }
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      <button onClick={() => onMove(idx, -1)} disabled={idx === 0} style={{ ...btn, opacity: idx === 0 ? 0.35 : 1 }} aria-label="Subir bloque">
+        <Icon name="chevronDown" size={15} style={{ transform: 'rotate(180deg)' }} />
+      </button>
+      <button onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={{ ...btn, opacity: idx === total - 1 ? 0.35 : 1 }} aria-label="Bajar bloque">
+        <Icon name="chevronDown" size={15} />
+      </button>
+      <button onClick={() => onRemove(idx)} style={btn} aria-label="Quitar bloque">
+        <Icon name="trash" size={14} />
+      </button>
+    </div>
+  )
+}
 
 export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove }) {
   const unidades = UNIDADES[disciplina] || UNIDADES.other
   const objetivos = OBJETIVOS[disciplina] || []
 
-  const icono = ICONO_POR_DISCIPLINA[disciplina] || ICONO_POR_DISCIPLINA.other
-  const titulo = bloque.tipo === 'warmup' ? `${icono} Calentamiento`
-    : bloque.tipo === 'cooldown' ? `${icono} Vuelta calma`
-    : '▸ Paso libre'
+  const titulo = bloque.tipo === 'warmup' ? 'Calentamiento'
+    : bloque.tipo === 'cooldown' ? 'Vuelta a la calma'
+    : 'Paso'
 
   return (
     <div
@@ -26,12 +44,8 @@ export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemov
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.accent }}>{titulo}</span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => onMove(idx, -1)} disabled={idx === 0} style={miniBtn}>↑</button>
-          <button onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={miniBtn}>↓</button>
-          <button onClick={() => onRemove(idx)} style={{ ...miniBtn, color: COLORS.error }}>🗑</button>
-        </div>
+        <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>{titulo}</span>
+        <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -191,9 +205,10 @@ export function PasoRepeat({ paso, pasoIdx, repeatIdx, disciplina, totalPasos, o
         </div>
         <button
           onClick={() => onRemovePaso(repeatIdx, pasoIdx)}
-          style={{ ...miniBtn, color: COLORS.error, marginBottom: 1 }}
+          style={{ ...miniBtn, marginBottom: 1, display: 'inline-flex', alignItems: 'center', padding: '7px 8px' }}
+          aria-label="Quitar paso"
         >
-          🗑
+          <Icon name="trash" size={14} />
         </button>
       </div>
 
@@ -221,7 +236,7 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#8B7FD1' }}>🔁 Serie</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.load }}>Serie</span>
           <input
             type="text"
             value={bloque.nombre || ''}
@@ -240,11 +255,7 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
             />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => onMove(idx, -1)} disabled={idx === 0} style={miniBtn}>↑</button>
-          <button onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={miniBtn}>↓</button>
-          <button onClick={() => onRemove(idx)} style={{ ...miniBtn, color: COLORS.error }}>🗑</button>
-        </div>
+        <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
       </div>
 
       {(bloque.pasos || []).map((paso, pi) => (

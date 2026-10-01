@@ -149,8 +149,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `SeasonOverview` (bloque "Temporadas" en el panel del coach). Helpers puros en
   `src/lib/season.js`; cliente en `src/lib/seasonApi.js`.
 - Tests: `npm test` (node --test, sin dependencias) — `test/season.test.js`.
-- Pendiente: avisos de inscripción por email (Resend) y enlazar pruebas
-  confirmadas con `training_cycles` de TriCoach.
+- Pendiente: avisos de inscripción por email (Resend).
+- Este panel es un proyecto INDEPENDIENTE de TriCoach (la app de coaching con IA):
+  comparten la instancia de Supabase, pero no hay que enlazar nada entre ambos.
 
 ## Variables de entorno
 
@@ -184,6 +185,28 @@ Color **por disciplina** sobre fondo oscuro Void. Constantes en `src/lib/theme.j
 
 Tipografía (Google Fonts en `index.html`): **JetBrains Mono** para TODO valor
 numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto.
+
+### Sistema de UI (2026-10)
+- Marca única **GetRiCoach** (`Brand` en `src/components/ui/Layout.jsx`: tres trazos
+  natación/bici/carrera + nombre). No usar "TriCoach" en este panel.
+- **Sello visual: el filo de color por disciplina** a la izquierda de cada sesión,
+  actividad o prueba (`railStyle(disciplina)` en theme.js, `SportRail` en season).
+  Nada de pastillas rellenas de deporte: texto + filo o punto.
+- Primitivas en `src/components/ui/`: `Icon` (SVG de trazo, NUNCA emojis en la UI),
+  `PageHeader`, `Tabs` (fijas arriba, etiquetas cortas de una línea), `SectionTitle`,
+  `Segmented`, `DisciplineTag`, `Metric`. Estilos en theme.js: `ghostButtonStyle`,
+  `iconButtonStyle`, `sectionTitleStyle`, `RADIUS`.
+- Títulos en frase normal (sin MAYÚSCULAS espaciadas). Chips de filtro neutros
+  (seleccionado = blanco translúcido); el acento teal se reserva para la acción
+  principal y los estados positivos.
+- `WorkoutDetail` dibuja el **perfil de intensidad** del entreno (barras por paso,
+  ancho = duración, alto/color = zona), como lo muestra el reloj.
+- Listas largas paginadas ("Ver más"): actividades del análisis (12) e historial del
+  atleta (10). Móvil primero: gutter 16 px, sin scroll horizontal.
+- Harness de diseño (gitignoreado): `preview.html` + `vite.preview.config.mjs` +
+  `src/preview/` con Supabase y functions simulados →
+  `npx vite build --config vite.preview.config.mjs && npx vite preview --config vite.preview.config.mjs`,
+  luego `/preview.html?as=coach|athlete|none&route=/dashboard`.
 
 ### Línea de Transición
 Barras apiladas por semana segmentadas por disciplina, con estados por relleno+borde

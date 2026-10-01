@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../../lib/chartUtils'
 import { authHeaders } from '../../lib/authHeaders'
 import { useIsMobile } from '../../hooks/useIsMobile'
-import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../../lib/theme'
+import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle } from '../../lib/theme'
 import { FILTROS_DISCIPLINA, descargarCsv } from '../../lib/activityFormat'
 import {
   computeResumenStats,
@@ -53,11 +53,14 @@ function etiquetaActividad(act) {
 }
 
 const seccionLabel = {
-  fontSize: 13,
-  color: COLORS.textSecondary,
-  letterSpacing: '0.03em',
-  marginBottom: 16,
+  fontSize: 14,
+  fontWeight: 600,
+  color: COLORS.textPrimary,
+  marginBottom: 14,
 }
+
+// Actividades visibles de entrada; "Ver más" añade otra página.
+const PAGINA_ACTIVIDADES = 12
 
 const TABLA_COLS = '100px 1.6fr 1fr 1fr 0.8fr 0.7fr 1fr'
 
@@ -75,6 +78,7 @@ export default function StravaAnalysis({
   accionesFiltro = null,
 }) {
   const [filtroDisciplina, setFiltroDisciplina] = useState('todos')
+  const [visibles, setVisibles] = useState(PAGINA_ACTIVIDADES)
   const [selectedActivityId, setSelectedActivityId] = useState(null)
   // Serie de 26 semanas SOLO para calentar la carga (ATL/CTL/TSB). Cacheada por
   // atleta. Si aún no llegó o falla, se usa `actividades` (comportamiento previo).
@@ -112,6 +116,7 @@ export default function StravaAnalysis({
     filtroDisciplina === 'todos'
       ? actividades
       : actividades.filter((a) => a.disciplina === filtroDisciplina)
+  const actividadesVisibles = actividadesFiltradas.slice(0, visibles)
 
   const stats = computeResumenStats(actividades)
   // CTL/ATL/TSB de hoy sobre la serie de 26 semanas (no sobre el rango dibujado).
@@ -171,7 +176,7 @@ export default function StravaAnalysis({
         <div style={{ marginBottom: isMobile ? 14 : 24 }}>
           <TransitionLine
             columns={columnas}
-            titulo={isMobile ? 'LÍNEA DE TRANSICIÓN' : 'LÍNEA DE TRANSICIÓN — volumen y disciplina por semana'}
+            titulo={isMobile ? 'Volumen por semana' : 'Volumen por semana y disciplina'}
             barsHeight={isMobile ? 110 : 180}
             gap={isMobile ? 6 : 14}
             maxBarWidth={isMobile ? null : 52}
@@ -189,7 +194,7 @@ export default function StravaAnalysis({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
         {zonas.length > 0 && (
           <div style={cardStyle}>
-            <div style={seccionLabel}>DISTRIBUCIÓN DE ZONAS FC</div>
+            <div style={seccionLabel}>Tiempo en cada zona de pulso</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
               {zonas.map((z) => (
                 <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
@@ -208,7 +213,7 @@ export default function StravaAnalysis({
 
         {paceTrend.length > 0 && (
           <div style={cardStyle}>
-            <div style={seccionLabel}>PROGRESIÓN RITMO RUNNING — últimas {paceTrend.length} semanas</div>
+            <div style={seccionLabel}>Ritmo medio de carrera, últimas {paceTrend.length} semanas</div>
             <div
               style={{
                 display: 'grid',
@@ -243,23 +248,32 @@ export default function StravaAnalysis({
       )}
 
       {/* Filtros + CSV */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '24px 0 10px' }}>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Actividades</h2>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>{actividadesFiltradas.length}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 12, paddingBottom: 2 }}>
         {FILTROS_DISCIPLINA.map((filtro) => {
           const activo = filtroDisciplina === filtro.clave
           return (
             <button
               key={filtro.clave}
-              onClick={() => setFiltroDisciplina(filtro.clave)}
+              onClick={() => {
+                setFiltroDisciplina(filtro.clave)
+                setVisibles(PAGINA_ACTIVIDADES)
+              }}
+              aria-pressed={activo}
               style={{
-                background: activo ? 'rgba(47,191,175,0.12)' : 'transparent',
+                background: activo ? 'rgba(237,238,242,0.1)' : 'transparent',
                 color: activo ? COLORS.textPrimary : COLORS.textSecondary,
-                border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
-                borderRadius: 8,
-                padding: '6px 14px',
+                border: `1px solid ${activo ? 'rgba(237,238,242,0.25)' : COLORS.cardBorder}`,
+                borderRadius: 999,
+                padding: '6px 13px',
                 fontSize: 13,
-                fontWeight: 600,
+                fontWeight: activo ? 600 : 500,
                 cursor: 'pointer',
-                fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {filtro.etiqueta}
@@ -273,12 +287,14 @@ export default function StravaAnalysis({
           style={{
             marginLeft: 'auto',
             background: 'transparent',
-            color: COLORS.accent,
+            color: COLORS.textSecondary,
             border: `1px solid ${COLORS.cardBorder}`,
-            borderRadius: 8,
-            padding: '6px 14px',
+            borderRadius: 999,
+            padding: '6px 13px',
             fontSize: 13,
-            fontWeight: 600,
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
             cursor: actividadesFiltradas.length === 0 ? 'default' : 'pointer',
             opacity: actividadesFiltradas.length === 0 ? 0.4 : 1,
             fontFamily: FONTS.sans,
@@ -290,55 +306,52 @@ export default function StravaAnalysis({
 
       {/* Sesiones — desktop: tabla de 7 columnas; móvil: lista de cards */}
       {isMobile ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ ...cardStyle, padding: '2px 0' }}>
           {actividadesFiltradas.length === 0 && (
-            <div style={{ ...cardStyle, textAlign: 'center', color: COLORS.textSecondary, fontSize: 13 }}>
+            <div style={{ padding: 16, color: COLORS.textSecondary, fontSize: 14 }}>
               {filtroDisciplina === 'todos'
                 ? 'Sin actividades en este rango'
-                : 'Sin actividades de esta disciplina en este rango'}
+                : 'Sin actividades de este deporte en este rango'}
             </div>
           )}
-          {actividadesFiltradas.map((act, i) => {
+          {actividadesVisibles.map((act, i) => {
             const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
             return (
-              <div
+              <button
                 key={act.id || `${act.fecha}-${i}`}
                 onClick={() => act.id && setSelectedActivityId(act.id)}
                 style={{
-                  background: COLORS.card,
-                  border: `1px solid ${COLORS.cardBorder}`,
-                  borderRadius: 10,
-                  padding: '12px 14px',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
+                  gap: 12,
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'none',
+                  border: 'none',
+                  borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}`,
+                  padding: '12px 16px',
                   cursor: act.id ? 'pointer' : 'default',
+                  color: COLORS.textPrimary,
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary }}>
-                    {act.fecha ? formatDiaMes(act.fecha) : '—'}
+                <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: color }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
+                    </span>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}>
+                      {act.fecha ? formatDiaMes(act.fecha) : '—'}
+                    </span>
                   </span>
-                  <span style={{ fontSize: 11, color, border: `1px solid ${color}`, borderRadius: 20, padding: '2px 9px', fontFamily: FONTS.sans }}>
-                    {etiquetaActividad(act)}
+                  <span style={{ display: 'flex', gap: 14, marginTop: 4, fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textSecondary }}>
+                    <span style={{ color: COLORS.textPrimary }}>{act.distancia_km != null ? `${act.distancia_km} km` : '—'}</span>
+                    <span>{formatEffort(act)}</span>
+                    <span title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined} style={{ color: COLORS.load }}>
+                      TSS {tssTexto(act)}
+                    </span>
                   </span>
-                </div>
-                <span style={{ fontSize: 14, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
                 </span>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textPrimary }}>
-                    {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
-                  </span>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
-                  <span
-                    title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined}
-                    style={{ fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.load }}
-                  >
-                    TSS {tssTexto(act)}
-                  </span>
-                </div>
-              </div>
+              </button>
             )
           })}
         </div>
@@ -350,12 +363,11 @@ export default function StravaAnalysis({
               gridTemplateColumns: TABLA_COLS,
               gap: 10,
               padding: '12px 24px',
-              fontSize: 11,
+              fontSize: 12,
               color: COLORS.textTertiary,
-              letterSpacing: '0.04em',
             }}
           >
-            <span>FECHA</span><span>SESIÓN</span><span>DISTANCIA</span><span>RITMO / POTENCIA</span><span>FC MEDIA</span><span>TSS</span><span>ESTADO</span>
+            <span>Fecha</span><span>Actividad</span><span>Distancia</span><span>Ritmo / velocidad</span><span>FC media</span><span>TSS</span><span>Deporte</span>
           </div>
 
           {actividadesFiltradas.length === 0 && (
@@ -366,7 +378,7 @@ export default function StravaAnalysis({
             </div>
           )}
 
-          {actividadesFiltradas.map((act, i) => {
+          {actividadesVisibles.map((act, i) => {
             const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
             return (
               <div
@@ -421,6 +433,15 @@ export default function StravaAnalysis({
             )
           })}
         </div>
+      )}
+
+      {actividadesFiltradas.length > actividadesVisibles.length && (
+        <button
+          onClick={() => setVisibles((v) => v + PAGINA_ACTIVIDADES)}
+          style={{ ...ghostButtonStyle, width: '100%', marginTop: 10, color: COLORS.textSecondary }}
+        >
+          Ver más actividades ({actividadesFiltradas.length - actividadesVisibles.length})
+        </button>
       )}
 
       {actividadesFiltradas.some((a) => a.tss_estimado_sin_fc) && (

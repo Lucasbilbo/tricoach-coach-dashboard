@@ -34,20 +34,16 @@ export const addBtnStyle = {
 
 export const sectionLabel = {
   display: 'block',
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 600,
-  color: COLORS.textSecondary,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  color: COLORS.textPrimary,
   marginBottom: 8,
 }
 
 export const separadorSection = {
-  fontSize: 11,
+  fontSize: 14,
   fontWeight: 600,
-  color: COLORS.textSecondary,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  color: COLORS.textPrimary,
   borderBottom: `1px solid ${COLORS.cardBorder}`,
   paddingBottom: 6,
   marginBottom: 12,

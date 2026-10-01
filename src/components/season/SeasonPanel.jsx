@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { COLORS, FONTS, buttonStyle, cardStyle } from '../../lib/theme'
+import { COLORS, FONTS, cardStyle, ghostButtonStyle } from '../../lib/theme'
+import Icon from '../ui/Icon'
 import {
   COLOR_AVISO,
   DEPORTES,
@@ -18,7 +19,7 @@ import {
 import { listarTemporada } from '../../lib/seasonApi'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import EventEditor from './EventEditor'
-import { Chip, EstadoPill, IconoAviso, PrioridadBadge, SportDot } from './SeasonBits'
+import { Chip, EstadoPill, IconoAviso, PrioridadBadge, SportDot, SportRail } from './SeasonBits'
 
 const FILTROS = [
   { clave: 'activas', label: 'Activas' },
@@ -143,9 +144,7 @@ function EventRow({ evento, hoy, onClick, isMobile }) {
       >
         {evento.fecha ? (evento.fecha_aprox ? `~${formatFechaCorta(evento.fecha).split(' ')[1]}` : formatFechaCorta(evento.fecha)) : '—'}
       </span>
-      <span style={{ paddingTop: 4 }}>
-        <SportDot deporte={evento.deporte} size={10} />
-      </span>
+      <SportRail deporte={evento.deporte} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span
           style={{
@@ -245,15 +244,15 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Temporada</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
+          <p style={{ margin: 0, fontSize: 14, color: COLORS.textSecondary }}>
             <span style={{ fontFamily: FONTS.mono }}>{nActivas}</span> pruebas en juego ·{' '}
             <span style={{ fontFamily: FONTS.mono }}>{nConfirmadas}</span> confirmadas
             {esCoach ? '' : ' · tu entrenador también puede editarla'}
           </p>
         </div>
-        <button onClick={() => setEditando({})} style={buttonStyle}>
-          ＋ Añadir prueba
+        <button onClick={() => setEditando({})} style={{ ...ghostButtonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px' }}>
+          <Icon name="plus" size={16} strokeWidth={2.2} />
+          Añadir prueba
         </button>
       </div>
 
@@ -268,7 +267,7 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
 
       {pendientes.length > 0 && (
         <div style={{ ...cardStyle, padding: '12px 16px', marginBottom: 16, borderColor: `${COLOR_AVISO}55` }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: COLOR_AVISO, marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginBottom: 8 }}>
             Inscripciones por cerrar
           </div>
           {pendientes.map(({ evento, alerta }) => (
@@ -323,7 +322,7 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
 
       {grupos.map((g) => (
         <section key={g.clave} id={`mes-${g.clave}`} style={{ marginTop: 20, scrollMarginTop: 16 }}>
-          <h3 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: COLORS.textSecondary }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
             {etiquetaMes(g.clave)}
           </h3>
           {g.items.map((e) => (

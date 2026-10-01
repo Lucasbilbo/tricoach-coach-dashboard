@@ -78,10 +78,10 @@ export function Chip({ activo, onClick, children, title }) {
       title={title}
       aria-pressed={activo}
       style={{
-        background: activo ? COLORS.accent : 'transparent',
-        color: activo ? COLORS.background : COLORS.textSecondary,
-        border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
-        borderRadius: 6,
+        background: activo ? 'rgba(237,238,242,0.1)' : 'transparent',
+        color: activo ? COLORS.textPrimary : COLORS.textSecondary,
+        border: `1px solid ${activo ? 'rgba(237,238,242,0.25)' : COLORS.cardBorder}`,
+        borderRadius: 999,
         padding: '6px 12px',
         fontSize: 13,
         fontWeight: 600,
@@ -99,6 +99,15 @@ export function Chip({ activo, onClick, children, title }) {
 }
 
 
+
+// Filo vertical de color del deporte (triatlón: las tres disciplinas).
+export function SportRail({ deporte }) {
+  const fondo =
+    deporte === 'tri'
+      ? 'linear-gradient(#2FBFAF 0 33%, #E8934A 33% 66%, #E85D5D 66%)'
+      : DEPORTES[deporte]?.color || DEPORTES.other.color
+  return <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: fondo, flexShrink: 0 }} />
+}
 
 export function IconoAviso({ color = COLOR_AVISO }) {
   return (

@@ -1,12 +1,50 @@
-/* Reset mínimo — el resto del estilo es inline (regla del proyecto) */
+/* Reset mínimo — el resto del estilo es inline (regla del proyecto).
+   Colores y fuentes alineados con src/lib/theme.js. */
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: #0a0f1e;
-  color: #f1f5f9;
-  font-family: 'Inter', sans-serif;
+  background: #0b0d12;
+  color: #edeef2;
+  font-family: 'Archivo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Foco visible solo con teclado; el inline style no puede expresar :focus-visible */
+:focus-visible {
+  outline: 2px solid #2fbfaf;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: rgba(47, 191, 175, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

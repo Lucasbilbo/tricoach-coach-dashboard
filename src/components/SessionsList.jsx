@@ -2,17 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, iconButtonStyle, railStyle } from '../lib/theme'
+import Icon from './ui/Icon'
 import { MESES_CORTOS, lunesDeSemana, formatDiaMes } from '../lib/chartUtils'
-import { useIsMobile } from '../hooks/useIsMobile'
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
 
-const BADGE_COLORS = DISCIPLINE_COLORS
-
 const DISC_LABELS = {
-  run: 'Running',
+  run: 'Carrera',
   swim: 'Natación',
   bike: 'Ciclismo',
   strength: 'Fuerza',
@@ -53,7 +51,7 @@ function fechaMadridHace(weeks) {
 function estadoSesion(sesion, actividad, coberturaDesde) {
   const estado = estadoDeSesion(sesion, actividad, hoyMadrid(), coberturaDesde)
   if (estado === ESTADO.completada) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: actividad }
-  if (estado === ESTADO.programada) return { texto: 'Programada', color: COLORS.accent, actividadStrava: null }
+  if (estado === ESTADO.programada) return { texto: 'Programada', color: COLORS.textSecondary, actividadStrava: null }
   if (estado === ESTADO.sinDatos) return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
   return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
 }
@@ -65,26 +63,30 @@ function tituloSesion(sesion) {
   return desc.length > 40 ? desc.slice(0, 40) + '…' : desc || '—'
 }
 
-const accionBtnStyle = {
+// Acción de texto (ver entreno / actividad): sin caja, para no competir con
+// los botones de icono.
+const textoBtnStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
   background: 'transparent',
-  border: `1px solid ${COLORS.cardBorder}`,
-  borderRadius: 6,
+  border: 'none',
   color: COLORS.textSecondary,
-  padding: '8px 10px',
-  fontSize: 12,
+  padding: '8px 6px 8px 0',
+  fontSize: 13,
+  fontWeight: 500,
   cursor: 'pointer',
-  fontFamily: "'Archivo', sans-serif",
   minHeight: 36,
-  lineHeight: 1,
 }
 
+// Ámbar: sesión que aún no está en el reloj.
+const COLOR_PENDIENTE = DISCIPLINE_COLORS.bike
+
 const cabeceraSemanaStyle = {
-  margin: '0 0 8px',
-  fontSize: 12,
+  margin: '0 0 10px',
+  fontSize: 14,
   fontWeight: 600,
-  color: COLORS.textSecondary,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
+  color: COLORS.textPrimary,
 }
 
 // Agrupa las sesiones por semana (lunes, mismo helper que los charts) preservando
@@ -107,7 +109,6 @@ function agruparPorSemana(sesiones) {
 const ESTADO_MAX_SEMANAS = 26 // tope de la ventana de actividades para el estado
 
 export default function SessionsList({ coachId, athleteId, actividades, weeks = 8, atletaNombre, onNewSession }) {
-  const isMobile = useIsMobile()
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -268,120 +269,81 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     const completada = !!estado.actividadStrava
     const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
     const expandida = expandidaId === sesion.id
+    const enviada = !!sesion.enviado_a_garmin
 
     return (
-      <div
-        key={sesion.id}
-        onClick={() => tieneWorkout && toggleExpandida(sesion.id)}
-        style={{ ...cardStyle, cursor: tieneWorkout ? 'pointer' : 'default' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
-                {formatFechaSesion(sesion.fecha)}
-              </span>
-              <span
-                style={{
-                  background: BADGE_COLORS[sesion.disciplina] || BADGE_COLORS.other,
-                  color: '#FFFFFF',
-                  borderRadius: 4,
-                  padding: '2px 8px',
-                  fontSize: 11,
-                  fontWeight: 600,
-                }}
-              >
-                {DISC_LABELS[sesion.disciplina] || sesion.disciplina}
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: estado.color }}>
-                {estado.texto}
-              </span>
-            </div>
+      <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 12px 18px', ...railStyle(sesion.disciplina) }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
+          <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{formatFechaSesion(sesion.fecha)}</span>
+          <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
+          {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+        </div>
+        <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
 
-            <p style={{ margin: '8px 0 0', fontSize: 14, color: COLORS.textPrimary }}>
-              {tituloSesion(sesion)}
-            </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 8, fontSize: 13 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: estado.color, fontWeight: 500 }}>
+            {completada && <Icon name="check" size={15} strokeWidth={2.2} />}
+            {estado.texto.replace('✓ ', '')}
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
+            <Icon name="watch" size={15} />
+            {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
+          </span>
+        </div>
 
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', ...(isMobile && { width: '100%', marginTop: 8 }) }}>
-            {completada && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setActividadDetalle(estado.actividadStrava) }}
-                style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
-              >
-                Ver actividad →
-              </button>
-            )}
-
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {tieneWorkout && (
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleExpandida(sesion.id) }}
-                style={{ ...accionBtnStyle, color: COLORS.accent, borderColor: COLORS.accent }}
-              >
-                {expandida ? '▼ Workout' : '▶ Workout'}
+              <button onClick={() => toggleExpandida(sesion.id)} style={textoBtnStyle} aria-expanded={expandida}>
+                <Icon name="chevronDown" size={16} style={{ transform: expandida ? 'rotate(180deg)' : 'none' }} />
+                {expandida ? 'Ocultar entreno' : 'Ver entreno'}
               </button>
             )}
-
-            <span
-              title={sesion.enviado_a_garmin ? 'Enviado a Garmin' : 'No enviado a Garmin'}
-              style={{ fontSize: 16 }}
-            >
-              {sesion.enviado_a_garmin ? '✅' : '⏳'}
-            </span>
-            {!sesion.enviado_a_garmin && tieneWorkout && (
+            {completada && (
+              <button onClick={() => setActividadDetalle(estado.actividadStrava)} style={textoBtnStyle}>
+                <Icon name="external" size={15} />
+                Actividad
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {!enviada && tieneWorkout && (
               <button
-                onClick={(e) => { e.stopPropagation(); handleReenviarGarmin(sesion) }}
+                onClick={() => handleReenviarGarmin(sesion)}
                 disabled={reenviando === sesion.id}
-                style={{ ...accionBtnStyle, opacity: reenviando === sesion.id ? 0.5 : 1 }}
+                style={{ ...iconButtonStyle, width: 'auto', padding: '0 12px', gap: 6, color: COLORS.accent, borderColor: 'rgba(47,191,175,0.45)', fontSize: 13, fontWeight: 600, opacity: reenviando === sesion.id ? 0.6 : 1 }}
               >
-                {reenviando === sesion.id ? '...' : 'Enviar'}
+                <Icon name="send" size={15} />
+                {reenviando === sesion.id ? 'Enviando…' : 'Enviar'}
               </button>
             )}
-            <button onClick={(e) => { e.stopPropagation(); setSesionEditando(sesion) }} style={accionBtnStyle}>
-              Editar
+            <button onClick={() => setSesionEditando(sesion)} style={iconButtonStyle} aria-label="Editar sesión" title="Editar">
+              <Icon name="edit" size={16} />
             </button>
             <button
-              onClick={(e) => {
-                e.stopPropagation()
+              onClick={() =>
                 // Copia sin id ni envío: el builder la trata como sesión nueva y
                 // solo falta elegir el día.
-                setSesionEditando({
-                  ...sesion,
-                  id: undefined,
-                  fecha: '',
-                  intervals_event_id: null,
-                  enviado_a_garmin: false,
-                })
-              }}
-              style={accionBtnStyle}
-              title="Copiar esta sesión a otro día"
+                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false })
+              }
+              style={iconButtonStyle}
+              aria-label="Duplicar sesión"
+              title="Duplicar a otro día"
             >
-              Duplicar
+              <Icon name="copy" size={16} />
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleEliminar(sesion) }}
-              style={{ ...accionBtnStyle, color: COLORS.error }}
-            >
-              Eliminar
+            <button onClick={() => handleEliminar(sesion)} style={iconButtonStyle} aria-label="Eliminar sesión" title="Eliminar">
+              <Icon name="trash" size={16} />
             </button>
           </div>
         </div>
 
         {expandida && tieneWorkout && (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div style={{ marginTop: 10 }}>
             <WorkoutDetail sesion={sesion} mostrarNotas={true} />
           </div>
         )}
-      </div>
+      </article>
     )
   }
 
@@ -393,11 +355,11 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
       </div>
       {sesionesGrupo.length === 0 && esActual ? (
-        <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 13 }}>
+        <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
           Sin sesiones esta semana
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {sesionesGrupo.map(renderSesion)}
         </div>
       )}
@@ -423,7 +385,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             Aún no has prescrito sesiones a este atleta
           </p>
           <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-            Usa «Prescribir entrenamiento» para crear la primera.
+            Usa «Prescribir entreno» para crear la primera.
           </p>
         </div>
       ) : (
@@ -439,21 +401,26 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           <div>
             <button
               onClick={() => setHistoricoAbierto((v) => !v)}
+              aria-expanded={historicoAbierto}
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
                 background: 'transparent',
                 border: `1px solid ${COLORS.cardBorder}`,
-                borderRadius: 8,
+                borderRadius: 10,
                 color: COLORS.textSecondary,
-                padding: '10px 14px',
-                fontSize: 13,
-                fontWeight: 600,
+                padding: '12px 14px',
+                fontSize: 14,
+                fontWeight: 500,
                 cursor: 'pointer',
-                fontFamily: "'Archivo', sans-serif",
                 width: '100%',
                 textAlign: 'left',
               }}
             >
-              {historicoAbierto ? '▼' : '▶'} Ver histórico ({pasadas.length})
+              <Icon name="chevronDown" size={16} style={{ transform: historicoAbierto ? 'rotate(180deg)' : 'none' }} />
+              Semanas anteriores
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.textTertiary }}>{pasadas.length}</span>
             </button>
             {historicoAbierto && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 12 }}>
