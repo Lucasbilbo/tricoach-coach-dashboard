@@ -4,7 +4,7 @@
 export const DISCIPLINAS = [
   { value: 'swim', label: 'Natación' },
   { value: 'bike', label: 'Ciclismo' },
-  { value: 'run', label: 'Running' },
+  { value: 'run', label: 'Carrera' },
   { value: 'strength', label: 'Fuerza' },
 ]
 

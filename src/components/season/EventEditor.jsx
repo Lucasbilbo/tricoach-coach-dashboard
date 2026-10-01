@@ -6,11 +6,9 @@ import { Chip, SportDot } from './SeasonBits'
 
 const sectionLabel = {
   display: 'block',
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 600,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  color: COLORS.textSecondary,
+  color: COLORS.textPrimary,
   marginBottom: 8,
 }
 

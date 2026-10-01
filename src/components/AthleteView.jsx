@@ -3,8 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { hoyMadrid } from '../lib/chartUtils'
-import { useIsMobile } from '../hooks/useIsMobile'
-import { COLORS, pageStyle, buttonStyle } from '../lib/theme'
+import { COLORS, pageStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
+import Icon from './ui/Icon'
+import { PageHeader, Segmented, Tabs } from './ui/Layout'
 import WorkoutBuilder from './WorkoutBuilder'
 import SessionsList from './SessionsList'
 import WeekCompare from './WeekCompare'
@@ -28,7 +29,6 @@ export default function AthleteView() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
-  const isMobile = useIsMobile()
 
   useEffect(() => {
     let activo = true
@@ -82,135 +82,41 @@ export default function AthleteView() {
   return (
     <div style={pageStyle}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <header
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: 24,
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <button
-              onClick={() => navigate('/dashboard')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: COLORS.textSecondary,
-                cursor: 'pointer',
-                fontSize: 13,
-                padding: 0,
-                fontFamily: "'Archivo', sans-serif",
-              }}
-            >
-              ← Volver al panel
+        <PageHeader
+          onBack={() => navigate('/dashboard')}
+          backLabel="Atletas"
+          title={datos?.atleta?.nombre || (cargando ? ' ' : 'Atleta')}
+          actions={
+            <button onClick={() => setModalAbierto(true)} style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="plus" size={16} strokeWidth={2.2} />
+              Prescribir entreno
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-              <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS.accent, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>
-                GetRiCoach · Panel de Jon
-              </span>
-            </div>
-            <h1
-              style={{
-                margin: '6px 0 0',
-                fontSize: isMobile ? 24 : 34,
-                fontWeight: 700,
-                letterSpacing: '-0.01em',
-                color: COLORS.textPrimary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {datos?.atleta?.nombre || 'Atleta'}
-            </h1>
-          </div>
+          }
+        />
 
-          {/* Dos grupos: en desktop quedan en línea, en móvil cada grupo baja a su propia fila */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              {RANGOS_SEMANAS.map((rango) => (
-                <button
-                  key={rango}
-                  onClick={() => setWeeks(rango)}
-                  style={{
-                    background: weeks === rango ? COLORS.accent : 'transparent',
-                    color: weeks === rango ? COLORS.background : COLORS.textSecondary,
-                    border: `1px solid ${weeks === rango ? COLORS.accent : COLORS.cardBorder}`,
-                    borderRadius: 8,
-                    padding: '6px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: "'Archivo', sans-serif",
-                  }}
-                >
-                  {rango} sem
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setComparadorAbierto(true)}
-                style={{
-                  background: 'transparent',
-                  color: COLORS.textSecondary,
-                  border: `1px solid ${COLORS.cardBorder}`,
-                  borderRadius: 8,
-                  padding: '6px 14px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: "'Archivo', sans-serif",
-                }}
-              >
-                Comparar semanas
-              </button>
-              <button onClick={() => setModalAbierto(true)} style={buttonStyle}>
-                ＋ Prescribir entrenamiento
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <nav
-          style={{
-            display: 'flex',
-            gap: 4,
-            borderBottom: `1px solid ${COLORS.cardBorder}`,
-            marginBottom: 24,
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-          }}
-        >
-          {[
+        <Tabs
+          active={activeTab}
+          onChange={setActiveTab}
+          tabs={[
             { clave: 'analisis', etiqueta: 'Análisis' },
-            { clave: 'sesiones', etiqueta: 'Sesiones prescritas' },
+            { clave: 'sesiones', etiqueta: 'Sesiones' },
             { clave: 'temporada', etiqueta: 'Temporada' },
-          ].map((tab) => (
-            <button
-              key={tab.clave}
-              onClick={() => setActiveTab(tab.clave)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom:
-                  activeTab === tab.clave ? `2px solid ${COLORS.accent}` : '2px solid transparent',
-                color: activeTab === tab.clave ? COLORS.textPrimary : COLORS.textSecondary,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: "'Archivo', sans-serif",
-              }}
-            >
-              {tab.etiqueta}
+          ]}
+        />
+
+        {activeTab === 'analisis' && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
+            <Segmented
+              ariaLabel="Semanas a mostrar"
+              value={weeks}
+              onChange={setWeeks}
+              options={RANGOS_SEMANAS.map((r) => ({ value: r, label: `${r} sem` }))}
+            />
+            <button onClick={() => setComparadorAbierto(true)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13 }}>
+              Comparar semanas
             </button>
-          ))}
-        </nav>
+          </div>
+        )}
 
         {activeTab === 'sesiones' && coachId && (
           <SessionsList

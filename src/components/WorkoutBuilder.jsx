@@ -567,7 +567,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 color: '#2FBFAF',
               }}
             >
-              ✅ Entrenamiento enviado al Garmin de {atletaNombre || 'el atleta'}
+              Enviado al reloj de {atletaNombre || 'el atleta'}
             </div>
           )}
 
@@ -629,7 +629,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 opacity: guardando || enviando ? 0.6 : 1,
               }}
             >
-              {enviando ? 'Enviando...' : '✈ Enviar a Garmin'}
+              {enviando ? 'Enviando…' : 'Guardar y enviar al reloj'}
             </button>
           </div>
             </>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { COLORS, cardStyle, pageStyle, inputStyle, buttonStyle } from '../lib/theme'
+import { COLORS, pageStyle, inputStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
+import { Brand } from './ui/Layout'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -71,79 +72,72 @@ export default function Login() {
     }
   }
 
+  const etiqueta = { display: 'block', fontSize: 14, fontWeight: 500, color: COLORS.textPrimary, marginBottom: 6 }
+  const campo = { ...inputStyle, padding: '13px 14px', fontSize: 16, borderRadius: 10 }
+
   return (
-    <div
-      style={{
-        ...pageStyle,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <form onSubmit={handleSubmit} style={{ ...cardStyle, maxWidth: 360, width: '100%', padding: 32 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>
-          TriCoach <span style={{ color: COLORS.accent }}>Coach</span>
-        </h1>
-        <p style={{ color: COLORS.textSecondary, fontSize: 14, marginTop: 8, marginBottom: 24 }}>
-          Panel del entrenador
-        </p>
-
-        <label style={{ display: 'block', fontSize: 13, color: COLORS.textSecondary, marginBottom: 6 }}>
-          Email
-        </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          style={{ ...inputStyle, marginBottom: 16 }}
-        />
-
-        <label style={{ display: 'block', fontSize: 13, color: COLORS.textSecondary, marginBottom: 6 }}>
-          Contraseña
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          style={{ ...inputStyle, marginBottom: 24 }}
-        />
-
-        {error && (
-          <p style={{ color: COLORS.error, fontSize: 13, marginTop: 0, marginBottom: 16 }}>
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={cargando}
-          style={{ ...buttonStyle, width: '100%', opacity: cargando ? 0.6 : 1 }}
-        >
-          {cargando ? 'Entrando…' : 'Entrar'}
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-          <div style={{ flex: 1, height: 1, background: COLORS.cardBorder }} />
-          <span style={{ color: COLORS.textSecondary, fontSize: 12 }}>o</span>
-          <div style={{ flex: 1, height: 1, background: COLORS.cardBorder }} />
+    <div style={{ ...pageStyle, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+      <div style={{ width: '100%', maxWidth: 380, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ paddingTop: 8 }}>
+          <Brand />
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogle}
-          style={{
-            ...buttonStyle,
-            width: '100%',
-            background: 'transparent',
-            color: COLORS.textPrimary,
-            border: `1px solid ${COLORS.cardBorder}`,
-          }}
-        >
-          Continuar con Google
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} style={{ margin: 'auto 0', padding: '48px 0' }}>
+          <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.15, fontWeight: 700, letterSpacing: '-0.02em' }}>Entra en tu panel</h1>
+          <p style={{ color: COLORS.textSecondary, fontSize: 15, margin: '10px 0 28px', lineHeight: 1.5 }}>
+            Entrenos, análisis y temporada, para entrenadores y atletas.
+          </p>
+
+          <label style={etiqueta} htmlFor="login-email">Email</label>
+          <input
+            id="login-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            inputMode="email"
+            style={{ ...campo, marginBottom: 16 }}
+          />
+
+          <label style={etiqueta} htmlFor="login-pass">Contraseña</label>
+          <input
+            id="login-pass"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            style={{ ...campo, marginBottom: 20 }}
+          />
+
+          {error && (
+            <p role="alert" style={{ color: COLORS.error, fontSize: 14, marginTop: 0, marginBottom: 16 }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={cargando}
+            style={{ ...buttonStyle, width: '100%', padding: '14px 16px', fontSize: 16, borderRadius: 10, opacity: cargando ? 0.6 : 1 }}
+          >
+            {cargando ? 'Entrando…' : 'Entrar'}
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+            <div style={{ flex: 1, height: 1, background: COLORS.cardBorder }} />
+            <span style={{ color: COLORS.textTertiary, fontSize: 13 }}>o</span>
+            <div style={{ flex: 1, height: 1, background: COLORS.cardBorder }} />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogle}
+            style={{ ...ghostButtonStyle, width: '100%', padding: '14px 16px', fontSize: 16, borderRadius: 10 }}
+          >
+            Continuar con Google
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

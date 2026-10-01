@@ -13,12 +13,10 @@ import { resumenTemporadas } from '../../lib/seasonApi'
 import { EstadoPill, IconoAviso, PrioridadBadge, SportDot } from './SeasonBits'
 
 const tituloBloque = {
-  margin: '0 0 10px',
-  fontSize: 11,
+  margin: '0 0 6px',
+  fontSize: 14,
   fontWeight: 600,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  color: COLORS.textSecondary,
+  color: COLORS.textPrimary,
 }
 
 const filaBoton = {
@@ -66,14 +64,14 @@ export default function SeasonOverview() {
 
   return (
     <section style={{ marginTop: 40 }}>
-      <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, paddingTop: 28, marginBottom: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Temporadas</h2>
+      <div style={{ marginBottom: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Temporadas</h2>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
           Próximas pruebas e inscripciones de tus atletas
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 14 }}>
         <div style={cardStyle}>
           <h3 style={tituloBloque}>Próximas pruebas</h3>
           {proximas.length === 0 && (
@@ -82,26 +80,29 @@ export default function SeasonOverview() {
             </p>
           )}
           {proximas.map((e) => (
-            <button key={e.id} type="button" onClick={() => abrir(e.athlete_id)} style={filaBoton}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary, width: 82, flexShrink: 0 }}>
-                {formatFechaEvento(e)}
+            <button key={e.id} type="button" onClick={() => abrir(e.athlete_id)} style={{ ...filaBoton, alignItems: 'flex-start' }}>
+              <span style={{ paddingTop: 5 }}>
+                <SportDot deporte={e.deporte} size={8} />
               </span>
-              <SportDot deporte={e.deporte} size={9} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {e.nombre}
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>{e.nombre}</span>
+                <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 3 }}>
+                  {nombres[e.athlete_id] || 'Atleta'}
+                  <span style={{ color: COLORS.textTertiary }}> — </span>
+                  <span style={{ fontFamily: FONTS.mono }}>{formatFechaEvento(e)}</span>
                 </span>
-                <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary }}>{nombres[e.athlete_id] || 'Atleta'}</span>
               </span>
-              <PrioridadBadge prioridad={e.prioridad} />
-              <EstadoPill estado={e.estado} />
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <EstadoPill estado={e.estado} />
+                <PrioridadBadge prioridad={e.prioridad} />
+              </span>
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={cardStyle}>
-            <h3 style={{ ...tituloBloque, color: pendientes.length ? COLOR_AVISO : COLORS.textSecondary }}>Inscripciones por cerrar</h3>
+            <h3 style={tituloBloque}>Inscripciones por cerrar</h3>
             {pendientes.length === 0 && (
               <p style={{ margin: 0, fontSize: 14, color: COLORS.textSecondary }}>Nada urgente en los próximos 30 días.</p>
             )}

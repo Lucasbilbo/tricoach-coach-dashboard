@@ -4,14 +4,10 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { misConexiones } from '../lib/connections'
 import { ESTADO, asignarActividades, estadoDeSesion, fechaHaceSemanas, semanasNecesarias } from '../lib/estadoSesion'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
-import {
-  COLORS,
-  DISCIPLINE_COLORS,
-  cardStyle,
-  pageStyle,
-} from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, FONTS, buttonStyle, cardStyle, ghostButtonStyle, iconButtonStyle, pageStyle, railStyle } from '../lib/theme'
+import Icon from '../components/ui/Icon'
+import { PageHeader, Segmented, SectionTitle, Tabs } from '../components/ui/Layout'
 import WorkoutDetail from '../components/WorkoutDetail'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
@@ -35,43 +31,40 @@ function tituloSesion(sesion) {
   return desc.length > 40 ? desc.slice(0, 40) + '…' : desc || '—'
 }
 
-const thStyle = {
-  textAlign: 'left',
-  padding: '10px 12px',
-  fontSize: 12,
-  fontWeight: 600,
-  color: COLORS.textSecondary,
-  borderBottom: `1px solid ${COLORS.cardBorder}`,
-  whiteSpace: 'nowrap',
-}
-
-const tdStyle = {
-  padding: '10px 12px',
-  fontSize: 13,
-  color: COLORS.textPrimary,
-  borderBottom: `1px solid ${COLORS.cardBorder}`,
-  whiteSpace: 'nowrap',
-}
-
 const DISC_LABELS_HOME = {
-  run: 'Running',
+  run: 'Carrera',
   bike: 'Ciclismo',
   swim: 'Natación',
   strength: 'Fuerza',
   other: 'Otro',
 }
 
-const badgeDisciplina = (disciplina) => ({
-  background: DISCIPLINE_COLORS[disciplina] || COLORS.textSecondary,
-  color: '#FFFFFF',
-  borderRadius: 4,
-  padding: '2px 8px',
-  fontSize: 11,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-})
+// "Hoy", "Mañana" o el día de la semana para los próximos 6 días.
+const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+function diaRelativo(fecha) {
+  const hoy = hoyMadrid()
+  const dias = Math.round((Date.parse(`${fecha}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000)
+  if (dias === 0) return 'Hoy'
+  if (dias === 1) return 'Mañana'
+  if (dias > 1 && dias < 7) return DIAS_LARGOS[new Date(`${fecha}T12:00:00Z`).getUTCDay()]
+  return null
+}
 
-const PAGINA_PASADAS = 20
+const textoBtn = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
+  background: 'transparent',
+  border: 'none',
+  color: COLORS.textSecondary,
+  padding: '8px 0',
+  fontSize: 13,
+  fontWeight: 500,
+  cursor: 'pointer',
+  minHeight: 36,
+}
+
+const PAGINA_PASADAS = 10
 
 // Actividades de Strava que cubren las sesiones pasadas mostradas (tope 26
 // semanas). Devuelve el nuevo estado, o null si no hace falta pedir más o si no
@@ -96,14 +89,19 @@ async function pedirActividadesEstado(userId, lista, actual) {
 }
 
 function EstadoPasada({ estado }) {
-  if (estado === ESTADO.completada) return <span style={{ color: COLORS.accent }}>✓ Hecha</span>
+  if (estado === ESTADO.completada)
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: COLORS.accent }}>
+        <Icon name="check" size={15} strokeWidth={2.2} />
+        Hecho
+      </span>
+    )
   if (estado === ESTADO.pendiente) return <span style={{ color: COLORS.textSecondary }}>Sin hacer</span>
   return <span style={{ color: COLORS.textTertiary }} title="Sin datos de Strava para esa fecha">—</span>
 }
 
 export default function AthleteHome() {
   const navigate = useNavigate()
-  const isMobile = useIsMobile()
 
   // Auth / IDs
   const [userId, setUserId] = useState(null)
@@ -329,272 +327,147 @@ export default function AthleteHome() {
   const intervalsOk = !!perfil?.conexiones?.intervals
   const stravaOk = !!perfil?.conexiones?.strava
 
+  async function cerrarSesion() {
+    await supabase.auth.signOut()
+    navigate('/')
+  }
+
   return (
     <div style={pageStyle}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <header
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS.accent, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: COLORS.textSecondary, letterSpacing: '0.03em' }}>GetRiCoach</span>
-            </div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: isMobile ? 24 : 34,
-                fontWeight: 700,
-                letterSpacing: '-0.01em',
-                color: COLORS.textPrimary,
-              }}
-            >
-              {perfil?.nombre || 'Mi panel'}
-            </h1>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            {activeTab === 'analisis' && RANGOS_SEMANAS.map((rango) => (
-              <button
-                key={rango}
-                onClick={() => { setDatos(null); setWeeks(rango) }}
-                style={{
-                  background: weeks === rango ? COLORS.accent : 'transparent',
-                  color: weeks === rango ? COLORS.background : COLORS.textSecondary,
-                  border: `1px solid ${weeks === rango ? COLORS.accent : COLORS.cardBorder}`,
-                  borderRadius: 8,
-                  padding: '6px 14px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: "'Archivo', sans-serif",
-                }}
-              >
-                {rango} sem
-              </button>
-            ))}
-          </div>
-        </header>
-
-        {/* ── Tabs ────────────────────────────────────────────────────── */}
-        <nav
-          style={{
-            display: 'flex',
-            gap: 4,
-            borderBottom: `1px solid ${COLORS.cardBorder}`,
-            marginBottom: 24,
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-          }}
-        >
-          {[
-            { clave: 'sesiones', etiqueta: 'Mis entrenamientos' },
-            { clave: 'analisis', etiqueta: 'Análisis Strava' },
-            { clave: 'temporada', etiqueta: 'Temporada' },
-          ].map((tab) => (
-            <button
-              key={tab.clave}
-              onClick={() => setActiveTab(tab.clave)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom:
-                  activeTab === tab.clave
-                    ? `2px solid ${COLORS.accent}`
-                    : '2px solid transparent',
-                color: activeTab === tab.clave ? COLORS.textPrimary : COLORS.textSecondary,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: "'Archivo', sans-serif",
-              }}
-            >
-              {tab.etiqueta}
+        <PageHeader
+          title={perfil?.nombre ? `Hola, ${perfil.nombre}` : 'Tus entrenos'}
+          subtitle="Lo que te ha preparado tu entrenador"
+          topActions={
+            <button onClick={cerrarSesion} style={iconButtonStyle} aria-label="Cerrar sesión" title="Cerrar sesión">
+              <Icon name="logout" size={17} />
             </button>
-          ))}
-        </nav>
+          }
+        />
 
-        {/* ══ TAB: MIS ENTRENAMIENTOS ══════════════════════════════════ */}
+        <Tabs
+          active={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { clave: 'sesiones', etiqueta: 'Entrenos' },
+            { clave: 'analisis', etiqueta: 'Análisis' },
+            { clave: 'temporada', etiqueta: 'Temporada' },
+          ]}
+        />
+
+        {/* ══ TAB: ENTRENOS ══════════════════════════════════════════════ */}
         {activeTab === 'sesiones' && (
           <>
-            {/* Próximos */}
             <section style={{ marginBottom: 32 }}>
-              <h2
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: COLORS.textPrimary,
-                  margin: '0 0 14px',
-                }}
-              >
-                Próximos entrenamientos
-              </h2>
+              <SectionTitle>Próximos</SectionTitle>
 
               {cargandoSesiones ? (
                 <p style={{ color: COLORS.textSecondary }}>Cargando…</p>
               ) : errorSesiones ? (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
+                <div style={{ ...cardStyle, padding: 20 }}>
                   <p style={{ color: COLORS.error, margin: 0 }}>
-                    No se pudieron cargar tus entrenamientos. Recarga la página o inténtalo más tarde.
+                    No se pudieron cargar tus entrenos. Recarga la página o inténtalo más tarde.
                   </p>
                 </div>
               ) : proximas.length === 0 ? (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
-                  <p style={{ color: COLORS.textSecondary, margin: 0 }}>
-                    No hay entrenamientos programados
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <p style={{ margin: '0 0 4px', fontWeight: 600 }}>Nada programado todavía</p>
+                  <p style={{ color: COLORS.textSecondary, margin: 0, fontSize: 14 }}>
+                    Cuando tu entrenador te prepare un entreno, aparecerá aquí.
                   </p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {proximas.map((sesion) => {
                     const tieneDetalle = sesion.workout_steps?.bloques?.length > 0
-
+                    const abierta = !!expandidas[sesion.id]
+                    const relativo = diaRelativo(sesion.fecha)
+                    const enviada = !!sesion.enviado_a_garmin
                     return (
-                      <div
-                        key={sesion.id}
-                        onClick={() => tieneDetalle && toggleDetalle(sesion.id)}
-                        style={{
-                          ...cardStyle,
-                          cursor: tieneDetalle ? 'pointer' : 'default',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 12,
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                flexWrap: 'wrap',
-                                marginBottom: 6,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 600,
-                                  color: COLORS.textSecondary,
-                                }}
-                              >
-                                {formatFechaLarga(sesion.fecha)}
-                              </span>
-                              <span style={badgeDisciplina(sesion.disciplina)}>
-                                {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  color: sesion.enviado_a_garmin ? '#2FBFAF' : COLORS.textSecondary,
-                                }}
-                              >
-                                {sesion.enviado_a_garmin ? '✅ En tu Garmin' : '⏳ Pendiente Garmin'}
-                              </span>
-                            </div>
+                      <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 10px 18px', ...railStyle(sesion.disciplina) }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
+                          {relativo && <span style={{ color: relativo === 'Hoy' ? COLORS.accent : COLORS.textPrimary, fontWeight: 600 }}>{relativo}</span>}
+                          <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span>
+                          <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
+                          {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+                        </div>
+                        <h3 style={{ margin: '6px 0 0', fontSize: 17, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
+                        {sesion.notas && (
+                          <p style={{ margin: '6px 0 0', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>
+                        )}
 
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: 15,
-                                fontWeight: 600,
-                                color: COLORS.textPrimary,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {tituloSesion(sesion)}
-                            </p>
-
-                            {sesion.notas && !expandidas[sesion.id] && (
-                              <p
-                                style={{
-                                  margin: '4px 0 0',
-                                  fontSize: 12,
-                                  color: COLORS.textSecondary,
-                                  fontStyle: 'italic',
-                                }}
-                              >
-                                {sesion.notas}
-                              </p>
-                            )}
-                          </div>
-
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : DISCIPLINE_COLORS.bike }}>
+                            <Icon name="watch" size={15} />
+                            {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
+                          </span>
                           {tieneDetalle && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleDetalle(sesion.id) }}
-                              style={{
-                                background: 'transparent',
-                                border: `1px solid ${COLORS.cardBorder}`,
-                                borderRadius: 6,
-                                color: COLORS.textSecondary,
-                                padding: '5px 12px',
-                                fontSize: 12,
-                                cursor: 'pointer',
-                                fontFamily: "'Archivo', sans-serif",
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {expandidas[sesion.id] ? 'Cerrar' : 'Ver detalle'}
+                            <button onClick={() => toggleDetalle(sesion.id)} style={textoBtn} aria-expanded={abierta}>
+                              <Icon name="chevronDown" size={16} style={{ transform: abierta ? 'rotate(180deg)' : 'none' }} />
+                              {abierta ? 'Ocultar' : 'Ver entreno'}
                             </button>
                           )}
                         </div>
 
-                        {expandidas[sesion.id] && tieneDetalle && (
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <WorkoutDetail sesion={sesion} mostrarNotas={true} />
-
-                            {intervalsOk && !sesion.enviado_a_garmin && (
-                              <div style={{ marginTop: 8 }}>
+                        {abierta && tieneDetalle && (
+                          <div style={{ marginTop: 6, paddingBottom: 4 }}>
+                            <WorkoutDetail sesion={sesion} mostrarNotas={false} />
+                            {intervalsOk && !enviada && (
+                              <div style={{ marginTop: 10 }}>
                                 {erroresGarmin[sesion.id] && (
-                                  <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>
-                                    {erroresGarmin[sesion.id]}
-                                  </p>
+                                  <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>
                                 )}
                                 <button
                                   onClick={() => enviarAGarmin(sesion)}
                                   disabled={enviandoGarmin[sesion.id]}
-                                  style={{
-                                    background: COLORS.accent,
-                                    color: COLORS.background,
-                                    border: 'none',
-                                    borderRadius: 8,
-                                    padding: '8px 16px',
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    cursor: enviandoGarmin[sesion.id] ? 'wait' : 'pointer',
-                                    fontFamily: "'Archivo', sans-serif",
-                                    opacity: enviandoGarmin[sesion.id] ? 0.6 : 1,
-                                  }}
+                                  style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: enviandoGarmin[sesion.id] ? 0.6 : 1 }}
                                 >
-                                  {enviandoGarmin[sesion.id] ? 'Enviando…' : '✈ Enviar a Garmin'}
+                                  <Icon name="send" size={15} />
+                                  {enviandoGarmin[sesion.id] ? 'Enviando…' : 'Enviar a mi reloj'}
                                 </button>
                               </div>
                             )}
+                          </div>
+                        )}
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
 
-                            {sesion.enviado_a_garmin && (
-                              <p style={{ color: '#2FBFAF', fontSize: 13, fontWeight: 600, marginTop: 8 }}>
-                                ✅ Enviado a Garmin
-                              </p>
-                            )}
+            <section>
+              <SectionTitle>Hechos y pendientes</SectionTitle>
+              {errorSesiones ? null : !cargandoSesiones && pasadas.length === 0 ? (
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <p style={{ color: COLORS.textSecondary, margin: 0, fontSize: 14 }}>Aquí verás tus entrenos pasados y si los hiciste.</p>
+                </div>
+              ) : (
+                <div style={{ ...cardStyle, padding: '2px 0' }}>
+                  {pasadas.map((sesion, i) => {
+                    const tieneDetalle = sesion.workout_steps?.bloques?.length > 0
+                    const abierta = !!expandidas[sesion.id]
+                    return (
+                      <div key={sesion.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}` }}>
+                        <button
+                          onClick={() => tieneDetalle && toggleDetalle(sesion.id)}
+                          aria-expanded={tieneDetalle ? abierta : undefined}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: tieneDetalle ? 'pointer' : 'default', color: COLORS.textPrimary }}
+                        >
+                          <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other }} />
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
+                            <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
+                              <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span> · {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
+                            </span>
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                            <EstadoPasada estado={estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)} />
+                          </span>
+                        </button>
+                        {abierta && tieneDetalle && (
+                          <div style={{ padding: '0 16px 14px 31px' }}>
+                            <WorkoutDetail sesion={sesion} mostrarNotas={true} />
                           </div>
                         )}
                       </div>
@@ -602,245 +475,50 @@ export default function AthleteHome() {
                   })}
                 </div>
               )}
-            </section>
-
-            {/* Historial */}
-            <section>
-              <h2
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: COLORS.textPrimary,
-                  margin: '0 0 14px',
-                }}
-              >
-                Entrenamientos pasados
-              </h2>
-
-              {errorSesiones ? null : !cargandoSesiones && pasadas.length === 0 ? (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
-                  <p style={{ color: COLORS.textSecondary, margin: 0 }}>
-                    Sin historial de entrenamientos
-                  </p>
-                </div>
-              ) : (
-                <div style={{ ...cardStyle, padding: 0, overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>Fecha</th>
-                        <th style={thStyle}>Disciplina</th>
-                        <th style={thStyle}>Nombre</th>
-                        <th style={thStyle}>Estado</th>
-                        <th style={thStyle}>Detalle</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pasadas.map((sesion) => (
-                        <tr key={sesion.id}>
-                          <td style={tdStyle}>{formatFechaLarga(sesion.fecha)}</td>
-                          <td style={tdStyle}>
-                            <span style={badgeDisciplina(sesion.disciplina)}>
-                              {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
-                            </span>
-                          </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              maxWidth: 260,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {tituloSesion(sesion)}
-                          </td>
-                          <td style={{ ...tdStyle, fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' }}>
-                            <EstadoPasada estado={estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)} />
-                          </td>
-                          <td style={tdStyle}>
-                            {sesion.workout_steps?.bloques?.length > 0 ? (
-                              <button
-                                onClick={() =>
-                                  setExpandidas((prev) => ({
-                                    ...prev,
-                                    [sesion.id]: !prev[sesion.id],
-                                  }))
-                                }
-                                style={{
-                                  background: 'transparent',
-                                  border: `1px solid ${COLORS.cardBorder}`,
-                                  borderRadius: 6,
-                                  color: COLORS.textSecondary,
-                                  padding: '3px 10px',
-                                  fontSize: 12,
-                                  cursor: 'pointer',
-                                  fontFamily: "'Archivo', sans-serif",
-                                }}
-                              >
-                                {expandidas[sesion.id] ? '▲' : '▼'}
-                              </button>
-                            ) : (
-                              <span style={{ color: COLORS.textSecondary, fontSize: 12 }}>—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      {pasadas.map((sesion) =>
-                        expandidas[sesion.id] && sesion.workout_steps?.bloques?.length > 0 ? (
-                          <tr key={`detalle-${sesion.id}`}>
-                            <td
-                              colSpan={5}
-                              style={{ padding: '0 12px 12px', borderBottom: `1px solid ${COLORS.cardBorder}` }}
-                            >
-                              <WorkoutDetail sesion={sesion} mostrarNotas={true} />
-                            </td>
-                          </tr>
-                        ) : null
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
               {hayMasPasadas && !errorSesiones && (
-                <button
-                  onClick={cargarMasPasadas}
-                  disabled={cargandoMas}
-                  style={{
-                    marginTop: 12,
-                    background: 'transparent',
-                    border: `1px solid ${COLORS.cardBorder}`,
-                    borderRadius: 8,
-                    color: COLORS.textSecondary,
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: "'Archivo', sans-serif",
-                  }}
-                >
-                  {cargandoMas ? 'Cargando…' : 'Ver más entrenamientos'}
+                <button onClick={cargarMasPasadas} disabled={cargandoMas} style={{ ...ghostButtonStyle, width: '100%', marginTop: 10, color: COLORS.textSecondary }}>
+                  {cargandoMas ? 'Cargando…' : 'Ver entrenos anteriores'}
                 </button>
               )}
             </section>
 
-            {/* Configuración Strava + Intervals — siempre al fondo */}
-            <section style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${COLORS.cardBorder}` }}>
-              <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {/* Strava */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 12,
-                  }}
-                >
+            {/* Conexiones — al fondo */}
+            <section style={{ marginTop: 32 }}>
+              <SectionTitle>Conexiones</SectionTitle>
+              <div style={{ ...cardStyle, padding: '4px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0' }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 500 }}>Strava</div>
+                    <div style={{ fontSize: 13, color: stravaOk ? COLORS.accent : COLORS.textSecondary, marginTop: 2 }}>
+                      {stravaOk ? 'Conectado: tus actividades llegan solas' : 'Sin conectar'}
+                    </div>
+                  </div>
                   {stravaOk ? (
-                    <>
-                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                        ✅ Strava conectado
-                      </p>
-                      <Link
-                        to="/setup/intervals"
-                        style={{
-                          color: COLORS.textSecondary,
-                          fontSize: 12,
-                          textDecoration: 'none',
-                          border: `1px solid ${COLORS.cardBorder}`,
-                          borderRadius: 6,
-                          padding: '4px 10px',
-                          fontFamily: "'Archivo', sans-serif",
-                        }}
-                      >
-                        Reconfigurar →
-                      </Link>
-                    </>
+                    <Link to="/setup/intervals" style={{ ...ghostButtonStyle, padding: '7px 12px', fontSize: 13, textDecoration: 'none' }}>
+                      Ajustes
+                    </Link>
                   ) : (
-                    <>
-                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                        ❌ Strava no conectado
-                      </p>
-                      <button
-                        onClick={conectarStrava}
-                        disabled={!userId}
-                        style={{
-                          background: '#FC4C02',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: 6,
-                          padding: '6px 12px',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          fontFamily: "'Archivo', sans-serif",
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Conectar →
-                      </button>
-                    </>
+                    <button onClick={conectarStrava} disabled={!userId} style={{ ...buttonStyle, background: '#FC4C02', color: '#FFFFFF', padding: '8px 14px', fontSize: 13 }}>
+                      Conectar
+                    </button>
                   )}
                 </div>
-
-                {/* Divisor */}
-                <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, margin: '12px 0' }} />
-
-                {/* Intervals */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 12,
-                  }}
-                >
-                  {intervalsOk ? (
-                    <>
-                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                        ✅ Intervals.icu conectado ·{' '}
-                        <span style={{ color: COLORS.accent }}>{perfil.intervals_athlete_id}</span>
-                      </p>
-                      <Link
-                        to="/setup/intervals"
-                        style={{
-                          color: COLORS.textSecondary,
-                          fontSize: 12,
-                          textDecoration: 'none',
-                          border: `1px solid ${COLORS.cardBorder}`,
-                          borderRadius: 6,
-                          padding: '4px 10px',
-                          fontFamily: "'Archivo', sans-serif",
-                        }}
-                      >
-                        Reconfigurar →
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                        ⚡ Conecta Intervals.icu para recibir entrenamientos en tu Garmin
-                      </p>
-                      <Link
-                        to="/setup/intervals"
-                        style={{
-                          color: COLORS.accent,
-                          fontSize: 12,
-                          textDecoration: 'none',
-                          border: `1px solid ${COLORS.accent}`,
-                          borderRadius: 6,
-                          padding: '4px 10px',
-                          fontFamily: "'Archivo', sans-serif",
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Configurar (opcional) →
-                      </Link>
-                    </>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 500 }}>Intervals.icu</div>
+                    <div style={{ fontSize: 13, color: intervalsOk ? COLORS.accent : COLORS.textSecondary, marginTop: 2 }}>
+                      {intervalsOk ? 'Conectado: los entrenos van a tu reloj' : 'Conéctalo para recibir los entrenos en el reloj'}
+                    </div>
+                  </div>
+                  <Link
+                    to="/setup/intervals"
+                    style={{ ...(intervalsOk ? ghostButtonStyle : buttonStyle), padding: '7px 12px', fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    {intervalsOk ? 'Ajustes' : 'Configurar'}
+                  </Link>
                 </div>
               </div>
+              {errorStrava && <p style={{ color: COLORS.error, fontSize: 13, marginTop: 8 }}>{errorStrava}</p>}
             </section>
           </>
         )}
@@ -848,6 +526,17 @@ export default function AthleteHome() {
         {/* ══ TAB: ANÁLISIS STRAVA ═════════════════════════════════════ */}
         {activeTab === 'analisis' && (
           <>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
+              <Segmented
+                ariaLabel="Semanas a mostrar"
+                value={weeks}
+                onChange={(r) => { setDatos(null); setWeeks(r) }}
+                options={RANGOS_SEMANAS.map((r) => ({ value: r, label: `${r} sem` }))}
+              />
+              <button onClick={() => setComparadorAbierto(true)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13 }}>
+                Comparar semanas
+              </button>
+            </div>
             {cargandoStrava && (
               <p style={{ color: COLORS.textSecondary }}>Cargando datos de Strava…</p>
             )}
@@ -861,24 +550,6 @@ export default function AthleteHome() {
                 weeks={weeks}
                 athleteId={userId}
                 buildCsvName={() => `mis_actividades_${weeks}sem_${hoyMadrid()}.csv`}
-                accionesFiltro={
-                  <button
-                    onClick={() => setComparadorAbierto(true)}
-                    style={{
-                      background: 'transparent',
-                      color: COLORS.textSecondary,
-                      border: `1px solid ${COLORS.cardBorder}`,
-                      borderRadius: 8,
-                      padding: '6px 14px',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      fontFamily: "'Archivo', sans-serif",
-                    }}
-                  >
-                    Comparar semanas
-                  </button>
-                }
               />
             )}
           </>

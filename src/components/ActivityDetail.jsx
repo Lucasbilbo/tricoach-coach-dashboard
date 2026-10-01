@@ -57,10 +57,8 @@ const tdStyle = {
 }
 
 const seccionTituloStyle = {
-  color: COLORS.textSecondary,
-  fontSize: 12,
-  textTransform: 'uppercase',
-  letterSpacing: 1,
+  color: COLORS.textPrimary,
+  fontSize: 14,
   margin: '24px 0 8px',
   fontWeight: 600,
 }

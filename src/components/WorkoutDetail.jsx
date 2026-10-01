@@ -1,36 +1,85 @@
-import { COLORS } from '../lib/theme'
-import { ICONO_POR_DISCIPLINA } from './workout/constants'
+import { COLORS, FONTS } from '../lib/theme'
 
-const PISCINA_LABEL = { '25': 'Piscina 25m', '50': 'Piscina 50m', open: 'Aguas abiertas' }
+// Detalle de un entreno prescrito: perfil de intensidad (como lo dibuja el
+// reloj) + lista de pasos. Lo ven el coach (lista de sesiones) y el atleta.
 
-function bloqueColor(tipo, esDescanso) {
-  if (esDescanso) return null
-  if (tipo === 'warmup' || tipo === 'cooldown') return '#2FBFAF'
-  if (tipo === 'repeat') return '#8B7FD1'
-  return '#E8934A'
+const PISCINA_LABEL = { '25': 'Piscina de 25 m', '50': 'Piscina de 50 m', open: 'Aguas abiertas' }
+
+// Intensidad 1–5 → color (de suave a máximo, con la paleta del panel).
+const COLOR_NIVEL = { 1: '#3E4656', 2: '#2FBFAF', 3: '#E8934A', 4: '#E8704F', 5: '#E85D5D' }
+
+function nivelPaso(paso) {
+  const v = paso.objetivo_valor
+  if (paso.objetivo_tipo === 'zona' && v) return Math.min(Math.max(Number(String(v).replace(/\D/g, '').charAt(0)) || 1, 1), 5)
+  if (paso.objetivo_tipo === 'fc' && v) {
+    const pct = Number(v)
+    return pct >= 92 ? 5 : pct >= 85 ? 4 : pct >= 78 ? 3 : pct >= 70 ? 2 : 1
+  }
+  if (paso.objetivo_tipo === 'ritmo' || paso.objetivo_tipo === 'potencia') return 3
+  // Sin objetivo: se interpreta por el nombre ("fuerte", "Z4", "descanso")
+  const n = (paso.nombre || '').toLowerCase()
+  const z = n.match(/z([1-5])/)
+  if (z) return Number(z[1])
+  if (/tope|fuerte|r[aá]pido/.test(n)) return 4
+  return 1
 }
 
-function bloqueBg(tipo) {
-  if (tipo === 'repeat') return 'rgba(139,127,209,0.08)'
-  return 'transparent'
+// Peso relativo de un paso en el perfil: minutos reales o una estimación por
+// distancia (solo para dibujar proporciones).
+function pesoPaso(paso, disciplina) {
+  const c = Number(paso.cantidad) || 0
+  if (paso.unidad === 'min') return c
+  if (paso.unidad === 'h') return c * 60
+  if (paso.unidad === 's') return c / 60
+  const metros = paso.unidad === 'km' ? c * 1000 : c
+  if (disciplina === 'swim') return (metros / 100) * 2
+  if (disciplina === 'bike') return (metros / 1000) * 2
+  return (metros / 1000) * 5
 }
 
-function bloqueIcono(tipo) {
-  if (tipo === 'warmup' || tipo === 'cooldown') return '🔵'
-  if (tipo === 'repeat') return '🔁'
-  return '🟢'
+function aplanar(bloques) {
+  const out = []
+  for (const b of bloques) {
+    if (b.tipo === 'repeat') {
+      const veces = Math.min(Number(b.repeticiones) || 1, 40)
+      for (let i = 0; i < veces; i++) for (const p of b.pasos || []) out.push(p)
+    } else out.push(b)
+  }
+  return out
 }
 
-function bloqueNombre(bloque) {
-  if (bloque.tipo === 'warmup') return bloque.nombre || 'Calentamiento'
-  if (bloque.tipo === 'cooldown') return bloque.nombre || 'Vuelta a la calma'
-  return bloque.nombre || '—'
+function Perfil({ bloques, disciplina }) {
+  const pasos = aplanar(bloques)
+  const total = pasos.reduce((s, p) => s + pesoPaso(p, disciplina), 0)
+  if (!total) return null
+  return (
+    <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: 1, height: 36, marginBottom: 12 }}>
+      {pasos.map((p, i) => {
+        const nivel = nivelPaso(p)
+        return (
+          <div
+            key={i}
+            style={{
+              flexGrow: pesoPaso(p, disciplina),
+              flexBasis: 0,
+              minWidth: 2,
+              height: `${20 + nivel * 16}%`,
+              background: COLOR_NIVEL[nivel],
+              borderRadius: 2,
+            }}
+          />
+        )
+      })}
+    </div>
+  )
 }
 
 function formatCant(cant, unidad) {
-  if (!cant) return ''
-  if (unidad === 'min') return `${cant}m`
-  if (unidad === 'h') return `${cant}h`
+  if (!cant && cant !== 0) return ''
+  if (unidad === 'min') return `${cant}′`
+  if (unidad === 's') return `${cant}″`
+  if (unidad === 'h') return `${cant} h`
+  if (unidad === 'mtr') return `${cant} m`
   return `${cant} ${unidad || ''}`
 }
 
@@ -42,91 +91,23 @@ function formatObjetivo(tipo, valor) {
   return valor
 }
 
-const labelSecundario = { fontSize: 12, color: COLORS.textSecondary }
-const materialStyle = { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 }
-
-function PasoRow({ paso, esUltimo }) {
-  const esDescanso = !paso.objetivo_tipo
-  const mat = Array.isArray(paso.material) && paso.material.length > 0 ? paso.material.join(', ') : null
+function Paso({ paso, etiqueta, disciplina }) {
+  const nivel = nivelPaso(paso)
   const obj = formatObjetivo(paso.objetivo_tipo, paso.objetivo_valor)
+  const mat = Array.isArray(paso.material) && paso.material.length > 0 ? paso.material.join(', ') : null
+  const texto = [etiqueta, paso.nombre].filter(Boolean).join(' · ')
   return (
-    <div
-      style={{
-        paddingLeft: 8,
-        paddingTop: 4,
-        paddingBottom: 4,
-        display: 'flex',
-        gap: 6,
-        alignItems: 'flex-start',
-        opacity: esDescanso ? 0.7 : 1,
-      }}
-    >
-      <span style={{ color: COLORS.textSecondary, fontSize: 11, paddingTop: 2, flexShrink: 0 }}>
-        {esUltimo ? '└' : '├'}
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '5px 0' }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, width: 58, flexShrink: 0, textAlign: 'right' }}>
+        {formatCant(paso.cantidad, paso.unidad)}
       </span>
-      <div>
-        <span style={labelSecundario}>
-          {formatCant(paso.cantidad, paso.unidad)}
-          {obj ? <span style={{ color: COLORS.textSecondary }}> · {obj}</span> : null}
-          {paso.nombre ? <span style={{ color: COLORS.textSecondary }}> — {paso.nombre}</span> : null}
-        </span>
-        {mat && <p style={materialStyle}>{mat}</p>}
-      </div>
-    </div>
-  )
-}
-
-function BloqueCard({ bloque }) {
-  const esDescanso = bloque.tipo === 'step' && !bloque.objetivo_tipo
-  const borde = bloqueColor(bloque.tipo, esDescanso)
-  const bg = bloqueBg(bloque.tipo)
-  const obj = formatObjetivo(bloque.objetivo_tipo, bloque.objetivo_valor)
-  const mat = Array.isArray(bloque.material) && bloque.material.length > 0 ? bloque.material.join(', ') : null
-
-  return (
-    <div
-      style={{
-        borderLeft: borde ? `3px solid ${borde}` : '3px solid transparent',
-        background: bg,
-        borderRadius: 6,
-        padding: '8px 12px',
-        marginBottom: 6,
-      }}
-    >
-      {bloque.tipo === 'repeat' ? (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 13 }}>{bloqueIcono(bloque.tipo)}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
-              {bloque.nombre || 'Serie'}{' '}
-              <span style={{ color: '#8B7FD1', fontWeight: 700 }}>×{bloque.repeticiones}</span>
-            </span>
-          </div>
-          {(bloque.pasos || []).map((paso, pi) => (
-            <PasoRow
-              key={pi}
-              paso={paso}
-              esUltimo={pi === (bloque.pasos || []).length - 1}
-            />
-          ))}
-        </>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-          <span style={{ fontSize: 13, flexShrink: 0 }}>{bloqueIcono(bloque.tipo)}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
-                {bloqueNombre(bloque)}
-              </span>
-              <span style={labelSecundario}>
-                {formatCant(bloque.cantidad, bloque.unidad)}
-                {obj ? ` · ${obj}` : ''}
-              </span>
-            </div>
-            {mat && <p style={materialStyle}>{mat}</p>}
-          </div>
-        </div>
-      )}
+      <span style={{ width: 8, height: 8, borderRadius: 2, background: COLOR_NIVEL[nivel], flexShrink: 0, alignSelf: 'center' }} />
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
+        {obj && <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary, marginRight: 6 }}>{obj}</span>}
+        {texto}
+        {mat && <span style={{ color: COLORS.textTertiary }}> — {mat}</span>}
+        {!obj && !texto && !mat && disciplina !== 'swim' && <span style={{ color: COLORS.textTertiary }}>Libre</span>}
+      </span>
     </div>
   )
 }
@@ -136,64 +117,42 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
   if (!ws?.bloques?.length) return null
 
   const disciplina = sesion.disciplina
-  const piscina = ws.piscina
   const notas = ws.notas || sesion.notas
 
-  const subtitulo = []
-  if (disciplina === 'swim' && piscina) subtitulo.push(PISCINA_LABEL[piscina] || piscina)
-
   return (
-    <div style={{ marginTop: 12 }}>
-      {/* Header del workout */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 10,
-          padding: '6px 10px',
-          background: 'rgba(255,255,255,0.03)',
-          borderRadius: 6,
-          borderLeft: `3px solid ${COLORS.accent}`,
-        }}
-      >
-        <span style={{ fontSize: 16 }}>{ICONO_POR_DISCIPLINA[disciplina] || '🏋'}</span>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
-            {sesion.descripcion || '—'}
-          </p>
-          {subtitulo.length > 0 && (
-            <p style={{ margin: 0, fontSize: 11, color: COLORS.textSecondary }}>
-              {subtitulo.join(' · ')}
-            </p>
-          )}
-        </div>
-      </div>
+    <div style={{ marginTop: 8, padding: '12px 12px 8px', background: 'rgba(255,255,255,0.025)', borderRadius: 10 }}>
+      <Perfil bloques={ws.bloques} disciplina={disciplina} />
+      {disciplina === 'swim' && ws.piscina && (
+        <p style={{ margin: '0 0 6px', fontSize: 12, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
+      )}
 
-      {/* Bloques */}
-      <div>
-        {ws.bloques.map((bloque, idx) => (
-          <BloqueCard key={idx} bloque={bloque} />
-        ))}
-      </div>
+      {ws.bloques.map((bloque, idx) =>
+        bloque.tipo === 'repeat' ? (
+          <div key={idx} style={{ margin: '4px 0', padding: '4px 0 4px 0', borderLeft: `2px solid ${COLORS.load}`, borderRadius: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '2px 0' }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: 13, fontWeight: 600, color: COLORS.load, width: 56, textAlign: 'right' }}>
+                {bloque.repeticiones} ×
+              </span>
+              <span style={{ fontSize: 13, color: COLORS.textSecondary }}>{bloque.nombre || 'Serie'}</span>
+            </div>
+            {(bloque.pasos || []).map((paso, pi) => (
+              <Paso key={pi} paso={paso} disciplina={disciplina} />
+            ))}
+          </div>
+        ) : (
+          <Paso
+            key={idx}
+            paso={bloque}
+            disciplina={disciplina}
+            etiqueta={bloque.tipo === 'warmup' ? 'Calentamiento' : bloque.tipo === 'cooldown' ? 'Vuelta a la calma' : null}
+          />
+        )
+      )}
 
-      {/* Notas del entrenador */}
       {mostrarNotas && notas && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: '10px 12px',
-            background: 'rgba(47,191,175,0.06)',
-            border: `1px solid ${COLORS.accent}`,
-            borderRadius: 8,
-          }}
-        >
-          <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: COLORS.accent }}>
-            📝 Nota del entrenador
-          </p>
-          <p style={{ margin: 0, fontSize: 13, color: COLORS.textPrimary, whiteSpace: 'pre-wrap' }}>
-            {notas}
-          </p>
+        <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.cardBorder}`, background: COLORS.background }}>
+          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>Nota del entrenador</p>
+          <p style={{ margin: 0, fontSize: 14, color: COLORS.textPrimary, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{notas}</p>
         </div>
       )}
     </div>

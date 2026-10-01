@@ -1,8 +1,8 @@
-import { COLORS, DISCIPLINE_COLORS, cardStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, FONTS, cardStyle } from '../lib/theme'
 
 const SECCIONES = [
   {
-    titulo: 'Running',
+    titulo: 'Carrera',
     color: DISCIPLINE_COLORS.run,
     grupo: 'running',
     sufijo: '/km',
@@ -46,30 +46,30 @@ export default function PRsBlock({ records, weeks }) {
   if (!records) return null
 
   return (
-    <div style={{ ...cardStyle, marginBottom: 24 }}>
+    <div style={{ ...cardStyle, marginBottom: 14 }}>
       <p
         style={{
-          color: COLORS.textSecondary,
-          fontSize: 12,
-          textTransform: 'uppercase',
-          letterSpacing: 1,
+          color: COLORS.textPrimary,
+          fontSize: 14,
           marginTop: 0,
-          marginBottom: 16,
+          marginBottom: 14,
           fontWeight: 600,
         }}
       >
         Mejores marcas · últimas {weeks} semanas
       </p>
 
-      <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '18px 32px', flexWrap: 'wrap' }}>
         {SECCIONES.map((seccion) => {
           const marcas = records[seccion.grupo] || {}
+          const filas = seccion.filas.filter((f) => marcas[f.clave] != null)
+          if (filas.length === 0) return null
           return (
             <div key={seccion.grupo} style={{ flex: 1, minWidth: 180 }}>
               <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: seccion.color }}>
                 {seccion.titulo}
               </p>
-              {seccion.filas.map((fila) => {
+              {filas.map((fila) => {
                 const valor = marcas[fila.clave]
                 return (
                   <div
@@ -85,8 +85,9 @@ export default function PRsBlock({ records, weeks }) {
                     <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{fila.label}</span>
                     <span
                       style={{
-                        fontSize: 15,
-                        fontWeight: 700,
+                        fontFamily: FONTS.mono,
+                        fontSize: 14,
+                        fontWeight: 600,
                         color: valor != null ? seccion.color : COLORS.textSecondary,
                       }}
                     >
@@ -100,8 +101,8 @@ export default function PRsBlock({ records, weeks }) {
         })}
       </div>
 
-      <p style={{ margin: '16px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
-        Calculado sobre actividades del período seleccionado
+      <p style={{ margin: '16px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
+        Mejor ritmo medio en actividades de esa distancia, en el periodo elegido
       </p>
     </div>
   )
