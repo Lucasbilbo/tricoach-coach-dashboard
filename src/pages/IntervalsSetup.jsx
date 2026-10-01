@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { misConexiones } from '../lib/connections'
 import { COLORS } from '../lib/theme'
 
 const PASOS_TOTAL = 5
@@ -135,13 +136,8 @@ export default function IntervalsSetup() {
       if (uid) setUserId(uid)
 
       if (uid) {
-        const { data: perfil } = await supabase
-          .from('profiles')
-          .select('strava_token, intervals_api_key')
-          .eq('id', uid)
-          .maybeSingle()
-
-        if (perfil?.strava_token) {
+        const conexiones = await misConexiones()
+        if (conexiones?.strava) {
           setStravaConectado(true)
           // Ya tiene Strava — saltar al paso Intervals
           setPaso(2)

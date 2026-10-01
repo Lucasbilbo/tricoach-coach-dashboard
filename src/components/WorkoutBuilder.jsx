@@ -6,6 +6,7 @@ import { buildIntervalsText } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
+import AtajosBuilder from './workout/AtajosBuilder'
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
@@ -456,6 +457,18 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               style={{ ...inputStyle, width: '100%' }}
             />
           </div>
+
+          {/* Atajos: escritura rápida y plantillas */}
+          <AtajosBuilder
+            key={form.disciplina}
+            disciplina={form.disciplina}
+            bloques={form.bloques}
+            nombre={form.nombre}
+            piscina={form.piscina}
+            onBloques={(bloques, nombrePlantilla) =>
+              setForm((prev) => ({ ...prev, bloques, nombre: prev.nombre?.trim() ? prev.nombre : nombrePlantilla || prev.nombre }))
+            }
+          />
 
           {/* Separador Bloques */}
           <div style={separadorSection}>Bloques</div>
