@@ -13,6 +13,7 @@ import {
 import WorkoutDetail from '../components/WorkoutDetail'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
+import SeasonPanel from '../components/season/SeasonPanel'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -331,6 +332,7 @@ export default function AthleteHome() {
           {[
             { clave: 'sesiones', etiqueta: 'Mis entrenamientos' },
             { clave: 'analisis', etiqueta: 'Análisis Strava' },
+            { clave: 'temporada', etiqueta: 'Temporada' },
           ].map((tab) => (
             <button
               key={tab.clave}
@@ -800,6 +802,11 @@ export default function AthleteHome() {
               />
             )}
           </>
+        )}
+
+        {/* ══ TAB: TEMPORADA ═══════════════════════════════════════════ */}
+        {activeTab === 'temporada' && userId && (
+          <SeasonPanel athleteId={userId} atletaNombre={perfil?.nombre} />
         )}
 
         {/* ── Modales ─────────────────────────────────────────────────── */}

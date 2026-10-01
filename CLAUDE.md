@@ -99,9 +99,30 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–005 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–006 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
+
+## Temporada (calendario de pruebas del año) — 2026-10
+
+- Tablas `temporada_eventos` y `temporada_cambios` (migración 006, **aplicada**).
+  RLS activado y SIN policies: solo la función `season` (service key) las toca.
+- `netlify/functions/season.js` — acciones `list` / `upsert` / `delete` (propio
+  atleta o su coach, vía `canAccessAthlete`) y `overview` (solo coaches, todos sus
+  atletas). Validación pura en `lib/season-validate.js` (whitelist de campos:
+  `athlete_id`/`created_by` NUNCA salen del body). Cada cambio se registra en
+  `temporada_cambios` con un resumen legible (best-effort).
+- Atleta y coach editan los dos. Estados: candidata, confirmada, inscrito,
+  descartada, hecha. Prioridad A/B/C. `escenario` = etiqueta libre para comparar
+  planes alternativos (p. ej. "Media" vs "Olímpico"). Multideporte: run, tri,
+  bike, swim, other.
+- UI: `src/components/season/` — `SeasonPanel` (pestaña "Temporada" en `/home` y
+  en `/athlete/:id`, admite `?tab=temporada`), `EventEditor` (drawer),
+  `SeasonOverview` (bloque "Temporadas" en el panel del coach). Helpers puros en
+  `src/lib/season.js`; cliente en `src/lib/seasonApi.js`.
+- Tests: `npm test` (node --test, sin dependencias) — `test/season.test.js`.
+- Pendiente: avisos de inscripción por email (Resend) y enlazar pruebas
+  confirmadas con `training_cycles` de TriCoach.
 
 ## Variables de entorno
 

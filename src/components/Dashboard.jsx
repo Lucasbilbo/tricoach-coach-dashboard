@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import SeasonOverview from './season/SeasonOverview'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
@@ -425,6 +426,8 @@ export default function Dashboard() {
               })
             })()}
         </div>
+
+        {!cargando && !error && atletas.length > 0 && <SeasonOverview />}
 
         {/* ── Invitar atleta ─────────────────────────────────────────────── */}
         <div style={{ marginTop: 40 }}>
