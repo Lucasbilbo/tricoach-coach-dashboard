@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { misConexiones } from '../lib/connections'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
 import {
@@ -112,14 +113,15 @@ export default function AthleteHome() {
       if (!activo) return
       setUserId(uid)
 
-      const perfilRes = await supabase
-        .from('profiles')
-        .select('nombre, intervals_api_key, intervals_athlete_id, strava_token')
-        .eq('id', uid)
-        .maybeSingle()
+      // Solo el nombre desde el cliente; las conexiones llegan como booleanos
+      // del backend (los tokens de Strava/Intervals no salen del servidor).
+      const [perfilRes, conexiones] = await Promise.all([
+        supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
+        misConexiones(),
+      ])
 
       if (!activo) return
-      setPerfil(perfilRes.data)
+      setPerfil({ ...(perfilRes.data || {}), conexiones })
     }
 
     cargarPerfil()
@@ -259,8 +261,8 @@ export default function AthleteHome() {
 
   const actividades = datos?.actividades || []
   const semanas = datos?.semanas || []
-  const intervalsOk = !!(perfil?.intervals_api_key && perfil?.intervals_athlete_id)
-  const stravaOk = !!perfil?.strava_token
+  const intervalsOk = !!perfil?.conexiones?.intervals
+  const stravaOk = !!perfil?.conexiones?.strava
 
   return (
     <div style={pageStyle}>
@@ -495,7 +497,7 @@ export default function AthleteHome() {
                           <div onClick={(e) => e.stopPropagation()}>
                             <WorkoutDetail sesion={sesion} mostrarNotas={true} />
 
-                            {perfil?.intervals_api_key && !sesion.enviado_a_garmin && (
+                            {intervalsOk && !sesion.enviado_a_garmin && (
                               <div style={{ marginTop: 8 }}>
                                 {erroresGarmin[sesion.id] && (
                                   <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>

@@ -15,9 +15,10 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   fija `{"type":"commonjs"}` y anula el `"type":"module"` de la raíz.
 - **Inline styles únicamente** — sin librerías UI (no Tailwind/MUI/styled).
 - **Tokens de terceros NUNCA al frontend** — `strava_token`, `strava_refresh_token`
-  e `intervals_api_key` se usan solo en backend con la service key. (Deuda actual:
-  el frontend aún lee `strava_token`/`intervals_api_key` para checks booleanos; ver
-  auditoría — pendiente pasar a flags.)
+  e `intervals_api_key` se usan solo en backend con la service key. El frontend
+  pregunta si hay conexión con `misConexiones()` (`src/lib/connections.js` →
+  función `my-connections`, solo booleanos). La única escritura de la key desde el
+  cliente es el alta en `IntervalsSetup` (update del propio perfil, RLS).
 - **Timezone: Europe/Madrid** — TODA fecha de actividad y agrupación semanal se
   deriva del instante UTC (`start_date`) convertido a Madrid con `fechaMadrid`,
   NO de `start_date_local` (que viene en la TZ de la actividad).
@@ -115,7 +116,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–006 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–007 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 
