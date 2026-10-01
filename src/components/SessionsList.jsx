@@ -200,18 +200,27 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   }, [cargarSesiones])
 
   async function handleEliminar(sesion) {
+    const enReloj = !!sesion.intervals_event_id
     const confirmado = window.confirm(
-      `¿Eliminar la sesión de ${DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina} del ${formatFechaSesion(sesion.fecha)}?`
+      `¿Eliminar la sesión de ${DISCIPLINE_LABELS[sesion.disciplina] || sesion.disciplina} del ${formatFechaSesion(sesion.fecha)}?` +
+        (enReloj ? '\n\nTambién se quitará del reloj del atleta.' : '')
     )
     if (!confirmado) return
 
-    const { error: deleteError } = await supabase
-      .from('coach_sessions')
-      .delete()
-      .eq('id', sesion.id)
-
-    if (deleteError) {
-      setError('No se pudo eliminar la sesión')
+    // Vía backend: borra también el entreno en Intervals (→ reloj).
+    try {
+      const res = await fetch('/.netlify/functions/delete-session', {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ sessionId: sesion.id }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(json.error || 'No se pudo eliminar la sesión')
+        return
+      }
+    } catch {
+      setError('Error de conexión eliminando la sesión')
       return
     }
     invalidarEstado()

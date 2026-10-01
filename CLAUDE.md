@@ -81,10 +81,26 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Texto del workout: `lib/intervals-text.cjs` (fuente única; el preview del builder
   lo re-exporta desde `src/lib/intervalsText.js`). **Las notas del entrenador NUNCA
   se envían al reloj** (`incluirNotas:false` en el envío; `true` solo en el preview).
-- Idempotente: si la sesión ya tenía `intervals_event_id`, borra el evento anterior
-  antes de recrear. Compensación: si el PATCH a Supabase no se confirma tras
-  reintentos, borra el evento recién creado (evita huérfanos). Ver auditoría para la
-  ventana no atómica del borrado previo.
+- Idempotente: si la sesión ya tenía `intervals_event_id`, crea el evento nuevo y,
+  confirmado en BD, borra el anterior. Compensación: si el PATCH a Supabase no se
+  confirma tras reintentos, borra el evento recién creado (el anterior sigue intacto).
+
+### Qué llega al reloj (2026-10)
+- **Bici y carrera por PULSO**: la zona se envía como `Zn HR` (también en bici) y
+  el objetivo por defecto es `Z1 HR`. Los atletas no tienen potenciómetro; el
+  builder no ofrece potencia (se sigue generando para sesiones antiguas).
+  **Natación sin objetivo por defecto** (antes `Z1 Pace` → avisos falsos).
+- Ritmo exacto o rango (`4:50-5:10/km Pace`), validado en el builder.
+- El material de cada paso va en el texto del paso (`@Z1 · palas, aletas`).
+- Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
+  se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
+  sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
+  pasos por distancia).
+- Reenvío: **primero crea** el evento nuevo y **después borra** el anterior
+  (antes al revés: un fallo intermedio dejaba al atleta sin entreno).
+- Borrar una sesión pasa por `delete-session.js`, que quita también el evento
+  de Intervals (→ reloj); si Intervals falla, la sesión NO se borra.
+- HTTP de Intervals compartido en `lib/intervals-api.js`. Tests: `test/entrenos-reloj.test.js`.
 
 ## Estructura
 
@@ -99,9 +115,30 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–005 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–006 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
+
+## Temporada (calendario de pruebas del año) — 2026-10
+
+- Tablas `temporada_eventos` y `temporada_cambios` (migración 006, **aplicada**).
+  RLS activado y SIN policies: solo la función `season` (service key) las toca.
+- `netlify/functions/season.js` — acciones `list` / `upsert` / `delete` (propio
+  atleta o su coach, vía `canAccessAthlete`) y `overview` (solo coaches, todos sus
+  atletas). Validación pura en `lib/season-validate.js` (whitelist de campos:
+  `athlete_id`/`created_by` NUNCA salen del body). Cada cambio se registra en
+  `temporada_cambios` con un resumen legible (best-effort).
+- Atleta y coach editan los dos. Estados: candidata, confirmada, inscrito,
+  descartada, hecha. Prioridad A/B/C. `escenario` = etiqueta libre para comparar
+  planes alternativos (p. ej. "Media" vs "Olímpico"). Multideporte: run, tri,
+  bike, swim, other.
+- UI: `src/components/season/` — `SeasonPanel` (pestaña "Temporada" en `/home` y
+  en `/athlete/:id`, admite `?tab=temporada`), `EventEditor` (drawer),
+  `SeasonOverview` (bloque "Temporadas" en el panel del coach). Helpers puros en
+  `src/lib/season.js`; cliente en `src/lib/seasonApi.js`.
+- Tests: `npm test` (node --test, sin dependencias) — `test/season.test.js`.
+- Pendiente: avisos de inscripción por email (Resend) y enlazar pruebas
+  confirmadas con `training_cycles` de TriCoach.
 
 ## Variables de entorno
 

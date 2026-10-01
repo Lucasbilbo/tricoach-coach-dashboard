@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { hoyMadrid } from '../lib/chartUtils'
@@ -9,6 +9,7 @@ import WorkoutBuilder from './WorkoutBuilder'
 import SessionsList from './SessionsList'
 import WeekCompare from './WeekCompare'
 import StravaAnalysis from './shared/StravaAnalysis'
+import SeasonPanel from './season/SeasonPanel'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -20,7 +21,10 @@ export default function AthleteView() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [coachId, setCoachId] = useState(null)
-  const [activeTab, setActiveTab] = useState('analisis')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() =>
+    ['analisis', 'sesiones', 'temporada'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'analisis'
+  )
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
@@ -185,6 +189,7 @@ export default function AthleteView() {
           {[
             { clave: 'analisis', etiqueta: 'Análisis' },
             { clave: 'sesiones', etiqueta: 'Sesiones prescritas' },
+            { clave: 'temporada', etiqueta: 'Temporada' },
           ].map((tab) => (
             <button
               key={tab.clave}
@@ -217,6 +222,10 @@ export default function AthleteView() {
             weeks={weeks}
             onNewSession={() => setSesionesVersion((v) => v + 1)}
           />
+        )}
+
+        {activeTab === 'temporada' && (
+          <SeasonPanel athleteId={id} atletaNombre={datos?.atleta?.nombre} esCoach />
         )}
 
         {activeTab === 'analisis' && cargando && (

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, inputStyle } from '../lib/theme'
 import { buildIntervalsText } from '../lib/intervalsText'
-import { DISCIPLINAS, defaultUnidad, initForm, proximosDias } from './workout/constants'
+import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 
@@ -120,6 +120,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
 
   // ── Guardar / Enviar ────────────────────────────────────────────────────
 
+  // Sesión que ya está en el reloj: al guardarla hay que reenviarla, o el
+  // atleta entrenaría la versión vieja.
+  const yaEnviada = !!sessionExistente?.intervals_event_id
+
   async function buildRegistro() {
     return {
       coach_id: coachId,
@@ -128,9 +132,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       disciplina: form.disciplina,
       descripcion: form.nombre,
       notas: form.notas || null,
+      duracion_min: duracionTotalMin(form.bloques),
       workout_steps: form.bloques.length > 0
         ? { bloques: form.bloques, notas: form.notas || '', ...(form.disciplina === 'swim' ? { piscina: form.piscina } : {}) }
         : null,
+      // Al editar una sesión ya enviada se marca como pendiente hasta que el
+      // reenvío se confirme: si falla, la lista lo muestra como "no enviado"
+      // en vez de mentir con un ✅ sobre una versión vieja.
+      ...(sessionId && yaEnviada ? { enviado_a_garmin: false } : {}),
     }
   }
 
@@ -155,15 +164,47 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     }
   }
 
+  function validar() {
+    if (!form.fecha || !form.nombre?.trim()) return 'La fecha y el nombre son obligatorios'
+    const malos = ritmosInvalidos(form.bloques)
+    if (malos.length) return `Ritmo mal escrito: ${malos.join(', ')}. Usa 5:00 o un rango 4:50-5:10`
+    return null
+  }
+
+  // Envía (o reenvía) la sesión a Intervals → reloj. Devuelve true si se confirmó.
+  async function enviarAlReloj(sid) {
+    const res = await fetch('/.netlify/functions/send-to-intervals', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ sessionId: sid }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (res.ok) return true
+    if (json.code === 'NO_INTERVALS') setErrorIntervals(true)
+    else setError(json.error || 'Error enviando a Garmin')
+    return false
+  }
+
   async function handleGuardar() {
-    if (!form.fecha || !form.nombre?.trim()) {
-      setError('La fecha y el nombre son obligatorios')
+    const invalido = validar()
+    if (invalido) {
+      setError(invalido)
       return
     }
     setGuardando(true)
     setError(null)
     try {
-      await saveToSupabase()
+      const sid = await saveToSupabase()
+      if (yaEnviada) {
+        const ok = await enviarAlReloj(sid)
+        if (!ok) {
+          // Guardado, pero el reloj sigue con la versión anterior: no cerrar,
+          // que el coach lo vea. La lista la mostrará como pendiente de envío.
+          setError('Cambios guardados, pero no se pudo actualizar el reloj. Queda pendiente de enviar.')
+          if (onSaved) onSaved()
+          return
+        }
+      }
       if (onSaved) onSaved()
       onClose()
     } catch (err) {
@@ -174,8 +215,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   async function handleEnviarGarmin() {
-    if (!form.fecha || !form.nombre?.trim()) {
-      setError('La fecha y el nombre son obligatorios')
+    const invalido = validar()
+    if (invalido) {
+      setError(invalido)
       return
     }
     setEnviando(true)
@@ -184,25 +226,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     setErrorIntervals(false)
     try {
       const sid = await saveToSupabase()
-
       // coach/atleta se derivan de la sesión y del JWT en el backend
-      const res = await fetch('/.netlify/functions/send-to-intervals', {
-        method: 'POST',
-        headers: await authHeaders(),
-        body: JSON.stringify({ sessionId: sid }),
-      })
-
-      const json = await res.json().catch(() => ({}))
-
-      if (!res.ok) {
-        if (json.code === 'NO_INTERVALS') {
-          setErrorIntervals(true)
-        } else {
-          setError(json.error || 'Error enviando a Garmin')
-        }
-        return
-      }
-
+      const ok = await enviarAlReloj(sid)
+      if (!ok) return
       setExitoGarmin(true)
       if (onSaved) onSaved()
     } catch {
@@ -489,7 +515,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           />
 
           {/* Preview Intervals */}
-          <div style={separadorSection}>Preview Intervals.icu</div>
+          <div style={separadorSection}>
+            Así llega al reloj
+            {duracionTotalMin(form.bloques) != null && (
+              <span style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textPrimary }}>
+                · {duracionTotalMin(form.bloques)} min
+              </span>
+            )}
+          </div>
           <pre
             style={{
               background: '#0B0D12',
@@ -564,7 +597,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 opacity: guardando || enviando ? 0.6 : 1,
               }}
             >
-              {guardando ? 'Guardando...' : 'Guardar borrador'}
+              {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : 'Guardar borrador'}
             </button>
             <button
               onClick={handleEnviarGarmin}
