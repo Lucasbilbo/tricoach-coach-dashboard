@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { misConexiones } from '../lib/connections'
+import { ESTADO, asignarActividades, estadoDeSesion, fechaHaceSemanas, semanasNecesarias } from '../lib/estadoSesion'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
 import {
@@ -70,6 +71,36 @@ const badgeDisciplina = (disciplina) => ({
   whiteSpace: 'nowrap',
 })
 
+const PAGINA_PASADAS = 20
+
+// Actividades de Strava que cubren las sesiones pasadas mostradas (tope 26
+// semanas). Devuelve el nuevo estado, o null si no hace falta pedir más o si no
+// hay Strava (entonces el estado se muestra "—").
+async function pedirActividadesEstado(userId, lista, actual) {
+  const hoy = hoyMadrid()
+  const semanas = semanasNecesarias(lista.map((x) => x.fecha), hoy)
+  if (!semanas || !userId) return null
+  if (actual?.actividades && actual.semanas >= semanas) return null
+  try {
+    const res = await fetch('/.netlify/functions/coach-athlete-data', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ athleteId: userId, weeks: semanas }),
+    })
+    if (!res.ok) return null
+    const json = await res.json().catch(() => null)
+    return json?.actividades ? { actividades: json.actividades, desde: fechaHaceSemanas(hoy, semanas), semanas } : null
+  } catch {
+    return null
+  }
+}
+
+function EstadoPasada({ estado }) {
+  if (estado === ESTADO.completada) return <span style={{ color: COLORS.accent }}>✓ Hecha</span>
+  if (estado === ESTADO.pendiente) return <span style={{ color: COLORS.textSecondary }}>Sin hacer</span>
+  return <span style={{ color: COLORS.textTertiary }} title="Sin datos de Strava para esa fecha">—</span>
+}
+
 export default function AthleteHome() {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
@@ -95,6 +126,10 @@ export default function AthleteHome() {
   const [expandidas, setExpandidas] = useState({})
   const [enviandoGarmin, setEnviandoGarmin] = useState({})
   const [erroresGarmin, setErroresGarmin] = useState({})
+  // Historial paginado + estado Hecha/Pendiente (misma lógica que ve el coach)
+  const [hayMasPasadas, setHayMasPasadas] = useState(false)
+  const [cargandoMas, setCargandoMas] = useState(false)
+  const [estadoActs, setEstadoActs] = useState({ actividades: null, desde: null, semanas: 0 })
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
@@ -151,7 +186,7 @@ export default function AthleteHome() {
           .eq('athlete_id', userId)
           .lt('fecha', hoy)
           .order('fecha', { ascending: false })
-          .limit(20),
+          .range(0, PAGINA_PASADAS),
       ])
 
       if (!activo) return
@@ -163,9 +198,17 @@ export default function AthleteHome() {
       } else {
         setErrorSesiones(false)
         setProximas(proximasRes.data || [])
-        setPasadas(pasadasRes.data || [])
+        // Se pide una de más para saber si hay otra página
+        const lista = pasadasRes.data || []
+        setHayMasPasadas(lista.length > PAGINA_PASADAS)
+        const visibles = lista.slice(0, PAGINA_PASADAS)
+        setPasadas(visibles)
       }
       setCargandoSesiones(false)
+      if (!proximasRes.error && !pasadasRes.error) {
+        const r = await pedirActividadesEstado(userId, (pasadasRes.data || []).slice(0, PAGINA_PASADAS), null)
+        if (activo && r) setEstadoActs(r)
+      }
     }
 
     cargarSesiones()
@@ -206,6 +249,27 @@ export default function AthleteHome() {
     cargarStrava()
     return () => { activo = false }
   }, [userId, weeks, activeTab])
+
+  async function cargarMasPasadas() {
+    if (!userId || cargandoMas) return
+    setCargandoMas(true)
+    const desde = pasadas.length
+    const { data, error } = await supabase
+      .from('coach_sessions')
+      .select('*')
+      .eq('athlete_id', userId)
+      .lt('fecha', hoyMadrid())
+      .order('fecha', { ascending: false })
+      .range(desde, desde + PAGINA_PASADAS)
+    setCargandoMas(false)
+    if (error) return
+    const nuevas = (data || []).slice(0, PAGINA_PASADAS)
+    setHayMasPasadas((data || []).length > PAGINA_PASADAS)
+    const todas = [...pasadas, ...nuevas]
+    setPasadas(todas)
+    const r = await pedirActividadesEstado(userId, todas, estadoActs)
+    if (r) setEstadoActs(r)
+  }
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -261,6 +325,7 @@ export default function AthleteHome() {
 
   const actividades = datos?.actividades || []
   const semanas = datos?.semanas || []
+  const asignacion = asignarActividades(pasadas, estadoActs.actividades)
   const intervalsOk = !!perfil?.conexiones?.intervals
   const stravaOk = !!perfil?.conexiones?.strava
 
@@ -566,7 +631,7 @@ export default function AthleteHome() {
                         <th style={thStyle}>Fecha</th>
                         <th style={thStyle}>Disciplina</th>
                         <th style={thStyle}>Nombre</th>
-                        <th style={thStyle}>Garmin</th>
+                        <th style={thStyle}>Estado</th>
                         <th style={thStyle}>Detalle</th>
                       </tr>
                     </thead>
@@ -589,15 +654,8 @@ export default function AthleteHome() {
                           >
                             {tituloSesion(sesion)}
                           </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              color: sesion.enviado_a_garmin ? '#2FBFAF' : COLORS.textSecondary,
-                              fontWeight: 600,
-                              fontSize: 12,
-                            }}
-                          >
-                            {sesion.enviado_a_garmin ? '✅' : '⏳'}
+                          <td style={{ ...tdStyle, fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' }}>
+                            <EstadoPasada estado={estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)} />
                           </td>
                           <td style={tdStyle}>
                             {sesion.workout_steps?.bloques?.length > 0 ? (
@@ -642,6 +700,26 @@ export default function AthleteHome() {
                     </tbody>
                   </table>
                 </div>
+              )}
+              {hayMasPasadas && !errorSesiones && (
+                <button
+                  onClick={cargarMasPasadas}
+                  disabled={cargandoMas}
+                  style={{
+                    marginTop: 12,
+                    background: 'transparent',
+                    border: `1px solid ${COLORS.cardBorder}`,
+                    borderRadius: 8,
+                    color: COLORS.textSecondary,
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: "'Archivo', sans-serif",
+                  }}
+                >
+                  {cargandoMas ? 'Cargando…' : 'Ver más entrenamientos'}
+                </button>
               )}
             </section>
 

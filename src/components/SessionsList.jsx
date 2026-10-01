@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle } from '../lib/theme'
 import { MESES_CORTOS, lunesDeSemana, formatDiaMes } from '../lib/chartUtils'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -47,17 +48,13 @@ function fechaMadridHace(weeks) {
   }).format(new Date(Date.now() - weeks * 7 * 86400000))
 }
 
-function estadoSesion(sesion, actividades, coberturaDesde) {
-  const act = (actividades || []).find(
-    (a) => a.fecha === sesion.fecha && a.disciplina === sesion.disciplina
-  )
-  if (act) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: act }
-  if (sesion.fecha > hoyMadrid()) return { texto: 'Programada', color: COLORS.accent, actividadStrava: null }
-  // Más antigua que las actividades disponibles: no se puede saber si se hizo →
-  // nunca un falso "Pendiente".
-  if (coberturaDesde && sesion.fecha < coberturaDesde) {
-    return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
-  }
+// Texto/color del estado (la lógica vive en lib/estadoSesion, compartida con la
+// vista del atleta).
+function estadoSesion(sesion, actividad, coberturaDesde) {
+  const estado = estadoDeSesion(sesion, actividad, hoyMadrid(), coberturaDesde)
+  if (estado === ESTADO.completada) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: actividad }
+  if (estado === ESTADO.programada) return { texto: 'Programada', color: COLORS.accent, actividadStrava: null }
+  if (estado === ESTADO.sinDatos) return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
   return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
 }
 
@@ -263,9 +260,11 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   // Usa las actividades dedicadas (cubren toda la historia de sesiones); mientras
   // cargan, cae en las del análisis para no mostrar vacío.
   const actsParaEstado = actividadesEstado || actividades
+  // Una actividad completa como mucho una sesión (F6).
+  const asignacion = asignarActividades(sesiones, actsParaEstado)
 
   const renderSesion = (sesion) => {
-    const estado = estadoSesion(sesion, actsParaEstado, coberturaDesde)
+    const estado = estadoSesion(sesion, asignacion.get(sesion.id), coberturaDesde)
     const completada = !!estado.actividadStrava
     const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
     const expandida = expandidaId === sesion.id
