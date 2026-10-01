@@ -13,15 +13,31 @@ function unidadIntervals(unidad) {
   return unidad || ''
 }
 
+// Objetivo por defecto de los pasos simples sin objetivo (calentamiento, vuelta
+// a la calma y pasos sueltos). Bici y carrera van por PULSO: los atletas no
+// tienen potenciómetro (2026-10) y una zona de potencia sin medidor deja el
+// reloj con un objetivo que no puede medir. Natación SIN objetivo: un ritmo en
+// piscina sin umbral configurado solo genera avisos falsos.
 function defaultZona(disciplina) {
-  if (disciplina === 'swim') return ' Z1 Pace'
-  if (disciplina === 'run') return ' Z1 HR'
-  if (disciplina === 'bike') return ' Z1'
+  if (disciplina === 'run' || disciplina === 'bike') return ' Z1 HR'
   return ''
 }
 
 const normalizarZona = (v) => (v && v.includes('-') ? v.split('-')[0] : v)
-const nombreStr = (nombre) => (nombre ? ` @${nombre}` : '')
+// Texto del paso que se ve en el reloj: nombre + material del paso (p. ej.
+// 'Z1 · palas, aletas'). Antes el material de cada paso se perdía.
+function nombreStr(nombre, material) {
+  const partes = []
+  if (nombre && String(nombre).trim()) partes.push(String(nombre).trim())
+  if (Array.isArray(material) && material.length > 0) partes.push(material.join(', '))
+  return partes.length ? ` @${partes.join(' · ')}` : ''
+}
+
+// 'Calentamiento' + nombre opcional del coach → 'Calentamiento · 75 crol 25 otro'
+function conPrefijo(prefijo, nombre) {
+  const n = nombre && String(nombre).trim()
+  return n ? `${prefijo} · ${n}` : prefijo
+}
 
 function objetivoStr(step, disciplina) {
   const tipo = step.objetivo_tipo
@@ -30,14 +46,17 @@ function objetivoStr(step, disciplina) {
   if (tipo === 'zona') {
     const zona = normalizarZona(valor)
     if (disciplina === 'swim') return ` ${zona} Pace`
-    if (disciplina === 'run') return ` ${zona} HR`
-    return ` ${zona}`
+    // Bici también por pulso (sin potenciómetro). Sesiones antiguas con zona en
+    // bici se reinterpretan como zona de FC al reenviarse.
+    return ` ${zona} HR`
   }
   if (tipo === 'fc') return ` ${valor}% HR`
   if (tipo === 'potencia') return ` ${valor}%`
   if (tipo === 'ritmo') {
-    if (disciplina === 'swim') return ` ${valor}/100m Pace`
-    if (disciplina === 'run') return ` ${valor}/km Pace`
+    // Admite ritmo exacto ('5:00') o rango ('4:50-5:10'); Intervals entiende ambos.
+    const ritmo = String(valor).replace(/\s+/g, '')
+    if (disciplina === 'swim') return ` ${ritmo}/100m Pace`
+    if (disciplina === 'run') return ` ${ritmo}/km Pace`
   }
   return ''
 }
@@ -65,17 +84,17 @@ function buildIntervalsText(session, options = {}) {
   for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + ' @Calentamiento')
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(conPrefijo('Calentamiento', bloque.nombre), bloque.material))
     } else if (bloque.tipo === 'cooldown') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + ' @Vuelta a la calma')
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(conPrefijo('Vuelta a la calma', bloque.nombre), bloque.material))
     } else if (bloque.tipo === 'step') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(bloque.nombre))
+      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(bloque.nombre, bloque.material))
     } else if (bloque.tipo === 'repeat') {
       const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
       for (const paso of (bloque.pasos || [])) {
-        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina) + nombreStr(paso.nombre))
+        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina) + nombreStr(paso.nombre, paso.material))
       }
       partes.push(lines.join('\n'))
     }

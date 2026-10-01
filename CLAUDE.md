@@ -81,10 +81,26 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Texto del workout: `lib/intervals-text.cjs` (fuente única; el preview del builder
   lo re-exporta desde `src/lib/intervalsText.js`). **Las notas del entrenador NUNCA
   se envían al reloj** (`incluirNotas:false` en el envío; `true` solo en el preview).
-- Idempotente: si la sesión ya tenía `intervals_event_id`, borra el evento anterior
-  antes de recrear. Compensación: si el PATCH a Supabase no se confirma tras
-  reintentos, borra el evento recién creado (evita huérfanos). Ver auditoría para la
-  ventana no atómica del borrado previo.
+- Idempotente: si la sesión ya tenía `intervals_event_id`, crea el evento nuevo y,
+  confirmado en BD, borra el anterior. Compensación: si el PATCH a Supabase no se
+  confirma tras reintentos, borra el evento recién creado (el anterior sigue intacto).
+
+### Qué llega al reloj (2026-10)
+- **Bici y carrera por PULSO**: la zona se envía como `Zn HR` (también en bici) y
+  el objetivo por defecto es `Z1 HR`. Los atletas no tienen potenciómetro; el
+  builder no ofrece potencia (se sigue generando para sesiones antiguas).
+  **Natación sin objetivo por defecto** (antes `Z1 Pace` → avisos falsos).
+- Ritmo exacto o rango (`4:50-5:10/km Pace`), validado en el builder.
+- El material de cada paso va en el texto del paso (`@Z1 · palas, aletas`).
+- Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
+  se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
+  sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
+  pasos por distancia).
+- Reenvío: **primero crea** el evento nuevo y **después borra** el anterior
+  (antes al revés: un fallo intermedio dejaba al atleta sin entreno).
+- Borrar una sesión pasa por `delete-session.js`, que quita también el evento
+  de Intervals (→ reloj); si Intervals falla, la sesión NO se borra.
+- HTTP de Intervals compartido en `lib/intervals-api.js`. Tests: `test/entrenos-reloj.test.js`.
 
 ## Estructura
 

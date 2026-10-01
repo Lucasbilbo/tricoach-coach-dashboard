@@ -40,26 +40,27 @@ export const OBJETIVOS = {
     { value: 'ritmo', label: 'Ritmo /100m' },
     { value: 'fc', label: 'FC %' },
   ],
+  // Bici solo por pulso: los atletas no tienen potenciómetro (2026-10). La
+  // potencia se sigue generando para sesiones antiguas, pero no se ofrece.
   bike: [
     { value: '', label: 'Sin objetivo' },
-    { value: 'potencia', label: 'Potencia %' },
+    { value: 'zona', label: 'Zona FC' },
     { value: 'fc', label: 'FC %' },
-    { value: 'zona', label: 'Zona' },
   ],
   run: [
     { value: '', label: 'Sin objetivo' },
+    { value: 'zona', label: 'Zona FC' },
     { value: 'ritmo', label: 'Ritmo /km' },
     { value: 'fc', label: 'FC %' },
-    { value: 'zona', label: 'Zona' },
   ],
   strength: [],
   other: [],
 }
 
 export const OBJETIVO_PLACEHOLDER = {
-  swim: { ritmo: '1:30', fc: '70' },
-  bike: { potencia: '80', fc: '75' },
-  run: { ritmo: '5:30', fc: '75' },
+  swim: { ritmo: '1:45-1:50', fc: '70' },
+  bike: { fc: '75' },
+  run: { ritmo: '4:50-5:10', fc: '75' },
 }
 
 export const ZONAS = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
@@ -105,4 +106,40 @@ export function initForm(sesion) {
     bloques,
     notas,
   }
+}
+
+// Ritmo válido: exacto ('5:00') o rango ('4:50-5:10'). Segundos 00–59.
+const RITMO = '\\d{1,2}:[0-5]\\d'
+const RITMO_REGEX = new RegExp(`^${RITMO}(\\s*-\\s*${RITMO})?$`)
+
+export function ritmoValido(valor) {
+  return typeof valor === 'string' && RITMO_REGEX.test(valor.trim())
+}
+
+// Pasos con ritmo mal escrito (Intervals los ignoraría y el reloj iría sin
+// objetivo). Devuelve la lista de ritmos inválidos encontrados.
+export function ritmosInvalidos(bloques) {
+  const pasos = (bloques || []).flatMap((b) => (b.tipo === 'repeat' ? b.pasos || [] : [b]))
+  return pasos
+    .filter((p) => p.objetivo_tipo === 'ritmo' && p.objetivo_valor && !ritmoValido(p.objetivo_valor))
+    .map((p) => p.objetivo_valor)
+}
+
+const MIN_POR_UNIDAD = { min: 1, h: 60, s: 1 / 60 }
+
+// Duración total en minutos si TODOS los pasos son por tiempo; null si alguno
+// va por distancia (no se puede saber sin ritmo).
+export function duracionTotalMin(bloques) {
+  let total = 0
+  for (const b of bloques || []) {
+    const pasos = b.tipo === 'repeat' ? b.pasos || [] : [b]
+    const veces = b.tipo === 'repeat' ? Number(b.repeticiones) || 0 : 1
+    for (const p of pasos) {
+      const factor = MIN_POR_UNIDAD[p.unidad]
+      const cantidad = Number(p.cantidad)
+      if (!factor || !Number.isFinite(cantidad)) return null
+      total += cantidad * factor * veces
+    }
+  }
+  return total > 0 ? Math.round(total) : null
 }

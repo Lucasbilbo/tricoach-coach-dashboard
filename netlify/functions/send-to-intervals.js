@@ -8,6 +8,7 @@
 const https = require('https')
 const { verifyAuth } = require('./lib/auth')
 const { buildIntervalsText } = require('./lib/intervals-text.cjs')
+const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)) }
 
@@ -104,59 +105,10 @@ async function patchConReintentos(sessionId, payload, intentos = 3) {
   return false
 }
 
-// ── Intervals.icu helpers ────────────────────────────────────────────────────
-// El texto del entrenamiento se genera con el módulo compartido
+// ── Intervals.icu ────────────────────────────────────────────────────────────
+// Llamadas HTTP en lib/intervals-api (compartidas con delete-session). El texto del entrenamiento se genera con el módulo compartido
 // (lib/intervals-text). El envío usa incluirNotas:false SIEMPRE: las notas del
 // entrenador no llegan al reloj (congelan el Garmin).
-
-function intervalsPost(athleteId, apiKey, body) {
-  const authHeader = 'Basic ' + Buffer.from('API_KEY:' + apiKey).toString('base64')
-  const bodyStr = JSON.stringify(body)
-  return new Promise((resolve) => {
-    const options = {
-      hostname: 'intervals.icu',
-      path: `/api/v1/athlete/${athleteId}/events`,
-      method: 'POST',
-      headers: {
-        Authorization: authHeader,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-      },
-    }
-    const req = https.request(options, (res) => {
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(data) }) }
-        catch { resolve({ status: res.statusCode, body: null }) }
-      })
-    })
-    req.on('error', (e) => resolve({ status: 500, body: { error: e.message } }))
-    req.write(bodyStr)
-    req.end()
-  })
-}
-
-// Borra un evento en Intervals. Se usa para el reenvío idempotente (borra el
-// evento previo antes de recrear) y para la compensación si el PATCH final no
-// se puede confirmar. Best-effort: un 404 (ya no existe) no es un fallo.
-function intervalsDelete(athleteId, apiKey, eventId) {
-  const authHeader = 'Basic ' + Buffer.from('API_KEY:' + apiKey).toString('base64')
-  return new Promise((resolve) => {
-    const options = {
-      hostname: 'intervals.icu',
-      path: `/api/v1/athlete/${athleteId}/events/${eventId}`,
-      method: 'DELETE',
-      headers: { Authorization: authHeader },
-    }
-    const req = https.request(options, (res) => {
-      res.on('data', () => {})
-      res.on('end', () => resolve({ status: res.statusCode }))
-    })
-    req.on('error', () => resolve({ status: 0 }))
-    req.end()
-  })
-}
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
@@ -233,11 +185,10 @@ exports.handler = async (event) => {
       eventBody.pool_length_unit = 'Meters'
     }
 
-    // Reenvío idempotente: si ya se había enviado, borrar el evento anterior en
-    // Intervals antes de crear el nuevo para no duplicar el workout en el reloj.
-    if (session.intervals_event_id) {
-      await intervalsDelete(intervals_athlete_id, intervals_api_key, session.intervals_event_id)
-    }
+    // Reenvío (sesión editada o reenviada): primero se CREA la versión nueva y
+    // solo cuando está confirmada se borra la anterior. Al revés, un fallo de
+    // Intervals entre medias dejaba al atleta sin entreno ese día.
+    const eventoAnterior = session.intervals_event_id || null
 
     const result = await intervalsPost(intervals_athlete_id, intervals_api_key, eventBody)
 
@@ -277,10 +228,22 @@ exports.handler = async (event) => {
       }
     }
 
+    // Nueva versión confirmada en Intervals y en BD: ahora sí se retira la vieja.
+    // Si este borrado fallara quedaría un duplicado en el calendario (visible y
+    // borrable a mano), nunca un hueco sin entreno.
+    let anteriorRetirado = true
+    if (eventoAnterior && eventoAnterior !== intervals_event_id) {
+      const del = await intervalsDelete(intervals_athlete_id, intervals_api_key, eventoAnterior)
+      anteriorRetirado = eventoBorrado(del)
+      if (!anteriorRetirado) {
+        console.error(`send-to-intervals: no se pudo retirar el evento anterior ${eventoAnterior} (status ${del.status})`)
+      }
+    }
+
     return {
       statusCode: 200,
       headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: true, intervals_event_id }),
+      body: JSON.stringify({ ok: true, intervals_event_id, anterior_retirado: anteriorRetirado }),
     }
   } catch (err) {
     // Detalle completo solo en el log del servidor; al cliente, mensaje genérico
