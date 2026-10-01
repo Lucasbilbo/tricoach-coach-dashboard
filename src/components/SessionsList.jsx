@@ -79,6 +79,14 @@ const textoBtnStyle = {
   minHeight: 36,
 }
 
+// Botón de icono compacto de la cabecera de la tarjeta (sin caja: 3 seguidos
+// pesaban demasiado en el móvil). Área táctil de 36 px.
+const accionIconoStyle = {
+  ...iconButtonStyle,
+  border: 'none',
+  color: COLORS.textTertiary,
+}
+
 // Ámbar: sesión que aún no está en el reloj.
 const COLOR_PENDIENTE = DISCIPLINE_COLORS.bike
 
@@ -273,12 +281,38 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
 
     return (
       <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 12px 18px', ...railStyle(sesion.disciplina) }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
-          <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{formatFechaSesion(sesion.fecha)}</span>
-          <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
-          {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+        {/* Cabecera: fecha y deporte a la izquierda, acciones de icono a la derecha
+            (así nunca se van a una línea propia en el móvil). */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0, paddingTop: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{formatFechaSesion(sesion.fecha)}</span>
+              <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
+              {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+            </div>
+            <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button onClick={() => setSesionEditando(sesion)} style={accionIconoStyle} aria-label="Editar sesión" title="Editar">
+              <Icon name="edit" size={16} />
+            </button>
+            <button
+              onClick={() =>
+                // Copia sin id ni envío: el builder la trata como sesión nueva y
+                // solo falta elegir el día.
+                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false })
+              }
+              style={accionIconoStyle}
+              aria-label="Duplicar sesión"
+              title="Duplicar a otro día"
+            >
+              <Icon name="copy" size={16} />
+            </button>
+            <button onClick={() => handleEliminar(sesion)} style={accionIconoStyle} aria-label="Eliminar sesión" title="Eliminar">
+              <Icon name="trash" size={16} />
+            </button>
+          </div>
         </div>
-        <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 8, fontSize: 13 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: estado.color, fontWeight: 500 }}>
@@ -291,12 +325,12 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             {tieneWorkout && (
               <button onClick={() => toggleExpandida(sesion.id)} style={textoBtnStyle} aria-expanded={expandida}>
                 <Icon name="chevronDown" size={16} style={{ transform: expandida ? 'rotate(180deg)' : 'none' }} />
-                {expandida ? 'Ocultar entreno' : 'Ver entreno'}
+                {expandida ? 'Ocultar' : 'Ver entreno'}
               </button>
             )}
             {completada && (
@@ -306,36 +340,16 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
               </button>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {!enviada && tieneWorkout && (
-              <button
-                onClick={() => handleReenviarGarmin(sesion)}
-                disabled={reenviando === sesion.id}
-                style={{ ...iconButtonStyle, width: 'auto', padding: '0 12px', gap: 6, color: COLORS.accent, borderColor: 'rgba(47,191,175,0.45)', fontSize: 13, fontWeight: 600, opacity: reenviando === sesion.id ? 0.6 : 1 }}
-              >
-                <Icon name="send" size={15} />
-                {reenviando === sesion.id ? 'Enviando…' : 'Enviar'}
-              </button>
-            )}
-            <button onClick={() => setSesionEditando(sesion)} style={iconButtonStyle} aria-label="Editar sesión" title="Editar">
-              <Icon name="edit" size={16} />
-            </button>
+          {!enviada && tieneWorkout && (
             <button
-              onClick={() =>
-                // Copia sin id ni envío: el builder la trata como sesión nueva y
-                // solo falta elegir el día.
-                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false })
-              }
-              style={iconButtonStyle}
-              aria-label="Duplicar sesión"
-              title="Duplicar a otro día"
+              onClick={() => handleReenviarGarmin(sesion)}
+              disabled={reenviando === sesion.id}
+              style={{ ...iconButtonStyle, width: 'auto', padding: '0 12px', gap: 6, color: COLORS.accent, borderColor: 'rgba(47,191,175,0.45)', fontSize: 13, fontWeight: 600, opacity: reenviando === sesion.id ? 0.6 : 1 }}
             >
-              <Icon name="copy" size={16} />
+              <Icon name="send" size={15} />
+              {reenviando === sesion.id ? 'Enviando…' : 'Enviar al reloj'}
             </button>
-            <button onClick={() => handleEliminar(sesion)} style={iconButtonStyle} aria-label="Eliminar sesión" title="Eliminar">
-              <Icon name="trash" size={16} />
-            </button>
-          </div>
+          )}
         </div>
 
         {expandida && tieneWorkout && (
