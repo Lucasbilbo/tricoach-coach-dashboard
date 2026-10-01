@@ -103,6 +103,17 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   de Intervals (→ reloj); si Intervals falla, la sesión NO se borra.
 - HTTP de Intervals compartido en `lib/intervals-api.js`. Tests: `test/entrenos-reloj.test.js`.
 
+### Atajos del coach (2026-10)
+- **Escritura rápida** (`workout/parser.js`, `AtajosBuilder.jsx`): una línea →
+  bloques. `15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1`; `'` min, `"` seg, m/km, Z1–Z5,
+  ritmo `4:50-5:10`, `cal`/`vc`, material de natación. Con 3+ bloques el primero
+  y el último sueltos pasan a calentamiento / vuelta a la calma. Tests: `test/parser.test.js`.
+- **Duplicar** sesión (SessionsList): copia sin id ni envío, solo falta el día.
+- **Plantillas**: tabla `coach_plantillas` (migración 008, RLS `coach_id = auth.uid()`).
+  Si la tabla no existe, la sección no se muestra.
+- Estado Hecha/Pendiente: `src/lib/estadoSesion.js` (fuente única coach + atleta;
+  una actividad completa como mucho una sesión). Tests: `test/estado-sesion.test.js`.
+
 ## Estructura
 
 - `src/components/` — Login, Dashboard, AthleteView (coach), SessionsList,
@@ -116,7 +127,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–007 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–008 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 

@@ -350,6 +350,24 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
               Editar
             </button>
             <button
+              onClick={(e) => {
+                e.stopPropagation()
+                // Copia sin id ni envío: el builder la trata como sesión nueva y
+                // solo falta elegir el día.
+                setSesionEditando({
+                  ...sesion,
+                  id: undefined,
+                  fecha: '',
+                  intervals_event_id: null,
+                  enviado_a_garmin: false,
+                })
+              }}
+              style={accionBtnStyle}
+              title="Copiar esta sesión a otro día"
+            >
+              Duplicar
+            </button>
+            <button
               onClick={(e) => { e.stopPropagation(); handleEliminar(sesion) }}
               style={{ ...accionBtnStyle, color: COLORS.error }}
             >
