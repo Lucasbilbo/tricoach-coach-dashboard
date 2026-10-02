@@ -94,11 +94,13 @@ function objetivoStr(step, disciplina) {
   return ''
 }
 
-// Natación: cada vez que cambia el material entre un paso y el siguiente
-// (ponerlo, quitarlo o cambiarlo) se intercala una PAUSA que termina al pulsar
-// vuelta ("press lap"), para tener tiempo de cambiarse. Se calcula al generar,
-// sin tocar lo guardado. Dentro de una serie: entre pasos con distinto material
-// y, si el último y el primero difieren, al inicio de cada repetición.
+// Natación: entre cada bloque y el siguiente se intercala una PAUSA que termina
+// al pulsar vuelta ("press lap"): el nadador para en la pared, se pone o quita
+// material y arranca cuando quiere. Se omite si ahí ya hay un descanso (serie
+// que acaba en descanso, o bloque que es un descanso), SALVO que cambie el
+// material: un 20" de serie no da para ponerse aletas. Dentro de una serie solo
+// se añade si cambia el material entre pasos sin descanso de por medio.
+// Se calcula al generar el texto; no se guarda.
 const SEG_PAUSA = 15
 
 function claveMaterial(paso) {
@@ -106,41 +108,71 @@ function claveMaterial(paso) {
   return m.map((x) => String(x).toLowerCase()).sort().join('|')
 }
 
-function pausa(paso) {
-  return { tipo: 'pausa', material: Array.isArray(paso.material) ? [...paso.material] : [] }
+function esDescanso(paso) {
+  return Boolean(paso) && /^\s*(descanso|desc\b|rec\b|recup|pausa)/i.test(paso.nombre || '')
 }
 
-function conPausasMaterial(bloques, disciplina) {
-  if (disciplina !== 'swim' || !Array.isArray(bloques)) return bloques || []
-  const out = []
-  let previa = null
-  for (const b of bloques) {
-    if (b.tipo === 'repeat' && Array.isArray(b.pasos) && b.pasos.length > 0) {
-      const pasos = []
-      b.pasos.forEach((p, i) => {
-        if (i > 0 && claveMaterial(p) !== claveMaterial(b.pasos[i - 1])) pasos.push(pausa(p))
-        pasos.push(p)
-      })
-      const primero = b.pasos[0]
-      const ultimo = b.pasos[b.pasos.length - 1]
-      if (b.pasos.length > 1 && claveMaterial(primero) !== claveMaterial(ultimo)) {
-        pasos.unshift(pausa(primero)) // cubre la entrada y cada vuelta de la serie
-      } else if (previa !== null && previa !== claveMaterial(primero)) {
-        out.push(pausa(primero))
-      }
-      out.push({ ...b, pasos })
-      previa = claveMaterial(ultimo)
-      continue
-    }
-    if (b.tipo === 'pausa') continue
-    if (previa !== null && previa !== claveMaterial(b)) out.push(pausa(b))
-    out.push(b)
-    previa = claveMaterial(b)
+function pausa(siguiente, cambiaMaterial) {
+  return {
+    tipo: 'pausa',
+    cambiaMaterial,
+    material: Array.isArray(siguiente.material) ? [...siguiente.material] : [],
   }
+}
+
+const primeroDe = (b) => (b.tipo === 'repeat' ? b.pasos[0] : b)
+const ultimoDe = (b) => (b.tipo === 'repeat' ? b.pasos[b.pasos.length - 1] : b)
+
+function pasosConPausas(pasos) {
+  const out = []
+  pasos.forEach((p, i) => {
+    const prev = pasos[i - 1]
+    if (prev && claveMaterial(p) !== claveMaterial(prev) && !esDescanso(p) && !esDescanso(prev)) {
+      out.push(pausa(p, true))
+    }
+    out.push(p)
+  })
+  // Vuelta de la serie: del último paso al primero de la siguiente repetición.
+  const primero = pasos[0]
+  const ultimo = pasos[pasos.length - 1]
+  const vueltaCambia = pasos.length > 1 && claveMaterial(primero) !== claveMaterial(ultimo)
+  return { pasos: out, vueltaCambia, primero, ultimo }
+}
+
+function conPausas(bloques, disciplina) {
+  if (disciplina !== 'swim' || !Array.isArray(bloques)) return bloques || []
+  const validos = bloques.filter((b) => b.tipo !== 'pausa' && (b.tipo !== 'repeat' || (Array.isArray(b.pasos) && b.pasos.length > 0)))
+  const out = []
+  validos.forEach((b, i) => {
+    let bloque = b
+    let pausaDentro = false
+    if (b.tipo === 'repeat') {
+      const r = pasosConPausas(b.pasos)
+      // Si la serie cambia de material al dar la vuelta, la pausa va al inicio
+      // de cada repetición (cubre también la entrada a la serie).
+      if (r.vueltaCambia && !esDescanso(r.primero) && !esDescanso(r.ultimo)) {
+        r.pasos.unshift(pausa(r.primero, true))
+        pausaDentro = true
+      }
+      bloque = { ...b, pasos: r.pasos }
+    }
+    const prev = validos[i - 1]
+    if (prev && !pausaDentro) {
+      const entrada = primeroDe(b)
+      const cambia = claveMaterial(ultimoDe(prev)) !== claveMaterial(entrada)
+      const hayDescanso = esDescanso(ultimoDe(prev)) || esDescanso(entrada)
+      if (cambia || !hayDescanso) out.push(pausa(entrada, cambia))
+    }
+    out.push(bloque)
+  })
   return out
 }
 
+// Compatibilidad con el nombre anterior.
+const conPausasMaterial = conPausas
+
 function textoPausa(p) {
+  if (!p.cambiaMaterial) return 'Siguiente'
   return p.material.length ? `Material · ${p.material.join(', ')}` : 'Quitar material'
 }
 
@@ -158,7 +190,7 @@ function buildIntervalsText(session, options = {}) {
   const incluirNotas = options.incluirNotas === true
   const ws = session.workout_steps || {}
   const disciplinaWs = session.disciplina
-  const bloques = conPausasMaterial(ws.bloques || [], disciplinaWs)
+  const bloques = conPausas(ws.bloques || [], disciplinaWs)
   const material = ws.material || session.material || []
   const notas = ws.notas ?? session.notas ?? ''
   const disciplina = session.disciplina
@@ -201,4 +233,4 @@ function buildIntervalsText(session, options = {}) {
   return sintaxis
 }
 
-module.exports = { buildIntervalsText, cueSeguro, conPausasMaterial, textoPausa }
+module.exports = { buildIntervalsText, cueSeguro, conPausas, conPausasMaterial, textoPausa }

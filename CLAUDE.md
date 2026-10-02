@@ -97,12 +97,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   lo que precede a la duración; lo de detrás se pierde (bug 2026-10, antes `@…`
   al final). `cueSeguro` neutraliza dentro del cue lo que Intervals leería como
   orden (Z4 → Zona 4, 10m → 10 minutos, 1:45 → 1.45, 4x → 4 veces, % ).
-- **Natación: pausa en cada cambio de material** (poner, quitar o cambiar):
-  `conPausasMaterial` intercala `- Material · aletas, tabla 15s press lap` (o
-  `Quitar material`), un paso que acaba al pulsar vuelta. Se calcula al generar
-  el texto (no se guarda) y `WorkoutDetail` la pinta como "Pulsa vuelta · …".
-  Intervals no tiene campo de equipo de natación (petición abierta 2026-08):
-  el material solo llega como texto del paso.
+- **Natación: pausa "pulsar vuelta" entre bloques** (`conPausas`): entre cada
+  bloque y el siguiente se intercala `- Siguiente 15s press lap` (o
+  `Material · aletas, tabla` / `Quitar material` si cambia el material). Se omite
+  si ya hay descanso ahí (serie que acaba en descanso o bloque descanso), salvo
+  cambio de material. Dentro de una serie solo si cambia el material sin
+  descanso de por medio. Se calcula al generar (no se guarda); `WorkoutDetail`
+  la pinta como "Pulsa vuelta…". Intervals no tiene campo de equipo de natación
+  (petición abierta 2026-08): el material solo llega como texto del paso.
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
   se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
   sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
