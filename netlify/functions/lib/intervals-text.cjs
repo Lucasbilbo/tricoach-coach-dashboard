@@ -61,10 +61,50 @@ function cueStr(nombre, material, disciplina) {
   return cue ? `${cue} ` : ''
 }
 
+// Técnica / pies (natación): el reloj no cuenta los largos sin brazada (tabla,
+// patada, ejercicios de técnica). Garmin tiene pasos "drill" que dan la
+// distancia por hecha, pero Intervals no puede mandarlos (petición abierta
+// 2026-08). Así que: en el reloj el paso acaba al PULSAR VUELTA (no se queda
+// esperando largos) y el panel suma esos metros a la actividad (lib/tecnica.js).
+const RE_TECNICA = /(^|[^a-záéíóúñ])(pies|patada|t[eé]cnica|drills?|kick)([^a-záéíóúñ]|$)/i
+
+function esTecnica(paso) {
+  if (!paso || paso.tipo === 'pausa' || paso.tipo === 'repeat') return false
+  const material = Array.isArray(paso.material) ? paso.material.map((x) => String(x).toLowerCase()) : []
+  return material.includes('tabla') || RE_TECNICA.test(paso.nombre || '')
+}
+
+function metrosDistancia(paso) {
+  const c = Number(paso.cantidad) || 0
+  if (paso.unidad === 'mtr' || paso.unidad === 'mts') return c
+  if (paso.unidad === 'km') return c * 1000
+  return 0
+}
+
+// Metros de técnica/pies de una sesión de natación (con repeticiones).
+function metrosTecnica(workoutSteps) {
+  const bloques = (workoutSteps && workoutSteps.bloques) || []
+  let total = 0
+  for (const b of bloques) {
+    if (b.tipo === 'repeat') {
+      const veces = Number(b.repeticiones) || 0
+      for (const p of b.pasos || []) if (esTecnica(p)) total += metrosDistancia(p) * veces
+    } else if (esTecnica(b)) {
+      total += metrosDistancia(b)
+    }
+  }
+  return total
+}
+
 // Línea de un paso: '- <cue> <cantidad><unidad> <objetivo>'
 function lineaPaso(paso, disciplina, cueNombre, objetivo) {
   if (disciplina === 'swim' && esDescanso(paso)) objetivo = ' intensity=rest'
-  return '- ' + cueStr(cueNombre, paso.material, disciplina) + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
+  let cue = cueStr(cueNombre, paso.material, disciplina)
+  if (disciplina === 'swim' && !esDescanso(paso) && esTecnica(paso)) {
+    objetivo = `${objetivo || ''} press lap`
+    cue = `${cue ? `${cue.trim()} · ` : ''}pulsa vuelta al acabar `
+  }
+  return '- ' + cue + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
 }
 
 // 'Calentamiento' + nombre opcional del coach → 'Calentamiento · 75 crol 25 otro'
@@ -271,4 +311,4 @@ function buildIntervalsText(session, options = {}) {
   return sintaxis
 }
 
-module.exports = { buildIntervalsText, cueSeguro, conPausas, conPausasMaterial, textoPausa }
+module.exports = { buildIntervalsText, cueSeguro, conPausas, conPausasMaterial, textoPausa, esTecnica, metrosTecnica }

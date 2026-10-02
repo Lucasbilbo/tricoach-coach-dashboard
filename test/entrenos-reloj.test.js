@@ -85,7 +85,7 @@ test('el texto del paso (nombre + material) va ANTES de la distancia: Intervals 
     disciplina: 'swim',
     workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', unidad: 'mtr', cantidad: 200, material: ['aletas', 'tabla'] }] },
   })
-  assert.equal(t, '- Pies · aletas, tabla 200mtr')
+  assert.equal(t, '- Pies · aletas, tabla · pulsa vuelta al acabar 200mtr press lap')
 })
 
 test('el cue no cuela órdenes a Intervals (zonas, duraciones, ritmos, repeticiones)', () => {
@@ -109,8 +109,8 @@ test('natación: pausa en cada cambio de bloque; con material indica qué poners
       ],
     },
   })
-  assert.equal(t.match(/press lap/g).length, 4) // poner aletas+tabla, siguiente (mismo material), cambiar a palas, quitar
-  assert.match(t, /- Siguiente: 200 metros Pies · aletas, tabla 15s press lap intensity=rest\n\n- Pies/)
+  assert.equal(t.match(/15s press lap intensity=rest/g).length, 4) // poner aletas+tabla, siguiente (mismo material), cambiar a palas, quitar
+  assert.match(t, /- Siguiente: 200 metros Pies · aletas, tabla 15s press lap intensity=rest\n\n- Pies · aletas, tabla · pulsa vuelta al acabar 200mtr press lap/)
   assert.match(t, /- Quita el material · Siguiente: 200 metros 15s press lap intensity=rest\n\n- Vuelta a la calma 200mtr/)
 })
 
@@ -173,4 +173,37 @@ test('la pausa dice qué viene después (con material y series)', () => {
     { tipo: 'repeat', repeticiones: 4, nombre: '', pasos: [{ cantidad: 100, unidad: 'mtr', objetivo_tipo: 'ritmo', objetivo_valor: '1:45', material: [] }, { nombre: 'Descanso', cantidad: 20, unidad: 's', material: [] }] },
   ], 'swim')
   assert.equal(textoPausa(r[1]), 'Quita el material · Siguiente: 4x 100m 1:45')
+})
+
+test('técnica/pies: tabla o nombre (pies, patada, técnica, drill) → acaba al pulsar vuelta', () => {
+  const { esTecnica, metrosTecnica } = require('../netlify/functions/lib/intervals-text.cjs')
+  assert.equal(esTecnica({ nombre: 'Pies', material: ['aletas'] }), true)
+  assert.equal(esTecnica({ nombre: 'Suave', material: ['tabla'] }), true)
+  assert.equal(esTecnica({ nombre: 'Técnica crol', material: [] }), true)
+  assert.equal(esTecnica({ nombre: '6/3/6 drill', material: [] }), true)
+  assert.equal(esTecnica({ nombre: 'Progresivo', material: ['palas'] }), false)
+  assert.equal(esTecnica({ nombre: 'Despiés', material: [] }), false)
+  const t = buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 200, unidad: 'mtr', material: ['aletas', 'tabla'] }] } })
+  assert.equal(t, '- Pies · aletas, tabla · pulsa vuelta al acabar 200mtr press lap')
+  // en carrera, "pies" no cambia nada
+  assert.doesNotMatch(buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 10, unidad: 'min', material: [] }] } }), /press lap/)
+  assert.equal(metrosTecnica({ bloques: [
+    { tipo: 'step', nombre: 'Pies', cantidad: 200, unidad: 'mtr', material: ['tabla'] },
+    { tipo: 'repeat', repeticiones: 4, pasos: [{ nombre: 'técnica', cantidad: 50, unidad: 'mtr', material: [] }, { nombre: 'Descanso', cantidad: 15, unidad: 's', material: [] }] },
+    { tipo: 'step', nombre: 'Z2', cantidad: 400, unidad: 'mtr', material: [] },
+  ] }), 400)
+})
+
+test('el panel suma a la natación del día los metros de técnica de la sesión (una vez)', () => {
+  const { sumarTecnica } = require('../netlify/functions/lib/tecnica.js')
+  const ses = [{ disciplina: 'swim', fecha: '2026-10-02', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 200, unidad: 'mtr', material: ['tabla'] }] } }]
+  const acts = [
+    { disciplina: 'swim', fecha: '2026-10-02', distancia_km: 1.4 },
+    { disciplina: 'swim', fecha: '2026-10-02', distancia_km: 0.5 },
+    { disciplina: 'run', fecha: '2026-10-02', distancia_km: 8 },
+  ]
+  sumarTecnica(acts, ses)
+  assert.deepEqual(acts.map((a) => a.distancia_km), [1.6, 0.5, 8])
+  assert.equal(acts[0].metros_tecnica, 200)
+  assert.equal(acts[1].metros_tecnica, undefined)
 })

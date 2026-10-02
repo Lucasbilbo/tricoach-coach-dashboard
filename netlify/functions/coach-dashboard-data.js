@@ -9,6 +9,7 @@ const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, cargaActividad, fechaMadrid, mapDisciplina } = require('./lib/metrics')
+const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -103,6 +104,16 @@ async function procesarAtleta(athleteId, perfil, env) {
       }),
       { km: 0, horas: 0, tss: 0 }
     )
+
+    // + metros de técnica/pies que el reloj no cuenta (sesión prescrita del día)
+    const nadosSemana = semana
+      .filter((a) => mapDisciplina(a.sport_type || a.type) === 'swim')
+      .map((a) => ({ disciplina: 'swim', fecha: fechaMadrid(new Date(a.start_date)), distancia_km: 0 }))
+    if (nadosSemana.length > 0) {
+      const desde = fechaMadrid(new Date(corteSemana))
+      sumarTecnica(nadosSemana, await sesionesNatacion(supabaseGet, env.supabaseHost, env.SERVICE_KEY, athleteId, desde))
+      totales.km += nadosSemana.reduce((s, a) => s + (a.metros_tecnica || 0), 0) / 1000
+    }
 
     const ultimaFecha = actividades.length > 0 ? new Date(actividades[0].start_date).getTime() : null
     const ultimaDias = ultimaFecha != null ? Math.floor((ahoraMs - ultimaFecha) / DIA_MS) : null

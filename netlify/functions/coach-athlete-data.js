@@ -10,6 +10,7 @@ const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
+const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -326,6 +327,9 @@ exports.handler = async (event) => {
     const actividades = actRes.json
       .map((a) => transformarActividad(a, fcMax))
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
+    // Metros de técnica/pies que el reloj no cuenta (de la sesión prescrita).
+    const desde = fechaMadrid(new Date(after * 1000))
+    sumarTecnica(actividades, await sesionesNatacion(supabaseGet, supabaseHost, SERVICE_KEY, athleteId, desde))
     const semanas = agruparSemanas(actividades)
 
     // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)

@@ -109,6 +109,13 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   calcula al generar (no se guarda); `WorkoutDetail` la pinta como "Pulsa
   vuelta · …". Intervals no tiene campo de equipo ni de técnica (drill) en
   natación (petición abierta 2026-08): el material solo llega como texto.
+- **Natación: técnica / pies** (`esTecnica`: material `tabla` o nombre pies,
+  patada, técnica, drill, kick): el reloj no cuenta largos sin brazada, así que
+  el paso va con `press lap` ("pulsa vuelta al acabar") y no se queda esperando
+  largos. El panel SUMA esos metros a la natación del día: `lib/tecnica.js`
+  (`sumarTecnica`) en `coach-athlete-data` (distancia, volumen, Línea de
+  Transición, ritmo; marca `metros_tecnica`, la tabla muestra "+200 téc.") y en
+  `coach-dashboard-data` (km de 7 días). Cada sesión suma a UNA actividad.
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
   se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
   sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
