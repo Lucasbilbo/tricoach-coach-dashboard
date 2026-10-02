@@ -1,5 +1,5 @@
 import { COLORS, FONTS } from '../lib/theme'
-import { conPausasMaterial } from '../lib/intervalsText'
+import { conPausas } from '../lib/intervalsText'
 
 // Detalle de un entreno prescrito: perfil de intensidad (como lo dibuja el
 // reloj) + lista de pasos. Lo ven el coach (lista de sesiones) y el atleta.
@@ -92,7 +92,7 @@ function formatObjetivo(tipo, valor) {
   return valor
 }
 
-// Pausa automática por cambio de material (natación): acaba al pulsar vuelta.
+// Pausa automática entre bloques de natación: acaba al pulsar vuelta.
 function Pausa({ paso }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
@@ -101,7 +101,7 @@ function Pausa({ paso }) {
       </span>
       <span style={{ width: 8, height: 8, borderRadius: 4, border: `1px solid ${COLORS.textTertiary}`, flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: COLORS.textTertiary, fontStyle: 'italic' }}>
-        Pulsa vuelta · {paso.material?.length ? `ponte ${paso.material.join(', ')}` : 'quítate el material'}
+        {!paso.cambiaMaterial ? 'Pulsa vuelta para seguir' : paso.material?.length ? `Pulsa vuelta · ponte ${paso.material.join(', ')}` : 'Pulsa vuelta · quítate el material'}
       </span>
     </div>
   )
@@ -134,7 +134,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
 
   const disciplina = sesion.disciplina
   const notas = ws.notas || sesion.notas
-  const bloques = conPausasMaterial(ws.bloques, disciplina)
+  const bloques = conPausas(ws.bloques, disciplina)
 
   return (
     <div style={{ marginTop: 8, padding: '12px 12px 8px', background: 'rgba(255,255,255,0.025)', borderRadius: 10 }}>

@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { duracionTotalMin, ritmoValido, ritmosInvalidos } from '../src/components/workout/constants.js'
 
 const require = createRequire(import.meta.url)
-const { buildIntervalsText, cueSeguro, conPausasMaterial } = require('../netlify/functions/lib/intervals-text.cjs')
+const { buildIntervalsText, cueSeguro, conPausas } = require('../netlify/functions/lib/intervals-text.cjs')
 const { eventoBorrado } = require('../netlify/functions/lib/intervals-api.js')
 
 const ses = (disciplina, bloques, extra = {}) => ({ disciplina, workout_steps: { bloques, notas: '', ...extra } })
@@ -96,7 +96,7 @@ test('el cue no cuela órdenes a Intervals (zonas, duraciones, ritmos, repeticio
   assert.equal(cueSeguro('Como siempre 75 c 25 otro', 'swim'), 'Como siempre 75 c 25 otro')
 })
 
-test('natación: pausa hasta pulsar vuelta en cada cambio de material (poner, quitar, cambiar)', () => {
+test('natación: pausa en cada cambio de bloque; con material indica qué ponerse o quitarse', () => {
   const t = buildIntervalsText({
     disciplina: 'swim',
     workout_steps: {
@@ -109,22 +109,41 @@ test('natación: pausa hasta pulsar vuelta en cada cambio de material (poner, qu
       ],
     },
   })
-  assert.equal(t.match(/press lap/g).length, 3) // poner aletas+tabla, cambiar a palas, quitar
+  assert.equal(t.match(/press lap/g).length, 4) // poner aletas+tabla, siguiente (mismo material), cambiar a palas, quitar
+  assert.match(t, /- Siguiente 15s press lap/)
   assert.match(t, /- Material · aletas, tabla 15s press lap\n\n- Pies/)
   assert.match(t, /- Quitar material 15s press lap\n\n- Vuelta a la calma 200mtr/)
 })
 
 test('pausa dentro de una serie con material alterno, una vez por repetición', () => {
-  const [serie] = conPausasMaterial(
+  const [serie] = conPausas(
     [{ tipo: 'repeat', repeticiones: 3, pasos: [{ cantidad: 100, unidad: 'mtr', material: ['pull buoy'] }, { cantidad: 100, unidad: 'mtr', material: [] }] }],
     'swim',
   )
   assert.deepEqual(serie.pasos.map((p) => p.tipo || 'paso'), ['pausa', 'paso', 'pausa', 'paso'])
 })
 
-test('sin cambios de material o fuera de natación no hay pausas', () => {
-  const bloques = [{ tipo: 'step', cantidad: 10, unidad: 'min', material: [] }, { tipo: 'step', cantidad: 5, unidad: 'min', material: [] }]
-  assert.equal(conPausasMaterial(bloques, 'swim').length, 2)
+test('natación: pausa "Siguiente" entre bloques aunque no cambie el material', () => {
+  const bloques = [{ tipo: 'warmup', cantidad: 400, unidad: 'mtr', material: [] }, { tipo: 'step', cantidad: 200, unidad: 'mtr', material: [] }]
+  const r = conPausas(bloques, 'swim')
+  assert.deepEqual(r.map((b) => b.tipo), ['warmup', 'pausa', 'step'])
+  assert.equal(r[1].cambiaMaterial, false)
+  assert.match(buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques } }), /- Siguiente 15s press lap/)
+})
+
+test('natación: sin pausa extra si ya hay descanso (serie que acaba en descanso), salvo cambio de material', () => {
+  const serie = { tipo: 'repeat', repeticiones: 4, pasos: [{ cantidad: 100, unidad: 'mtr', material: [] }, { nombre: 'Descanso', cantidad: 20, unidad: 's', material: [] }] }
+  const sinCambio = conPausas([serie, { tipo: 'step', cantidad: 200, unidad: 'mtr', material: [] }], 'swim')
+  assert.deepEqual(sinCambio.map((b) => b.tipo), ['repeat', 'step'])
+  const conCambio = conPausas([serie, { tipo: 'step', cantidad: 200, unidad: 'mtr', material: ['aletas'] }], 'swim')
+  assert.deepEqual(conCambio.map((b) => b.tipo), ['repeat', 'pausa', 'step'])
+  // dentro de la serie no se añade nada: ya tiene su descanso
+  assert.equal(sinCambio[0].pasos.length, 2)
+  // entrar en una serie desde un paso sin descanso sí lleva pausa
+  assert.deepEqual(conPausas([{ tipo: 'warmup', cantidad: 400, unidad: 'mtr', material: [] }, serie], 'swim').map((b) => b.tipo), ['warmup', 'pausa', 'repeat'])
+})
+
+test('fuera de natación no hay pausas', () => {
   const bici = [{ tipo: 'step', cantidad: 10, unidad: 'min', material: [] }, { tipo: 'step', cantidad: 5, unidad: 'min', material: ['rodillo'] }]
-  assert.equal(conPausasMaterial(bici, 'bike').length, 2)
+  assert.equal(conPausas(bici, 'bike').length, 2)
 })

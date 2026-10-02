@@ -7,4 +7,4 @@
 //
 // El módulo compartido es CommonJS (.cjs) para que las Netlify Functions puedan
 // require()-arlo; Vite lo trata como CJS por la extensión y expone los named.
-export { buildIntervalsText, conPausasMaterial, textoPausa } from '../../netlify/functions/lib/intervals-text.cjs'
+export { buildIntervalsText, conPausas, textoPausa } from '../../netlify/functions/lib/intervals-text.cjs'
