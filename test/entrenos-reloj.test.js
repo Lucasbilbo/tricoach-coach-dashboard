@@ -110,9 +110,8 @@ test('natación: pausa en cada cambio de bloque; con material indica qué poners
     },
   })
   assert.equal(t.match(/press lap/g).length, 4) // poner aletas+tabla, siguiente (mismo material), cambiar a palas, quitar
-  assert.match(t, /- Siguiente 15s press lap/)
-  assert.match(t, /- Material · aletas, tabla 15s press lap\n\n- Pies/)
-  assert.match(t, /- Quitar material 15s press lap\n\n- Vuelta a la calma 200mtr/)
+  assert.match(t, /- Siguiente: 200 metros Pies · aletas, tabla 15s press lap intensity=rest\n\n- Pies/)
+  assert.match(t, /- Quita el material · Siguiente: 200 metros 15s press lap intensity=rest\n\n- Vuelta a la calma 200mtr/)
 })
 
 test('pausa dentro de una serie con material alterno, una vez por repetición', () => {
@@ -128,7 +127,7 @@ test('natación: pausa "Siguiente" entre bloques aunque no cambie el material', 
   const r = conPausas(bloques, 'swim')
   assert.deepEqual(r.map((b) => b.tipo), ['warmup', 'pausa', 'step'])
   assert.equal(r[1].cambiaMaterial, false)
-  assert.match(buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques } }), /- Siguiente 15s press lap/)
+  assert.match(buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques } }), /- Siguiente: 200 metros 15s press lap intensity=rest/)
 })
 
 test('natación: sin pausa extra si ya hay descanso (serie que acaba en descanso), salvo cambio de material', () => {
@@ -146,4 +145,32 @@ test('natación: sin pausa extra si ya hay descanso (serie que acaba en descanso
 test('fuera de natación no hay pausas', () => {
   const bici = [{ tipo: 'step', cantidad: 10, unidad: 'min', material: [] }, { tipo: 'step', cantidad: 5, unidad: 'min', material: ['rodillo'] }]
   assert.equal(conPausas(bici, 'bike').length, 2)
+})
+
+test('natación: los descansos son descanso NATIVO de Garmin (cuenta atrás), no tiempo nadando', () => {
+  const t = buildIntervalsText({
+    disciplina: 'swim',
+    workout_steps: { bloques: [{ tipo: 'repeat', repeticiones: 4, nombre: '', pasos: [
+      { cantidad: 100, unidad: 'mtr', objetivo_tipo: 'zona', objetivo_valor: 'Z3', material: [] },
+      { nombre: 'Descanso', cantidad: 20, unidad: 's', material: [] },
+    ] }] },
+  })
+  assert.match(t, /- 100mtr Z3 Pace\n- Descanso 20s intensity=rest/)
+  // paso por segundos sin nombre ni objetivo dentro de una serie = descanso
+  const t2 = buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ tipo: 'repeat', repeticiones: 2, nombre: '', pasos: [
+    { cantidad: 50, unidad: 'mtr', material: [] }, { cantidad: 15, unidad: 's', material: [] },
+  ] }] } })
+  assert.match(t2, /- 15s intensity=rest/)
+  // en carrera no se toca (el descanso activo es intencionado)
+  const run = buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Descanso', cantidad: 2, unidad: 'min', material: [] }] } })
+  assert.doesNotMatch(run, /intensity=rest/)
+})
+
+test('la pausa dice qué viene después (con material y series)', () => {
+  const { textoPausa } = require('../netlify/functions/lib/intervals-text.cjs')
+  const r = conPausas([
+    { tipo: 'step', cantidad: 200, unidad: 'mtr', nombre: 'Pies', material: ['aletas', 'tabla'] },
+    { tipo: 'repeat', repeticiones: 4, nombre: '', pasos: [{ cantidad: 100, unidad: 'mtr', objetivo_tipo: 'ritmo', objetivo_valor: '1:45', material: [] }, { nombre: 'Descanso', cantidad: 20, unidad: 's', material: [] }] },
+  ], 'swim')
+  assert.equal(textoPausa(r[1]), 'Quita el material · Siguiente: 4x 100m 1:45')
 })

@@ -1,5 +1,5 @@
 import { COLORS, FONTS } from '../lib/theme'
-import { conPausas } from '../lib/intervalsText'
+import { conPausas, textoPausa } from '../lib/intervalsText'
 
 // Detalle de un entreno prescrito: perfil de intensidad (como lo dibuja el
 // reloj) + lista de pasos. Lo ven el coach (lista de sesiones) y el atleta.
@@ -101,7 +101,7 @@ function Pausa({ paso }) {
       </span>
       <span style={{ width: 8, height: 8, borderRadius: 4, border: `1px solid ${COLORS.textTertiary}`, flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: COLORS.textTertiary, fontStyle: 'italic' }}>
-        {!paso.cambiaMaterial ? 'Pulsa vuelta para seguir' : paso.material?.length ? `Pulsa vuelta · ponte ${paso.material.join(', ')}` : 'Pulsa vuelta · quítate el material'}
+        Pulsa vuelta · {textoPausa(paso)}
       </span>
     </div>
   )

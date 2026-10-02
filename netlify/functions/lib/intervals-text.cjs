@@ -63,6 +63,7 @@ function cueStr(nombre, material, disciplina) {
 
 // Línea de un paso: '- <cue> <cantidad><unidad> <objetivo>'
 function lineaPaso(paso, disciplina, cueNombre, objetivo) {
+  if (disciplina === 'swim' && esDescanso(paso)) objetivo = ' intensity=rest'
   return '- ' + cueStr(cueNombre, paso.material, disciplina) + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
 }
 
@@ -109,14 +110,44 @@ function claveMaterial(paso) {
 }
 
 function esDescanso(paso) {
-  return Boolean(paso) && /^\s*(descanso|desc\b|rec\b|recup|pausa)/i.test(paso.nombre || '')
+  if (!paso) return false
+  if (/^\s*(descanso|desc\b|rec\b|recup|pausa)/i.test(paso.nombre || '')) return true
+  // En natación un paso por segundos sin nombre ni objetivo es un descanso.
+  return paso.unidad === 's' && !paso.objetivo_tipo && !(paso.nombre && String(paso.nombre).trim())
 }
 
-function pausa(siguiente, cambiaMaterial) {
+const UNIDAD_CORTA = { mtr: 'm', km: 'km', min: "'", s: '"', h: 'h' }
+
+function describirPaso(p) {
+  const partes = [`${p.cantidad}${UNIDAD_CORTA[p.unidad] || p.unidad || ''}`]
+  if (p.objetivo_valor && (p.objetivo_tipo === 'zona' || p.objetivo_tipo === 'ritmo')) partes.push(p.objetivo_valor)
+  if (p.objetivo_valor && p.objetivo_tipo === 'fc') partes.push(`${p.objetivo_valor}%`)
+  if (p.nombre && String(p.nombre).trim() && !esDescanso(p)) partes.push(String(p.nombre).trim())
+  let txt = partes.join(' ')
+  if (Array.isArray(p.material) && p.material.length) txt += ` · ${p.material.join(', ')}`
+  return txt
+}
+
+// Lo que viene después de la pausa, en corto: "300m Progresivo · palas, aletas",
+// "4x 100m Z3". Garmin corta las notas largas: máximo ~60 caracteres.
+function describirBloque(b) {
+  if (!b) return ''
+  let txt
+  if (b.tipo === 'repeat') {
+    const activos = (b.pasos || []).filter((p) => p.tipo !== 'pausa' && !esDescanso(p))
+    txt = `${b.repeticiones}x ${activos.map(describirPaso).join(' / ')}`
+  } else {
+    txt = describirPaso(b)
+  }
+  return txt.length > 60 ? `${txt.slice(0, 59).trim()}…` : txt
+}
+
+function pausa(siguiente, cambiaMaterial, bloqueSiguiente) {
   return {
     tipo: 'pausa',
     cambiaMaterial,
     material: Array.isArray(siguiente.material) ? [...siguiente.material] : [],
+    siguiente: describirBloque(bloqueSiguiente || siguiente),
   }
 }
 
@@ -161,7 +192,7 @@ function conPausas(bloques, disciplina) {
       const entrada = primeroDe(b)
       const cambia = claveMaterial(ultimoDe(prev)) !== claveMaterial(entrada)
       const hayDescanso = esDescanso(ultimoDe(prev)) || esDescanso(entrada)
-      if (cambia || !hayDescanso) out.push(pausa(entrada, cambia))
+      if (cambia || !hayDescanso) out.push(pausa(entrada, cambia, b))
     }
     out.push(bloque)
   })
@@ -171,13 +202,20 @@ function conPausas(bloques, disciplina) {
 // Compatibilidad con el nombre anterior.
 const conPausasMaterial = conPausas
 
+// Texto de la pausa: qué hacer y qué viene. Lo usan el reloj (vía cueSeguro) y
+// el panel. "Quita el material · Siguiente: 200m Soltar" / "Siguiente: 300m
+// Progresivo · palas, aletas" (el material del siguiente ya dice qué ponerse).
 function textoPausa(p) {
-  if (!p.cambiaMaterial) return 'Siguiente'
-  return p.material.length ? `Material · ${p.material.join(', ')}` : 'Quitar material'
+  const partes = []
+  if (p.cambiaMaterial && !(p.material && p.material.length)) partes.push('Quita el material')
+  if (p.siguiente) partes.push(`Siguiente: ${p.siguiente}`)
+  return partes.join(' · ') || 'Siguiente'
 }
 
+// Descanso NATIVO de Garmin (intensity=rest): en piscina es la cuenta atrás de
+// descanso, no tiempo nadando. La pausa además acaba al pulsar vuelta.
 function lineaPausa(p, disciplina) {
-  return `- ${cueSeguro(textoPausa(p), disciplina)} ${SEG_PAUSA}s press lap`
+  return `- ${cueSeguro(textoPausa(p), disciplina)} ${SEG_PAUSA}s press lap intensity=rest`
 }
 
 // Construye el texto de un entrenamiento. Los bloques se separan con \n\n para
