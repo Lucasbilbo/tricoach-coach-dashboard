@@ -32,12 +32,11 @@ test('ritmo exacto y rango', () => {
   assert.equal(parsearEntreno("6x(1km 4:20 / 90\")", 'run').bloques[0].pasos[0].objetivo_valor, '4:20')
 })
 
-test('natación: material, cal/vc explícitos y zona pasa al nombre', () => {
+test('natación: material, cal/vc explícitos y zona de ritmo', () => {
   const { bloques } = parsearEntreno('cal 500m palas aletas + 4x(100m 1:45 / 20" descanso) + 300m Z1 pull + vc 200m', 'swim')
   assert.deepEqual(bloques.map((b) => b.tipo), ['warmup', 'repeat', 'step', 'cooldown'])
   assert.deepEqual(bloques[0].material, ['palas', 'aletas'])
-  assert.equal(bloques[2].objetivo_tipo, null)
-  assert.equal(bloques[2].nombre, 'Z1')
+  assert.deepEqual([bloques[2].objetivo_tipo, bloques[2].objetivo_valor], ['zona', 'Z1'])
   assert.deepEqual(bloques[2].material, ['pull buoy'])
 })
 
@@ -56,4 +55,50 @@ test('errores legibles', () => {
   assert.equal(r.errores.length, 2)
   assert.match(r.errores[1], /bla/)
   assert.deepEqual(parsearEntreno('', 'run').errores, ['Escribe el entrenamiento'])
+})
+
+test('series sin paréntesis: 8x100m 1:45 es una serie, no un paso llamado "8x"', () => {
+  const [b] = parsearEntreno('8x100m 1:45', 'swim').bloques
+  assert.equal(b.tipo, 'repeat')
+  assert.equal(b.repeticiones, 8)
+  assert.deepEqual([b.pasos[0].cantidad, b.pasos[0].unidad, b.pasos[0].objetivo_valor], [100, 'mtr', '1:45'])
+})
+
+test('serie sin paréntesis con descanso (rec / r / descanso)', () => {
+  for (const t of ['8x100m 1:45 rec 20"', '8x100m 1:45 r20"', '8x100m 1:45 descanso 20s']) {
+    const [b] = parsearEntreno(t, 'swim').bloques
+    assert.equal(b.pasos.length, 2, t)
+    assert.deepEqual([b.pasos[1].cantidad, b.pasos[1].unidad, b.pasos[1].nombre], [20, 's', 'Descanso'], t)
+  }
+  const run = parsearEntreno("15' Z1 + 6x3' Z4 r2' + 10' Z1", 'run').bloques
+  assert.deepEqual(run.map((b) => b.tipo), ['warmup', 'repeat', 'cooldown'])
+  assert.equal(run[1].pasos[1].cantidad, 2)
+})
+
+test('forma inversa: 100m x 8 a 1:45', () => {
+  const [b] = parsearEntreno('100m x 8 a 1:45', 'swim').bloques
+  assert.equal(b.repeticiones, 8)
+  assert.equal(b.pasos[0].objetivo_valor, '1:45')
+  assert.equal(b.pasos[0].nombre, null)
+})
+
+test('natación: número suelto son metros; en otras disciplinas pide unidad', () => {
+  const { bloques, errores } = parsearEntreno('400 cal + 4x100 1:45 + 200 vc', 'swim')
+  assert.equal(errores.length, 0)
+  assert.deepEqual(bloques.map((b) => b.tipo), ['warmup', 'repeat', 'cooldown'])
+  assert.equal(bloques[0].cantidad, 400)
+  assert.match(parsearEntreno('45 Z2', 'run').errores[0], /Falta la duración/)
+})
+
+test('comas y ; separan bloques; "con palas" no deja "con" en el nombre', () => {
+  const r = parsearEntreno('calentamiento 15min, 5x1km 4:30, vc 10min', 'run')
+  assert.deepEqual(r.bloques.map((b) => b.tipo), ['warmup', 'repeat', 'cooldown'])
+  const s = parsearEntreno('8x100m 1:50 con palas', 'swim').bloques[0].pasos[0]
+  assert.equal(s.nombre, null)
+  assert.deepEqual(s.material, ['palas'])
+})
+
+test('natación: zona de ritmo y ritmo llegan a Intervals', () => {
+  assert.match(texto('swim', '10x100m Z3'), /- 100mtr Z3 Pace/)
+  assert.match(texto('swim', '8x100m 1:45-1:50 rec 20"'), /- 100mtr 1:45-1:50\/100m Pace/)
 })
