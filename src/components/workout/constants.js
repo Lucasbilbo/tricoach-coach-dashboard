@@ -38,6 +38,7 @@ export const OBJETIVOS = {
   swim: [
     { value: '', label: 'Sin objetivo' },
     { value: 'ritmo', label: 'Ritmo /100m' },
+    { value: 'zona', label: 'Zona (ritmo)' },
     { value: 'fc', label: 'FC %' },
   ],
   // Bici solo por pulso: los atletas no tienen potenciómetro (2026-10). La
@@ -142,4 +143,13 @@ export function duracionTotalMin(bloques) {
     }
   }
   return total > 0 ? Math.round(total) : null
+}
+
+// Zona de ritmo en natación: Intervals la resuelve con el ritmo umbral (CSS)
+// de natación del atleta. Sin él no hay objetivo que medir.
+export function usaZonaNatacion(bloques, disciplina) {
+  if (disciplina !== 'swim') return false
+  return (bloques || [])
+    .flatMap((b) => (b.tipo === 'repeat' ? b.pasos || [] : [b]))
+    .some((p) => p.objetivo_tipo === 'zona')
 }

@@ -90,7 +90,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - **Bici y carrera por PULSO**: la zona se envía como `Zn HR` (también en bici) y
   el objetivo por defecto es `Z1 HR`. Los atletas no tienen potenciómetro; el
   builder no ofrece potencia (se sigue generando para sesiones antiguas).
-  **Natación sin objetivo por defecto** (antes `Z1 Pace` → avisos falsos).
+  **Natación sin objetivo por defecto** (el coach sí puede elegir ritmo /100m, zona de ritmo —`Zn Pace`, requiere ritmo umbral de natación en Intervals— o FC %) (antes `Z1 Pace` → avisos falsos).
 - Ritmo exacto o rango (`4:50-5:10/km Pace`), validado en el builder.
 - El material de cada paso va en el texto del paso (`@Z1 · palas, aletas`).
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
@@ -106,7 +106,11 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 ### Atajos del coach (2026-10)
 - **Escritura rápida** (`workout/parser.js`, `AtajosBuilder.jsx`): una línea →
   bloques. `15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1`; `'` min, `"` seg, m/km, Z1–Z5,
-  ritmo `4:50-5:10`, `cal`/`vc`, material de natación. Con 3+ bloques el primero
+  ritmo `4:50-5:10`, `cal`/`vc`, material de natación. Series también SIN
+  paréntesis: `8x100m 1:45 rec 20"`, `6x3' Z4 r2'`, `100m x 8 a 1:45` (el
+  descanso `rec`/`r`/`descanso` es el 2º paso). En natación un número suelto son
+  metros (`400 cal`). Bloques separados por `+`, `;` o `, `. Nunca interpretar
+  en silencio: si queda un `Nx` en el nombre del paso, da error. Con 3+ bloques el primero
   y el último sueltos pasan a calentamiento / vuelta a la calma. Tests: `test/parser.test.js`.
 - **Duplicar** sesión (SessionsList): copia sin id ni envío, solo falta el día.
 - **Plantillas**: tabla `coach_plantillas` (migración 008, RLS `coach_id = auth.uid()`).

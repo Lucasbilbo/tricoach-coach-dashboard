@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, inputStyle } from '../lib/theme'
 import { buildIntervalsText } from '../lib/intervalsText'
-import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos } from './workout/constants'
+import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import AtajosBuilder from './workout/AtajosBuilder'
@@ -553,6 +553,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           >
             {preview || '(sin bloques aún)'}
           </pre>
+          {usaZonaNatacion(form.bloques, form.disciplina) && (
+            <p style={{ margin: '-8px 0 16px', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.45 }}>
+              La zona de natación se manda como zona de ritmo: necesita el ritmo umbral de natación
+              configurado en Intervals. Si el atleta no lo tiene, usa ritmo /100m.
+            </p>
+          )}
 
           {/* Mensajes de estado */}
           {exitoGarmin && (

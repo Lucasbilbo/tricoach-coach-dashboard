@@ -87,7 +87,7 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
               generar()
             }
           }}
-          placeholder={disciplina === 'swim' ? 'cal 400m + 8x(100m 1:45 / 20" rec) + 200m suave' : "15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1"}
+          placeholder={disciplina === 'swim' ? 'cal 400 + 8x100 1:45 rec 20" + 200 suave' : "15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1"}
           style={{ ...inputStyle, flex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}
         />
         <button type="button" onClick={generar} style={{ ...miniBtn, padding: '0 12px', color: COLORS.accent, borderColor: COLORS.accent }}>
@@ -95,7 +95,7 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
         </button>
       </div>
       <p style={{ margin: '6px 0 0', fontSize: 11, color: COLORS.textTertiary, lineHeight: 1.5 }}>
-        ' minutos · " segundos · m/km distancia · Z1–Z5 · ritmo 4:50-5:10 · Nx( … / … ) series. Reemplaza los bloques.
+        ' minutos · " segundos · m/km distancia (en natación, un número suelto son metros) · Z1–Z5 · ritmo 4:50-5:10 · series: 8x100m 1:45 rec 20" o Nx( … / … ). Reemplaza los bloques.
       </p>
       {errores.length > 0 && (
         <ul style={{ margin: '6px 0 0', paddingLeft: 18, color: COLORS.error, fontSize: 12 }}>
