@@ -24,13 +24,46 @@ function defaultZona(disciplina) {
 }
 
 const normalizarZona = (v) => (v && v.includes('-') ? v.split('-')[0] : v)
-// Texto del paso que se ve en el reloj: nombre + material del paso (p. ej.
-// 'Z1 · palas, aletas'). Antes el material de cada paso se perdía.
-function nombreStr(nombre, material) {
+// Texto del paso que se ve en el reloj (el "cue"): nombre + material del paso
+// (p. ej. 'Pies · aletas, tabla'). Intervals SOLO toma como cue el texto que va
+// ANTES de la duración/distancia; lo que va detrás no llega al reloj (bug
+// 2026-10: material y nombres se perdían). Por eso el cue va delante y se
+// neutraliza lo que Intervals leería como orden: zonas (Z4), duraciones o
+// distancias (10m, 400mtr, 20"), porcentajes, ritmos (1:45) y repeticiones (4x).
+const PALABRA_UNIDAD = {
+  km: 'kilómetros', mtr: 'metros', mts: 'metros', m: null, s: 'segundos', seg: 'segundos',
+  h: 'horas', min: 'minutos', "'": 'minutos', '’': 'minutos', '"': 'segundos', '”': 'segundos',
+  '%': 'por ciento', w: 'vatios', rpm: 'pedaladas', bpm: 'pulsaciones',
+}
+
+function cueSeguro(texto, disciplina) {
+  return String(texto)
+    .replace(/[@^]/g, ' ')
+    .replace(/<!>/g, ' ')
+    .replace(/\bz\s?([1-7])\b/gi, 'Zona $1')
+    .replace(/(\d+(?:[.,]\d+)?)\s*(km|mtr|mts|min|seg|rpm|bpm|m|s|h|w|'|’|"|”|%)(?![a-záéíóúñ])/gi, (_, n, u) => {
+      const k = u.toLowerCase()
+      const palabra = k === 'm' ? (disciplina === 'swim' ? 'metros' : 'minutos') : PALABRA_UNIDAD[k]
+      return `${n} ${palabra}`
+    })
+    .replace(/(\d{1,2}):([0-5]\d)/g, '$1.$2')
+    .replace(/\b(\d+)\s*[x×](?![a-záéíóúñ])/gi, '$1 veces ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function cueStr(nombre, material, disciplina) {
   const partes = []
   if (nombre && String(nombre).trim()) partes.push(String(nombre).trim())
   if (Array.isArray(material) && material.length > 0) partes.push(material.join(', '))
-  return partes.length ? ` @${partes.join(' · ')}` : ''
+  if (!partes.length) return ''
+  const cue = cueSeguro(partes.join(' · '), disciplina)
+  return cue ? `${cue} ` : ''
+}
+
+// Línea de un paso: '- <cue> <cantidad><unidad> <objetivo>'
+function lineaPaso(paso, disciplina, cueNombre, objetivo) {
+  return '- ' + cueStr(cueNombre, paso.material, disciplina) + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
 }
 
 // 'Calentamiento' + nombre opcional del coach → 'Calentamiento · 75 crol 25 otro'
@@ -84,17 +117,17 @@ function buildIntervalsText(session, options = {}) {
   for (const bloque of bloques) {
     if (bloque.tipo === 'warmup') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(conPrefijo('Calentamiento', bloque.nombre), bloque.material))
+      partes.push(lineaPaso(bloque, disciplina, conPrefijo('Calentamiento', bloque.nombre), obj))
     } else if (bloque.tipo === 'cooldown') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(conPrefijo('Vuelta a la calma', bloque.nombre), bloque.material))
+      partes.push(lineaPaso(bloque, disciplina, conPrefijo('Vuelta a la calma', bloque.nombre), obj))
     } else if (bloque.tipo === 'step') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
-      partes.push('- ' + bloque.cantidad + unidadIntervals(bloque.unidad) + obj + nombreStr(bloque.nombre, bloque.material))
+      partes.push(lineaPaso(bloque, disciplina, bloque.nombre, obj))
     } else if (bloque.tipo === 'repeat') {
       const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
       for (const paso of (bloque.pasos || [])) {
-        lines.push('- ' + paso.cantidad + unidadIntervals(paso.unidad) + objetivoStr(paso, disciplina) + nombreStr(paso.nombre, paso.material))
+        lines.push(lineaPaso(paso, disciplina, paso.nombre, objetivoStr(paso, disciplina)))
       }
       partes.push(lines.join('\n'))
     }
@@ -107,4 +140,4 @@ function buildIntervalsText(session, options = {}) {
   return sintaxis
 }
 
-module.exports = { buildIntervalsText }
+module.exports = { buildIntervalsText, cueSeguro }

@@ -14,7 +14,7 @@ test('cambios de Leire en una línea', () => {
   assert.deepEqual(bloques.map((b) => b.tipo), ['warmup', 'repeat', 'cooldown'])
   assert.equal(bloques[1].repeticiones, 8)
   assert.equal(texto('run', "15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1"),
-    '- 15m Z1 HR @Calentamiento\n\nSerie 8x\n- 1m Z5 HR\n- 1m Z1 HR\n\n- 10m Z1 HR @Vuelta a la calma')
+    '- Calentamiento 15m Z1 HR\n\nSerie 8x\n- 1m Z5 HR\n- 1m Z1 HR\n\n- Vuelta a la calma 10m Z1 HR')
 })
 
 test('distancias, segundos y descanso con nombre', () => {

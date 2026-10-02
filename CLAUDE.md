@@ -92,7 +92,11 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   builder no ofrece potencia (se sigue generando para sesiones antiguas).
   **Natación sin objetivo por defecto** (el coach sí puede elegir ritmo /100m, zona de ritmo —`Zn Pace`, requiere ritmo umbral de natación en Intervals— o FC %) (antes `Z1 Pace` → avisos falsos).
 - Ritmo exacto o rango (`4:50-5:10/km Pace`), validado en el builder.
-- El material de cada paso va en el texto del paso (`@Z1 · palas, aletas`).
+- El material de cada paso va en el texto del paso. **El texto (cue) va DELANTE
+  de la duración** (`- Pies · aletas, tabla 200mtr`): Intervals solo lleva al reloj
+  lo que precede a la duración; lo de detrás se pierde (bug 2026-10, antes `@…`
+  al final). `cueSeguro` neutraliza dentro del cue lo que Intervals leería como
+  orden (Z4 → Zona 4, 10m → 10 minutos, 1:45 → 1.45, 4x → 4 veces, % ).
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
   se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
   sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
