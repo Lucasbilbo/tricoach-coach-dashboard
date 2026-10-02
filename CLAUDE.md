@@ -97,12 +97,25 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   lo que precede a la duración; lo de detrás se pierde (bug 2026-10, antes `@…`
   al final). `cueSeguro` neutraliza dentro del cue lo que Intervals leería como
   orden (Z4 → Zona 4, 10m → 10 minutos, 1:45 → 1.45, 4x → 4 veces, % ).
-- **Natación: pausa en cada cambio de material** (poner, quitar o cambiar):
-  `conPausasMaterial` intercala `- Material · aletas, tabla 15s press lap` (o
-  `Quitar material`), un paso que acaba al pulsar vuelta. Se calcula al generar
-  el texto (no se guarda) y `WorkoutDetail` la pinta como "Pulsa vuelta · …".
-  Intervals no tiene campo de equipo de natación (petición abierta 2026-08):
-  el material solo llega como texto del paso.
+- **Natación: descansos NATIVOS** (`intensity=rest`): los pasos de descanso
+  (nombre descanso/rec/pausa, o por segundos sin nombre ni objetivo) se mandan
+  como descanso de Garmin (cuenta atrás), no como tiempo nadando. Solo natación.
+- **Natación: pausa "pulsar vuelta" entre bloques** (`conPausas`): entre cada
+  bloque y el siguiente, `- Siguiente: 300 metros Progresivo · palas, aletas 15s
+  press lap intensity=rest` (con `Quita el material ·` delante si toca quitarlo).
+  Dice qué viene (≤60 caracteres, Garmin corta). Se omite si ya hay descanso ahí
+  (serie que acaba en descanso o bloque descanso), salvo cambio de material.
+  Dentro de una serie solo si cambia el material sin descanso de por medio. Se
+  calcula al generar (no se guarda); `WorkoutDetail` la pinta como "Pulsa
+  vuelta · …". Intervals no tiene campo de equipo ni de técnica (drill) en
+  natación (petición abierta 2026-08): el material solo llega como texto.
+- **Natación: técnica / pies** (`esTecnica`: material `tabla` o nombre pies,
+  patada, técnica, drill, kick): el reloj no cuenta largos sin brazada, así que
+  el paso va con `press lap` ("pulsa vuelta al acabar") y no se queda esperando
+  largos. El panel SUMA esos metros a la natación del día: `lib/tecnica.js`
+  (`sumarTecnica`) en `coach-athlete-data` (distancia, volumen, Línea de
+  Transición, ritmo; marca `metros_tecnica`, la tabla muestra "+200 téc.") y en
+  `coach-dashboard-data` (km de 7 días). Cada sesión suma a UNA actividad.
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
   se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
   sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay

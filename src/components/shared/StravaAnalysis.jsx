@@ -344,7 +344,10 @@ export default function StravaAnalysis({
                     </span>
                   </span>
                   <span style={{ display: 'flex', gap: 14, marginTop: 4, fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textSecondary }}>
-                    <span style={{ color: COLORS.textPrimary }}>{act.distancia_km != null ? `${act.distancia_km} km` : '—'}</span>
+                    <span style={{ color: COLORS.textPrimary }} title={act.metros_tecnica ? `Incluye ${act.metros_tecnica} m de técnica/pies que el reloj no cuenta` : undefined}>
+                      {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
+                      {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary }}> · {act.metros_tecnica} m téc.</span> : null}
+                    </span>
                     <span>{formatEffort(act)}</span>
                     <span title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined} style={{ color: COLORS.load }}>
                       TSS {tssTexto(act)}
@@ -402,8 +405,12 @@ export default function StravaAnalysis({
                 <span style={{ fontSize: 14, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
                 </span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>
+                <span
+                  style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}
+                  title={act.metros_tecnica ? `Incluye ${act.metros_tecnica} m de técnica/pies que el reloj no cuenta` : undefined}
+                >
                   {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
+                  {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary, fontSize: 11 }}> +{act.metros_tecnica} téc.</span> : null}
                 </span>
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>

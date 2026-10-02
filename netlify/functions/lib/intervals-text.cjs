@@ -61,9 +61,50 @@ function cueStr(nombre, material, disciplina) {
   return cue ? `${cue} ` : ''
 }
 
+// Técnica / pies (natación): el reloj no cuenta los largos sin brazada (tabla,
+// patada, ejercicios de técnica). Garmin tiene pasos "drill" que dan la
+// distancia por hecha, pero Intervals no puede mandarlos (petición abierta
+// 2026-08). Así que: en el reloj el paso acaba al PULSAR VUELTA (no se queda
+// esperando largos) y el panel suma esos metros a la actividad (lib/tecnica.js).
+const RE_TECNICA = /(^|[^a-záéíóúñ])(pies|patada|t[eé]cnica|drills?|kick)([^a-záéíóúñ]|$)/i
+
+function esTecnica(paso) {
+  if (!paso || paso.tipo === 'pausa' || paso.tipo === 'repeat') return false
+  const material = Array.isArray(paso.material) ? paso.material.map((x) => String(x).toLowerCase()) : []
+  return material.includes('tabla') || RE_TECNICA.test(paso.nombre || '')
+}
+
+function metrosDistancia(paso) {
+  const c = Number(paso.cantidad) || 0
+  if (paso.unidad === 'mtr' || paso.unidad === 'mts') return c
+  if (paso.unidad === 'km') return c * 1000
+  return 0
+}
+
+// Metros de técnica/pies de una sesión de natación (con repeticiones).
+function metrosTecnica(workoutSteps) {
+  const bloques = (workoutSteps && workoutSteps.bloques) || []
+  let total = 0
+  for (const b of bloques) {
+    if (b.tipo === 'repeat') {
+      const veces = Number(b.repeticiones) || 0
+      for (const p of b.pasos || []) if (esTecnica(p)) total += metrosDistancia(p) * veces
+    } else if (esTecnica(b)) {
+      total += metrosDistancia(b)
+    }
+  }
+  return total
+}
+
 // Línea de un paso: '- <cue> <cantidad><unidad> <objetivo>'
 function lineaPaso(paso, disciplina, cueNombre, objetivo) {
-  return '- ' + cueStr(cueNombre, paso.material, disciplina) + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
+  if (disciplina === 'swim' && esDescanso(paso)) objetivo = ' intensity=rest'
+  let cue = cueStr(cueNombre, paso.material, disciplina)
+  if (disciplina === 'swim' && !esDescanso(paso) && esTecnica(paso)) {
+    objetivo = `${objetivo || ''} press lap`
+    cue = `${cue ? `${cue.trim()} · ` : ''}pulsa vuelta al acabar `
+  }
+  return '- ' + cue + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
 }
 
 // 'Calentamiento' + nombre opcional del coach → 'Calentamiento · 75 crol 25 otro'
@@ -94,11 +135,13 @@ function objetivoStr(step, disciplina) {
   return ''
 }
 
-// Natación: cada vez que cambia el material entre un paso y el siguiente
-// (ponerlo, quitarlo o cambiarlo) se intercala una PAUSA que termina al pulsar
-// vuelta ("press lap"), para tener tiempo de cambiarse. Se calcula al generar,
-// sin tocar lo guardado. Dentro de una serie: entre pasos con distinto material
-// y, si el último y el primero difieren, al inicio de cada repetición.
+// Natación: entre cada bloque y el siguiente se intercala una PAUSA que termina
+// al pulsar vuelta ("press lap"): el nadador para en la pared, se pone o quita
+// material y arranca cuando quiere. Se omite si ahí ya hay un descanso (serie
+// que acaba en descanso, o bloque que es un descanso), SALVO que cambie el
+// material: un 20" de serie no da para ponerse aletas. Dentro de una serie solo
+// se añade si cambia el material entre pasos sin descanso de por medio.
+// Se calcula al generar el texto; no se guarda.
 const SEG_PAUSA = 15
 
 function claveMaterial(paso) {
@@ -106,46 +149,113 @@ function claveMaterial(paso) {
   return m.map((x) => String(x).toLowerCase()).sort().join('|')
 }
 
-function pausa(paso) {
-  return { tipo: 'pausa', material: Array.isArray(paso.material) ? [...paso.material] : [] }
+function esDescanso(paso) {
+  if (!paso) return false
+  if (/^\s*(descanso|desc\b|rec\b|recup|pausa)/i.test(paso.nombre || '')) return true
+  // En natación un paso por segundos sin nombre ni objetivo es un descanso.
+  return paso.unidad === 's' && !paso.objetivo_tipo && !(paso.nombre && String(paso.nombre).trim())
 }
 
-function conPausasMaterial(bloques, disciplina) {
-  if (disciplina !== 'swim' || !Array.isArray(bloques)) return bloques || []
-  const out = []
-  let previa = null
-  for (const b of bloques) {
-    if (b.tipo === 'repeat' && Array.isArray(b.pasos) && b.pasos.length > 0) {
-      const pasos = []
-      b.pasos.forEach((p, i) => {
-        if (i > 0 && claveMaterial(p) !== claveMaterial(b.pasos[i - 1])) pasos.push(pausa(p))
-        pasos.push(p)
-      })
-      const primero = b.pasos[0]
-      const ultimo = b.pasos[b.pasos.length - 1]
-      if (b.pasos.length > 1 && claveMaterial(primero) !== claveMaterial(ultimo)) {
-        pasos.unshift(pausa(primero)) // cubre la entrada y cada vuelta de la serie
-      } else if (previa !== null && previa !== claveMaterial(primero)) {
-        out.push(pausa(primero))
-      }
-      out.push({ ...b, pasos })
-      previa = claveMaterial(ultimo)
-      continue
-    }
-    if (b.tipo === 'pausa') continue
-    if (previa !== null && previa !== claveMaterial(b)) out.push(pausa(b))
-    out.push(b)
-    previa = claveMaterial(b)
+const UNIDAD_CORTA = { mtr: 'm', km: 'km', min: "'", s: '"', h: 'h' }
+
+function describirPaso(p) {
+  const partes = [`${p.cantidad}${UNIDAD_CORTA[p.unidad] || p.unidad || ''}`]
+  if (p.objetivo_valor && (p.objetivo_tipo === 'zona' || p.objetivo_tipo === 'ritmo')) partes.push(p.objetivo_valor)
+  if (p.objetivo_valor && p.objetivo_tipo === 'fc') partes.push(`${p.objetivo_valor}%`)
+  if (p.nombre && String(p.nombre).trim() && !esDescanso(p)) partes.push(String(p.nombre).trim())
+  let txt = partes.join(' ')
+  if (Array.isArray(p.material) && p.material.length) txt += ` · ${p.material.join(', ')}`
+  return txt
+}
+
+// Lo que viene después de la pausa, en corto: "300m Progresivo · palas, aletas",
+// "4x 100m Z3". Garmin corta las notas largas: máximo ~60 caracteres.
+function describirBloque(b) {
+  if (!b) return ''
+  let txt
+  if (b.tipo === 'repeat') {
+    const activos = (b.pasos || []).filter((p) => p.tipo !== 'pausa' && !esDescanso(p))
+    txt = `${b.repeticiones}x ${activos.map(describirPaso).join(' / ')}`
+  } else {
+    txt = describirPaso(b)
   }
+  return txt.length > 60 ? `${txt.slice(0, 59).trim()}…` : txt
+}
+
+function pausa(siguiente, cambiaMaterial, bloqueSiguiente) {
+  return {
+    tipo: 'pausa',
+    cambiaMaterial,
+    material: Array.isArray(siguiente.material) ? [...siguiente.material] : [],
+    siguiente: describirBloque(bloqueSiguiente || siguiente),
+  }
+}
+
+const primeroDe = (b) => (b.tipo === 'repeat' ? b.pasos[0] : b)
+const ultimoDe = (b) => (b.tipo === 'repeat' ? b.pasos[b.pasos.length - 1] : b)
+
+function pasosConPausas(pasos) {
+  const out = []
+  pasos.forEach((p, i) => {
+    const prev = pasos[i - 1]
+    if (prev && claveMaterial(p) !== claveMaterial(prev) && !esDescanso(p) && !esDescanso(prev)) {
+      out.push(pausa(p, true))
+    }
+    out.push(p)
+  })
+  // Vuelta de la serie: del último paso al primero de la siguiente repetición.
+  const primero = pasos[0]
+  const ultimo = pasos[pasos.length - 1]
+  const vueltaCambia = pasos.length > 1 && claveMaterial(primero) !== claveMaterial(ultimo)
+  return { pasos: out, vueltaCambia, primero, ultimo }
+}
+
+function conPausas(bloques, disciplina) {
+  if (disciplina !== 'swim' || !Array.isArray(bloques)) return bloques || []
+  const validos = bloques.filter((b) => b.tipo !== 'pausa' && (b.tipo !== 'repeat' || (Array.isArray(b.pasos) && b.pasos.length > 0)))
+  const out = []
+  validos.forEach((b, i) => {
+    let bloque = b
+    let pausaDentro = false
+    if (b.tipo === 'repeat') {
+      const r = pasosConPausas(b.pasos)
+      // Si la serie cambia de material al dar la vuelta, la pausa va al inicio
+      // de cada repetición (cubre también la entrada a la serie).
+      if (r.vueltaCambia && !esDescanso(r.primero) && !esDescanso(r.ultimo)) {
+        r.pasos.unshift(pausa(r.primero, true))
+        pausaDentro = true
+      }
+      bloque = { ...b, pasos: r.pasos }
+    }
+    const prev = validos[i - 1]
+    if (prev && !pausaDentro) {
+      const entrada = primeroDe(b)
+      const cambia = claveMaterial(ultimoDe(prev)) !== claveMaterial(entrada)
+      const hayDescanso = esDescanso(ultimoDe(prev)) || esDescanso(entrada)
+      if (cambia || !hayDescanso) out.push(pausa(entrada, cambia, b))
+    }
+    out.push(bloque)
+  })
   return out
 }
 
+// Compatibilidad con el nombre anterior.
+const conPausasMaterial = conPausas
+
+// Texto de la pausa: qué hacer y qué viene. Lo usan el reloj (vía cueSeguro) y
+// el panel. "Quita el material · Siguiente: 200m Soltar" / "Siguiente: 300m
+// Progresivo · palas, aletas" (el material del siguiente ya dice qué ponerse).
 function textoPausa(p) {
-  return p.material.length ? `Material · ${p.material.join(', ')}` : 'Quitar material'
+  const partes = []
+  if (p.cambiaMaterial && !(p.material && p.material.length)) partes.push('Quita el material')
+  if (p.siguiente) partes.push(`Siguiente: ${p.siguiente}`)
+  return partes.join(' · ') || 'Siguiente'
 }
 
+// Descanso NATIVO de Garmin (intensity=rest): en piscina es la cuenta atrás de
+// descanso, no tiempo nadando. La pausa además acaba al pulsar vuelta.
 function lineaPausa(p, disciplina) {
-  return `- ${cueSeguro(textoPausa(p), disciplina)} ${SEG_PAUSA}s press lap`
+  return `- ${cueSeguro(textoPausa(p), disciplina)} ${SEG_PAUSA}s press lap intensity=rest`
 }
 
 // Construye el texto de un entrenamiento. Los bloques se separan con \n\n para
@@ -158,7 +268,7 @@ function buildIntervalsText(session, options = {}) {
   const incluirNotas = options.incluirNotas === true
   const ws = session.workout_steps || {}
   const disciplinaWs = session.disciplina
-  const bloques = conPausasMaterial(ws.bloques || [], disciplinaWs)
+  const bloques = conPausas(ws.bloques || [], disciplinaWs)
   const material = ws.material || session.material || []
   const notas = ws.notas ?? session.notas ?? ''
   const disciplina = session.disciplina
@@ -201,4 +311,4 @@ function buildIntervalsText(session, options = {}) {
   return sintaxis
 }
 
-module.exports = { buildIntervalsText, cueSeguro, conPausasMaterial, textoPausa }
+module.exports = { buildIntervalsText, cueSeguro, conPausas, conPausasMaterial, textoPausa, esTecnica, metrosTecnica }
