@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { duracionTotalMin, ritmoValido, ritmosInvalidos } from '../src/components/workout/constants.js'
 
 const require = createRequire(import.meta.url)
-const { buildIntervalsText, cueSeguro } = require('../netlify/functions/lib/intervals-text.cjs')
+const { buildIntervalsText, cueSeguro, conPausasMaterial } = require('../netlify/functions/lib/intervals-text.cjs')
 const { eventoBorrado } = require('../netlify/functions/lib/intervals-api.js')
 
 const ses = (disciplina, bloques, extra = {}) => ({ disciplina, workout_steps: { bloques, notas: '', ...extra } })
@@ -94,4 +94,37 @@ test('el cue no cuela órdenes a Intervals (zonas, duraciones, ritmos, repeticio
   assert.equal(cueSeguro('cada 2x50m a 1:45', 'swim'), 'cada 2 veces 50 metros a 1.45')
   assert.equal(cueSeguro('al 75% @tope', 'run'), 'al 75 por ciento tope')
   assert.equal(cueSeguro('Como siempre 75 c 25 otro', 'swim'), 'Como siempre 75 c 25 otro')
+})
+
+test('natación: pausa hasta pulsar vuelta en cada cambio de material (poner, quitar, cambiar)', () => {
+  const t = buildIntervalsText({
+    disciplina: 'swim',
+    workout_steps: {
+      bloques: [
+        { tipo: 'warmup', unidad: 'mtr', cantidad: 400, material: [] },
+        { tipo: 'step', nombre: 'Pies', unidad: 'mtr', cantidad: 200, material: ['aletas', 'tabla'] },
+        { tipo: 'step', unidad: 'mtr', cantidad: 200, material: ['tabla', 'aletas'] },
+        { tipo: 'step', unidad: 'mtr', cantidad: 300, material: ['palas'] },
+        { tipo: 'cooldown', unidad: 'mtr', cantidad: 200, material: [] },
+      ],
+    },
+  })
+  assert.equal(t.match(/press lap/g).length, 3) // poner aletas+tabla, cambiar a palas, quitar
+  assert.match(t, /- Material · aletas, tabla 15s press lap\n\n- Pies/)
+  assert.match(t, /- Quitar material 15s press lap\n\n- Vuelta a la calma 200mtr/)
+})
+
+test('pausa dentro de una serie con material alterno, una vez por repetición', () => {
+  const [serie] = conPausasMaterial(
+    [{ tipo: 'repeat', repeticiones: 3, pasos: [{ cantidad: 100, unidad: 'mtr', material: ['pull buoy'] }, { cantidad: 100, unidad: 'mtr', material: [] }] }],
+    'swim',
+  )
+  assert.deepEqual(serie.pasos.map((p) => p.tipo || 'paso'), ['pausa', 'paso', 'pausa', 'paso'])
+})
+
+test('sin cambios de material o fuera de natación no hay pausas', () => {
+  const bloques = [{ tipo: 'step', cantidad: 10, unidad: 'min', material: [] }, { tipo: 'step', cantidad: 5, unidad: 'min', material: [] }]
+  assert.equal(conPausasMaterial(bloques, 'swim').length, 2)
+  const bici = [{ tipo: 'step', cantidad: 10, unidad: 'min', material: [] }, { tipo: 'step', cantidad: 5, unidad: 'min', material: ['rodillo'] }]
+  assert.equal(conPausasMaterial(bici, 'bike').length, 2)
 })

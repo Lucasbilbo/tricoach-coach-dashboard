@@ -1,4 +1,5 @@
 import { COLORS, FONTS } from '../lib/theme'
+import { conPausasMaterial } from '../lib/intervalsText'
 
 // Detalle de un entreno prescrito: perfil de intensidad (como lo dibuja el
 // reloj) + lista de pasos. Lo ven el coach (lista de sesiones) y el atleta.
@@ -42,8 +43,8 @@ function aplanar(bloques) {
   for (const b of bloques) {
     if (b.tipo === 'repeat') {
       const veces = Math.min(Number(b.repeticiones) || 1, 40)
-      for (let i = 0; i < veces; i++) for (const p of b.pasos || []) out.push(p)
-    } else out.push(b)
+      for (let i = 0; i < veces; i++) for (const p of b.pasos || []) if (p.tipo !== 'pausa') out.push(p)
+    } else if (b.tipo !== 'pausa') out.push(b)
   }
   return out
 }
@@ -91,6 +92,21 @@ function formatObjetivo(tipo, valor) {
   return valor
 }
 
+// Pausa automática por cambio de material (natación): acaba al pulsar vuelta.
+function Pausa({ paso }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary, width: 58, flexShrink: 0, textAlign: 'right' }}>
+        vuelta
+      </span>
+      <span style={{ width: 8, height: 8, borderRadius: 4, border: `1px solid ${COLORS.textTertiary}`, flexShrink: 0 }} />
+      <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: COLORS.textTertiary, fontStyle: 'italic' }}>
+        Pulsa vuelta · {paso.material?.length ? `ponte ${paso.material.join(', ')}` : 'quítate el material'}
+      </span>
+    </div>
+  )
+}
+
 function Paso({ paso, etiqueta, disciplina }) {
   const nivel = nivelPaso(paso)
   const obj = formatObjetivo(paso.objetivo_tipo, paso.objetivo_valor)
@@ -118,6 +134,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
 
   const disciplina = sesion.disciplina
   const notas = ws.notas || sesion.notas
+  const bloques = conPausasMaterial(ws.bloques, disciplina)
 
   return (
     <div style={{ marginTop: 8, padding: '12px 12px 8px', background: 'rgba(255,255,255,0.025)', borderRadius: 10 }}>
@@ -126,8 +143,10 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
         <p style={{ margin: '0 0 6px', fontSize: 12, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
       )}
 
-      {ws.bloques.map((bloque, idx) =>
-        bloque.tipo === 'repeat' ? (
+      {bloques.map((bloque, idx) =>
+        bloque.tipo === 'pausa' ? (
+          <Pausa key={idx} paso={bloque} />
+        ) : bloque.tipo === 'repeat' ? (
           <div key={idx} style={{ margin: '4px 0', padding: '4px 0 4px 0', borderLeft: `2px solid ${COLORS.load}`, borderRadius: 1 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '2px 0' }}>
               <span style={{ fontFamily: FONTS.mono, fontSize: 13, fontWeight: 600, color: COLORS.load, width: 56, textAlign: 'right' }}>
@@ -135,9 +154,9 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
               </span>
               <span style={{ fontSize: 13, color: COLORS.textSecondary }}>{bloque.nombre || 'Serie'}</span>
             </div>
-            {(bloque.pasos || []).map((paso, pi) => (
-              <Paso key={pi} paso={paso} disciplina={disciplina} />
-            ))}
+            {(bloque.pasos || []).map((paso, pi) =>
+              paso.tipo === 'pausa' ? <Pausa key={pi} paso={paso} /> : <Paso key={pi} paso={paso} disciplina={disciplina} />
+            )}
           </div>
         ) : (
           <Paso

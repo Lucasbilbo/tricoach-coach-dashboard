@@ -94,6 +94,60 @@ function objetivoStr(step, disciplina) {
   return ''
 }
 
+// Natación: cada vez que cambia el material entre un paso y el siguiente
+// (ponerlo, quitarlo o cambiarlo) se intercala una PAUSA que termina al pulsar
+// vuelta ("press lap"), para tener tiempo de cambiarse. Se calcula al generar,
+// sin tocar lo guardado. Dentro de una serie: entre pasos con distinto material
+// y, si el último y el primero difieren, al inicio de cada repetición.
+const SEG_PAUSA = 15
+
+function claveMaterial(paso) {
+  const m = Array.isArray(paso && paso.material) ? paso.material : []
+  return m.map((x) => String(x).toLowerCase()).sort().join('|')
+}
+
+function pausa(paso) {
+  return { tipo: 'pausa', material: Array.isArray(paso.material) ? [...paso.material] : [] }
+}
+
+function conPausasMaterial(bloques, disciplina) {
+  if (disciplina !== 'swim' || !Array.isArray(bloques)) return bloques || []
+  const out = []
+  let previa = null
+  for (const b of bloques) {
+    if (b.tipo === 'repeat' && Array.isArray(b.pasos) && b.pasos.length > 0) {
+      const pasos = []
+      b.pasos.forEach((p, i) => {
+        if (i > 0 && claveMaterial(p) !== claveMaterial(b.pasos[i - 1])) pasos.push(pausa(p))
+        pasos.push(p)
+      })
+      const primero = b.pasos[0]
+      const ultimo = b.pasos[b.pasos.length - 1]
+      if (b.pasos.length > 1 && claveMaterial(primero) !== claveMaterial(ultimo)) {
+        pasos.unshift(pausa(primero)) // cubre la entrada y cada vuelta de la serie
+      } else if (previa !== null && previa !== claveMaterial(primero)) {
+        out.push(pausa(primero))
+      }
+      out.push({ ...b, pasos })
+      previa = claveMaterial(ultimo)
+      continue
+    }
+    if (b.tipo === 'pausa') continue
+    if (previa !== null && previa !== claveMaterial(b)) out.push(pausa(b))
+    out.push(b)
+    previa = claveMaterial(b)
+  }
+  return out
+}
+
+function textoPausa(p) {
+  return p.material.length ? `Material · ${p.material.join(', ')}` : 'Quitar material'
+}
+
+function lineaPausa(p, disciplina) {
+  return `- ${cueSeguro(textoPausa(p), disciplina)} ${SEG_PAUSA}s press lap`
+}
+
 // Construye el texto de un entrenamiento. Los bloques se separan con \n\n para
 // que Intervals los parsee como pasos independientes; los pasos internos de un
 // repeat van con \n simple.
@@ -103,7 +157,8 @@ function objetivoStr(step, disciplina) {
 function buildIntervalsText(session, options = {}) {
   const incluirNotas = options.incluirNotas === true
   const ws = session.workout_steps || {}
-  const bloques = ws.bloques || []
+  const disciplinaWs = session.disciplina
+  const bloques = conPausasMaterial(ws.bloques || [], disciplinaWs)
   const material = ws.material || session.material || []
   const notas = ws.notas ?? session.notas ?? ''
   const disciplina = session.disciplina
@@ -115,7 +170,9 @@ function buildIntervalsText(session, options = {}) {
   }
 
   for (const bloque of bloques) {
-    if (bloque.tipo === 'warmup') {
+    if (bloque.tipo === 'pausa') {
+      partes.push(lineaPausa(bloque, disciplina))
+    } else if (bloque.tipo === 'warmup') {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
       partes.push(lineaPaso(bloque, disciplina, conPrefijo('Calentamiento', bloque.nombre), obj))
     } else if (bloque.tipo === 'cooldown') {
@@ -127,6 +184,10 @@ function buildIntervalsText(session, options = {}) {
     } else if (bloque.tipo === 'repeat') {
       const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
       for (const paso of (bloque.pasos || [])) {
+        if (paso.tipo === 'pausa') {
+          lines.push(lineaPausa(paso, disciplina))
+          continue
+        }
         lines.push(lineaPaso(paso, disciplina, paso.nombre, objetivoStr(paso, disciplina)))
       }
       partes.push(lines.join('\n'))
@@ -140,4 +201,4 @@ function buildIntervalsText(session, options = {}) {
   return sintaxis
 }
 
-module.exports = { buildIntervalsText, cueSeguro }
+module.exports = { buildIntervalsText, cueSeguro, conPausasMaterial, textoPausa }
