@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../../lib/chartUtils'
+import { decimalToRitmo, formatDiaMes, hoyMadrid, sumarDias } from '../../lib/chartUtils'
 import { authHeaders } from '../../lib/authHeaders'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle } from '../../lib/theme'
@@ -21,6 +21,7 @@ import PRsBlock from '../PRsBlock'
 import ChartCard from '../charts/ChartCard'
 import PowerChart from '../charts/PowerChart'
 import TSSChart from '../charts/TSSChart'
+import FormaChart from '../charts/FormaChart'
 import ActivityDetail from '../ActivityDetail'
 
 // Ritmo o potencia según disciplina, para la columna RITMO / POTENCIA del spec.
@@ -247,9 +248,14 @@ export default function StravaAnalysis({
       )}
 
       {semanas.length > 0 && (
-        <ChartCard title="Carga semanal (TSS · ATL · CTL)">
-          <TSSChart actividades={actividades} actividadesCarga={actsCarga} semanas={semanas} />
-        </ChartCard>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 14 }}>
+          <ChartCard title="Carga semanal (TSS)" flush>
+            <TSSChart semanas={semanas} />
+          </ChartCard>
+          <ChartCard title="Forma (CTL · ATL)" flush>
+            <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} />
+          </ChartCard>
+        </div>
       )}
 
       {/* Filtros + CSV */}

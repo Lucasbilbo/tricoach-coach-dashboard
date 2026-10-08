@@ -235,6 +235,17 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   `npx vite build --config vite.preview.config.mjs && npx vite preview --config vite.preview.config.mjs`,
   luego `/preview.html?as=coach|athlete|none&route=/dashboard`.
 
+### Gráficos (2026-10)
+- **Nunca colores de disciplina para algo que no es una disciplina**: teal/ámbar/
+  coral significan natación/bici/carrera. Carga y forma usan el violeta Load;
+  series de contexto (ATL, medias móviles) en gris Mist.
+- **Una escala por gráfico**: el TSS semanal (suma) y la CTL/ATL (media diaria)
+  van en gráficos separados — `TSSChart` (barras, semana en curso tenue) y
+  `FormaChart` (CTL/ATL diarios del rango del selector, calentados con la serie
+  de 26 semanas; valores de hoy en la leyenda, TSB en el tooltip).
+- Leyenda en cuanto hay ≥2 series; números de los ejes en JetBrains Mono;
+  marcas del eje Y redondas y equiespaciadas.
+
 ### Línea de Transición
 Barras apiladas por semana segmentadas por disciplina, con estados por relleno+borde
 (completado/programado/descanso). `src/components/shared/TransitionLine.jsx`.
