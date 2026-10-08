@@ -170,7 +170,6 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
           aria-label="Cerrar"
           title="Cerrar"
           onClick={onClose}
-          aria-label="Cerrar"
           style={{
             position: 'absolute',
             top: 16,
