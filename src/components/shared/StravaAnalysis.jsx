@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../../lib/chartUtils'
 import { authHeaders } from '../../lib/authHeaders'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -88,13 +88,16 @@ export default function StravaAnalysis({
 
   useEffect(() => {
     if (!athleteId || cargaRef.current === athleteId) return
+    // Si el selector ya cubre la ventana de carga, `actividades` basta: no se
+    // pide a Strava lo mismo dos veces.
+    if (weeks >= SEMANAS_CARGA) return
     let activo = true
     async function cargarSerie() {
       try {
         const res = await fetch('/.netlify/functions/coach-athlete-data', {
           method: 'POST',
           headers: await authHeaders(),
-          body: JSON.stringify({ athleteId, weeks: SEMANAS_CARGA }),
+          body: JSON.stringify({ athleteId, weeks: SEMANAS_CARGA, records: false }),
         })
         if (!res.ok) return
         const json = await res.json().catch(() => null)
@@ -108,7 +111,7 @@ export default function StravaAnalysis({
     }
     cargarSerie()
     return () => { activo = false }
-  }, [athleteId])
+  }, [athleteId, weeks])
 
   const actsCarga = actividadesCarga || actividades
 
@@ -120,7 +123,9 @@ export default function StravaAnalysis({
 
   const stats = computeResumenStats(actividades)
   // CTL/ATL/TSB de hoy sobre la serie de 26 semanas (no sobre el rango dibujado).
-  const carga = computeCargaHoy(actsCarga, hoyMadrid())
+  // Memoizada: la serie de 26 semanas no cambia con filtros, paginación ni
+  // selección de actividad, y la EWMA recorre ~180 días.
+  const carga = useMemo(() => computeCargaHoy(actsCarga, hoyMadrid()), [actsCarga])
   const zonas = computeZonas(actividades)
   const paceTrend = computePaceTrend(actividades)
   const columnas = buildTransitionColumns(actividades, semanas)
