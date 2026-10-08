@@ -1,12 +1,12 @@
 // send-to-intervals.js — Netlify Function (CommonJS)
 // Envía un workout estructurado de coach_sessions a Intervals.icu (→ Garmin)
 // POST { sessionId } + header Authorization: Bearer <jwt de Supabase>
-// Autorización: el coach dueño de la sesión (session.coach_id) o el atleta
-// destinatario (session.athlete_id). coach/atleta se derivan de la sesión y
+// Autorización: el atleta destinatario (session.athlete_id) o el coach dueño
+// de la sesión con relación verificada en coach_athletes (canCoachSession). coach/atleta se derivan de la sesión y
 // del JWT, nunca del body.
 
 const https = require('https')
-const { verifyAuth } = require('./lib/auth')
+const { verifyAuth, canCoachSession } = require('./lib/auth')
 const { buildIntervalsText } = require('./lib/intervals-text.cjs')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 
@@ -143,8 +143,10 @@ exports.handler = async (event) => {
     }
     const session = sesiones[0]
 
-    // Autorización: el coach dueño de la sesión o el atleta destinatario
-    if (auth.uid !== session.coach_id && auth.uid !== session.athlete_id) {
+    // Autorización: el atleta destinatario, o el coach dueño de la sesión CON
+    // relación real con ese atleta (canCoachSession: ser coach_id no basta).
+    const esAtleta = auth.uid === session.athlete_id
+    if (!esAtleta && !(await canCoachSession(auth, session))) {
       return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'No autorizado para esta sesión' }) }
     }
 

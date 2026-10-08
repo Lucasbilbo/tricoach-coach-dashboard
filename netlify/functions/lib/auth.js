@@ -133,4 +133,19 @@ async function canAccessAthlete(auth, athleteId) {
   return coachOwnsAthlete(auth.uid, athleteId)
 }
 
-module.exports = { verifyAuth, coachOwnsAthlete, canAccessAthlete, UUID_REGEX }
+// ¿Puede este usuario actuar COMO COACH sobre una sesión (enviarla al reloj,
+// reenviarla, borrarla)? Ser session.coach_id NO basta: la policy de
+// coach_sessions deja a cualquier usuario autenticado insertar filas con
+// coach_id = él mismo y el athlete_id de otra persona. Sin esta comprobación,
+// esa fila permitía escribir (y borrar eventos) en el Intervals → Garmin de
+// un atleta ajeno. Exige: dueño de la sesión + whitelist de coaches + relación
+// real en coach_athletes. Caso especial: coach y atleta son la misma persona.
+async function canCoachSession(auth, session) {
+  if (!auth || !session) return false
+  if (auth.uid !== session.coach_id) return false
+  if (session.coach_id === session.athlete_id) return true
+  if (!auth.isCoach) return false
+  return coachOwnsAthlete(session.coach_id, session.athlete_id)
+}
+
+module.exports = { verifyAuth, coachOwnsAthlete, canAccessAthlete, canCoachSession, UUID_REGEX }
