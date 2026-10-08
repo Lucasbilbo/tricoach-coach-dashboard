@@ -16,7 +16,7 @@ export const ESTADOS = {
   candidata: { label: 'Candidata', color: '#8A90A0', fondo: 'transparent', borde: '#2A3040' },
   confirmada: { label: 'Confirmada', color: '#EDEEF2', fondo: 'rgba(237,238,242,0.06)', borde: '#3A4152' },
   inscrito: { label: 'Inscrito', color: '#0B0D12', fondo: '#2FBFAF', borde: '#2FBFAF' },
-  descartada: { label: 'Descartada', color: '#5C6270', fondo: 'transparent', borde: '#1B202C' },
+  descartada: { label: 'Descartada', color: '#7A808F', fondo: 'transparent', borde: '#1B202C' },
   hecha: { label: 'Hecha', color: '#8B7FD1', fondo: 'rgba(139,127,209,0.12)', borde: '#8B7FD1' },
 }
 

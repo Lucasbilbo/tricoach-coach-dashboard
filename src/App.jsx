@@ -58,6 +58,8 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      {/* Un único landmark <main> para todas las pantallas (lectores de pantalla) */}
+      <main>
       <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/" element={<Login />} />
@@ -76,6 +78,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
+      </main>
     </BrowserRouter>
   )
 }

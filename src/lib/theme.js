@@ -17,7 +17,9 @@ export const COLORS = {
   accent: '#2FBFAF', // Swim teal — acento de marca (el punto de firma)
   textPrimary: '#EDEEF2', // Ink — texto primario, números neutros
   textSecondary: '#8A90A0', // Mist — texto secundario, labels
-  textTertiary: '#5C6270', // Mist oscuro — texto terciario (subetiquetas)
+  // Mist oscuro — texto terciario (subetiquetas). #7A808F = 4.6:1 sobre Slate y
+  // 4.9:1 sobre Void (AA texto pequeño); antes #5C6270 daba 3.0:1 y no pasaba.
+  textTertiary: '#7A808F',
   load: '#8B7FD1', // Load · Dusk Violet — TSS/carga (no es una disciplina)
   restBorder: '#2A3040', // Borde punteado de días de descanso
   error: '#E85D5D', // Run coral — reutilizado como color de error

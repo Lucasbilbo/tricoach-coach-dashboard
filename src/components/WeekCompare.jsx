@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icon from './ui/Icon'
 import { COLORS, inputStyle } from '../lib/theme'
 import { formatFechaCorta, sumarDias } from '../lib/chartUtils'
 
@@ -83,6 +84,8 @@ export default function WeekCompare({ semanas, onClose }) {
           Comparar semanas
         </h2>
         <button
+          aria-label="Cerrar"
+          title="Cerrar"
           onClick={onClose}
           aria-label="Cerrar"
           style={{
@@ -97,7 +100,7 @@ export default function WeekCompare({ semanas, onClose }) {
             lineHeight: 1,
           }}
         >
-          ✕
+          <Icon name="close" size={16} style={{ margin: '0 auto' }} />
         </button>
       </div>
 
