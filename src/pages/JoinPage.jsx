@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { COLORS } from '../lib/theme'
+import Icon from '../components/ui/Icon'
 
 const pageStyle = {
   minHeight: '100vh',
@@ -153,10 +154,12 @@ export default function JoinPage() {
     return (
       <div style={pageStyle}>
         <div style={{ ...cardStyle, textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 700 }}>
+          <div aria-hidden="true" style={{ width: 56, height: 56, borderRadius: 28, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.cardBorder}`, color: COLORS.textSecondary }}>
+            <Icon name="lock" size={24} />
+          </div>
+          <h1 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 700 }}>
             Link no válido
-          </h2>
+          </h1>
           <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: 0 }}>
             Este link de invitación ya no es válido o ha sido usado.
             Pide a tu entrenador un nuevo link.
@@ -170,10 +173,12 @@ export default function JoinPage() {
     <div style={pageStyle}>
       <div style={cardStyle}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>👋</div>
-          <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700 }}>
+          <div aria-hidden="true" style={{ width: 56, height: 56, borderRadius: 28, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.cardBorder}`, color: COLORS.accent }}>
+            <Icon name="user" size={24} />
+          </div>
+          <h1 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700 }}>
             Te ha invitado {coachNombre}
-          </h2>
+          </h1>
           <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: 0 }}>
             Crea tu cuenta para ver tus entrenamientos
           </p>

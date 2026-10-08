@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { misConexiones } from '../lib/connections'
 import { COLORS } from '../lib/theme'
+import Icon from '../components/ui/Icon'
 
 const PASOS_TOTAL = 5
 
@@ -249,9 +250,9 @@ export default function IntervalsSetup() {
             <p style={{ margin: '0 0 6px', fontSize: 13, color: COLORS.textSecondary }}>
               Paso 1 de {PASOS_TOTAL}
             </p>
-            <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
-              🏃 Conecta tu Strava
-            </h2>
+            <h1 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
+              Conecta tu Strava
+            </h1>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.6, margin: '0 0 24px' }}>
               Strava sincroniza tus actividades para que tu entrenador pueda ver tu progreso.
             </p>
@@ -268,7 +269,8 @@ export default function IntervalsSetup() {
                   color: COLORS.error,
                 }}
               >
-                ⚠️ Error conectando con Strava. Inténtalo de nuevo.
+                <Icon name="alert" size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />
+                Error conectando con Strava. Inténtalo de nuevo.
               </div>
             )}
 
@@ -315,9 +317,9 @@ export default function IntervalsSetup() {
             <p style={{ margin: '0 0 6px', fontSize: 13, color: COLORS.textSecondary }}>
               Paso 2 de {PASOS_TOTAL}
             </p>
-            <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
+            <h1 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
               Crea tu cuenta en Intervals.icu
-            </h2>
+            </h1>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.6, margin: '0 0 24px' }}>
               Intervals.icu conecta a tu entrenador con tu Garmin. Es gratuita.
             </p>
@@ -356,9 +358,9 @@ export default function IntervalsSetup() {
             <p style={{ margin: '0 0 6px', fontSize: 13, color: COLORS.textSecondary }}>
               Paso 3 de {PASOS_TOTAL}
             </p>
-            <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
+            <h1 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
               Copia tu clave de API
-            </h2>
+            </h1>
             <ol style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.8, margin: '0 0 20px', paddingLeft: 20 }}>
               <li>Entra en intervals.icu</li>
               <li>Ve a <strong style={{ color: COLORS.textPrimary }}>Settings</strong> (esquina superior derecha)</li>
@@ -407,9 +409,9 @@ export default function IntervalsSetup() {
             <p style={{ margin: '0 0 6px', fontSize: 13, color: COLORS.textSecondary }}>
               Paso 4 de {PASOS_TOTAL}
             </p>
-            <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
+            <h1 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>
               Conecta tu reloj
-            </h2>
+            </h1>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.6, margin: '0 0 16px' }}>
               Para que los entrenamientos lleguen a tu reloj:
             </p>
@@ -449,10 +451,12 @@ export default function IntervalsSetup() {
         {/* ── Paso 5: Listo ───────────────────────────────────────────────── */}
         {paso === 5 && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-            <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
+            <div aria-hidden="true" style={{ width: 56, height: 56, borderRadius: 28, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.cardBorder}`, color: COLORS.accent }}>
+            <Icon name="check" size={24} />
+          </div>
+            <h1 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 700 }}>
               ¡Todo configurado!
-            </h2>
+            </h1>
             <p style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 1.7, margin: '0 0 24px' }}>
               Tu entrenador ya puede enviarte entrenamientos directamente a tu Garmin.
               Los recibirás en la app Garmin Connect y en tu reloj antes de cada sesión.

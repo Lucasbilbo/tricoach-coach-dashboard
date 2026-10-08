@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from './ui/Icon'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '../lib/theme'
 import PolylineMap from './PolylineMap'
@@ -166,6 +167,8 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
         }}
       >
         <button
+          aria-label="Cerrar"
+          title="Cerrar"
           onClick={onClose}
           aria-label="Cerrar"
           style={{
@@ -183,7 +186,7 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
             lineHeight: 1,
           }}
         >
-          ✕
+          <Icon name="close" size={16} style={{ margin: '0 auto' }} />
         </button>
 
         {cargando && <p style={{ color: COLORS.textSecondary }}>Cargando detalle…</p>}

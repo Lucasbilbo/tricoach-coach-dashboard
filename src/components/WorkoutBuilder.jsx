@@ -7,6 +7,7 @@ import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, r
 import { sectionLabel, separadorSection, addBtnStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import AtajosBuilder from './workout/AtajosBuilder'
+import Icon from './ui/Icon'
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
@@ -303,6 +304,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             )}
           </div>
           <button
+            aria-label="Cerrar"
+            title="Cerrar"
             onClick={onClose}
             style={{
               background: 'none',
@@ -314,7 +317,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               padding: 4,
             }}
           >
-            ×
+            <Icon name="close" size={18} />
           </button>
         </div>
 
@@ -595,7 +598,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 color: COLORS.error,
               }}
             >
-              ⚠️ Este atleta no tiene Intervals.icu configurado. Comparte con él el link de configuración desde la sección Configuración Garmin.
+              <Icon name="alert" size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />
+              Este atleta no tiene Intervals.icu configurado. Comparte con él el link de configuración desde la sección Configuración Garmin.
             </div>
           )}
 

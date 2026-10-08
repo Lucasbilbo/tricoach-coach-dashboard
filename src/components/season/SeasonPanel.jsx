@@ -322,9 +322,9 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
 
       {grupos.map((g) => (
         <section key={g.clave} id={`mes-${g.clave}`} style={{ marginTop: 20, scrollMarginTop: 16 }}>
-          <h3 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
             {etiquetaMes(g.clave)}
-          </h3>
+          </h2>
           {g.items.map((e) => (
             <EventRow key={e.id} evento={e} hoy={hoy} isMobile={isMobile} onClick={() => setEditando(e)} />
           ))}
