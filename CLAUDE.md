@@ -30,8 +30,10 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 
 ## Stack
 
-- Frontend: React 19 + Vite, react-router-dom v7, recharts (solo en las rutas de
-  análisis, cargado con `React.lazy`).
+- Frontend: React 19 + Vite, react-router-dom v7, recharts. Recharts (~100 KB
+  gzip) va en chunks propios: los gráficos se importan con `React.lazy` DENTRO de
+  `StravaAnalysis`, así que solo se descarga al abrir la pestaña Análisis (no en
+  Sesiones/Entrenos ni en el dashboard).
 - Backend: Netlify Functions (CommonJS).
 - DB/Auth: Supabase (cliente JS solo en el frontend con la anon key).
 - Datos: Strava API v3 · Entrega: Intervals.icu API.

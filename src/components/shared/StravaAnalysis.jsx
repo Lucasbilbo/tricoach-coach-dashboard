@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid, sumarDias } from '../../lib/chartUtils'
 import { authHeaders } from '../../lib/authHeaders'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -19,9 +19,17 @@ const SEMANAS_CARGA = 26
 import TransitionLine from './TransitionLine'
 import PRsBlock from '../PRsBlock'
 import ChartCard from '../charts/ChartCard'
-import PowerChart from '../charts/PowerChart'
-import TSSChart from '../charts/TSSChart'
-import FormaChart from '../charts/FormaChart'
+// Los gráficos (Recharts, ~130 KB gzip) se cargan aparte y solo al pintarse:
+// AthleteView y AthleteHome importan este módulo de entrada, pero su pestaña
+// por defecto (Sesiones / Entrenos) no tiene gráficos.
+const PowerChart = lazy(() => import('../charts/PowerChart'))
+const TSSChart = lazy(() => import('../charts/TSSChart'))
+const FormaChart = lazy(() => import('../charts/FormaChart'))
+
+// Hueco del mismo alto que el gráfico mientras llega el chunk: sin salto de layout.
+function HuecoGrafico({ alto }) {
+  return <div aria-hidden="true" style={{ height: alto }} />
+}
 import ActivityDetail from '../ActivityDetail'
 
 // Ritmo o potencia según disciplina, para la columna RITMO / POTENCIA del spec.
@@ -243,17 +251,23 @@ export default function StravaAnalysis({
 
       {hayPotencia && (
         <ChartCard title="Progresión potencia ciclismo">
-          <PowerChart actividades={actividades} />
+          <Suspense fallback={<HuecoGrafico alto={270} />}>
+            <PowerChart actividades={actividades} />
+          </Suspense>
         </ChartCard>
       )}
 
       {semanas.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 14 }}>
           <ChartCard title="Carga semanal (TSS)" flush>
-            <TSSChart semanas={semanas} />
+            <Suspense fallback={<HuecoGrafico alto={240} />}>
+              <TSSChart semanas={semanas} />
+            </Suspense>
           </ChartCard>
           <ChartCard title="Forma (CTL · ATL)" flush>
-            <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} />
+            <Suspense fallback={<HuecoGrafico alto={240} />}>
+              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} />
+            </Suspense>
           </ChartCard>
         </div>
       )}
