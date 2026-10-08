@@ -135,7 +135,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     setExpandidaId((prev) => (prev === id ? null : id))
   }
 
-  const cargarSesiones = useCallback(async () => {
+  // `senal.activo` (opcional) descarta una respuesta que llega tras desmontar o
+  // cambiar de atleta: así no pisa la lista del atleta nuevo.
+  const cargarSesiones = useCallback(async (senal) => {
     try {
       const { data, error: queryError } = await supabase
         .from('coach_sessions')
@@ -143,6 +145,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         .eq('coach_id', coachId)
         .eq('athlete_id', athleteId)
         .order('fecha', { ascending: true })
+      if (senal && !senal.activo) return
 
       if (queryError) {
         setError('No se pudieron cargar las sesiones')
@@ -183,15 +186,16 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       })
       if (res.ok) {
         const json = await res.json().catch(() => null)
+        if (senal && !senal.activo) return
         if (json?.actividades) {
           estadoCacheRef.current = { key }
           setActividadesEstado(json.actividades)
         }
       }
     } catch {
-      setError('Error de conexión cargando las sesiones')
+      if (!senal || senal.activo) setError('Error de conexión cargando las sesiones')
     } finally {
-      setCargando(false)
+      if (!senal || senal.activo) setCargando(false)
     }
   }, [coachId, athleteId, weeks])
 
@@ -202,7 +206,12 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   }
 
   useEffect(() => {
-    cargarSesiones()
+    const senal = { activo: true }
+    // Falso positivo de set-state-in-effect: cargarSesiones es async y todos
+    // sus setState van DESPUÉS del primer await (no son síncronos).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarSesiones(senal)
+    return () => { senal.activo = false }
   }, [cargarSesiones])
 
   async function handleEliminar(sesion) {
