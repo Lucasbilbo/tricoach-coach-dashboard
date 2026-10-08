@@ -2,9 +2,10 @@
 // Borra una sesión prescrita Y su entreno en Intervals.icu (y por tanto en el
 // reloj). Antes el borrado era solo en Supabase y el workout seguía en el Garmin.
 // POST { sessionId } + header Authorization: Bearer <jwt de Supabase>
-// Autorización: solo el coach dueño de la sesión (session.coach_id).
+// Autorización: solo el coach dueño de la sesión con relación verificada con
+// el atleta (canCoachSession).
 
-const { verifyAuth, UUID_REGEX } = require('./lib/auth')
+const { verifyAuth, canCoachSession, UUID_REGEX } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 
@@ -57,6 +58,10 @@ exports.handler = async (event) => {
     const sesion = Array.isArray(ses.json) ? ses.json[0] : null
     if (!sesion) return respuesta(404, { error: 'Sesión no encontrada' })
     if (sesion.coach_id !== auth.uid) return respuesta(403, { error: 'Solo el entrenador que la creó puede borrarla' })
+    // Ser coach_id no basta (ver canCoachSession): sin relación real con el
+    // atleta, intervals_event_id lo pone quien inserta la fila y permitiría
+    // borrar eventos ajenos del Intervals del atleta.
+    if (!(await canCoachSession(auth, sesion))) return respuesta(403, { error: 'No autorizado para este atleta' })
 
     // 1) Retirar del calendario de Intervals (→ reloj). Si falla, NO se borra
     //    de la BD: así la sesión sigue visible y se puede reintentar, en vez de

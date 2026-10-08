@@ -45,6 +45,12 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   venir del body porque se autoriza contra `coach_athletes` (`canAccessAthlete`), o
   `uid === athleteId` si es el propio atleta. En `send-to-intervals`, coach y atleta
   se derivan de la sesión prescrita.
+- **Acciones de coach sobre una sesión** (`send-to-intervals`, `delete-session`):
+  ser `session.coach_id` NO basta — `canCoachSession` (lib/auth.js) exige además
+  whitelist de `coaches` y relación real en `coach_athletes` (o coach = atleta).
+  Motivo: las RLS de `coach_sessions` dejaban a cualquier usuario autenticado
+  insertar filas con `coach_id` = él y el `athlete_id` de otro (2026-10-08).
+  La raíz en BD: `supabase/migrations/PENDIENTE_009_autorizacion_rls_panel.sql`.
 - OAuth de Strava con `state` firmado (HMAC-SHA256 + nonce + expiración) en
   `lib/oauth-state.js` — anti-CSRF de vinculación.
 - Rate limit best-effort vía RPC `check_rate_limit` (`lib/rate-limit.js`), aplicado
