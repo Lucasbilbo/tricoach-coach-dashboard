@@ -41,9 +41,11 @@ function CargaSemanas({ semanas }) {
             title={`Semana del ${s.semana}: ${s.tss_total} TSS`}
             style={{
               flex: 1,
-              height: `${Math.max(((s.tss_total || 0) / maxTss) * 100, 6)}%`,
+              // Semana sin actividad: raya fina gris (no una barra mínima violeta,
+              // que se confundiría con una semana floja).
+              height: s.tss_total > 0 ? `${Math.max((s.tss_total / maxTss) * 100, 6)}%` : 2,
               borderRadius: 3,
-              background: COLORS.load,
+              background: s.tss_total > 0 ? COLORS.load : COLORS.textTertiary,
               opacity: i === semanas.length - 1 ? 1 : 0.4,
             }}
           />

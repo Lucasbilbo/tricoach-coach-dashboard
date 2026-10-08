@@ -10,6 +10,7 @@ const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, cargaActividad, fechaMadrid, mapDisciplina } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
+const { lunesDeSemana } = require('./lib/semanas')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -24,31 +25,27 @@ const DIA_MS = 86400000
 const VENTANA_DIAS = 7
 const SEMANAS_SPARKLINE = 4
 
-// Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
-function lunesDeSemana(fechaLocal) {
-  const [y, m, d] = fechaLocal.split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  const dow = date.getUTCDay() // 0=domingo
-  const offset = dow === 0 ? 6 : dow - 1
-  const monday = new Date(date.getTime() - offset * 86400000)
-  return monday.toISOString().slice(0, 10)
-}
-
-// Últimas N semanas con TSS agregado, ordenadas de más antigua a más reciente
-function semanasRecientes(actividades, fcMax, n) {
-  const porLunes = actividades.reduce((acc, a) => {
-    if (!a.start_date) return acc
+// Las N semanas de CALENDARIO que acaban en la actual (Europe/Madrid), de más
+// antigua a más reciente, con TSS agregado y a 0 si no hubo actividad. Antes
+// eran "las últimas N semanas CON datos": un atleta parado hace 3 semanas
+// enseñaba un sparkline de hace un mes como si fuera reciente.
+function semanasRecientes(actividades, fcMax, n, hoy = fechaMadrid(new Date())) {
+  const porLunes = {}
+  for (const a of actividades) {
+    if (!a.start_date) continue
     const disc = mapDisciplina(a.sport_type || a.type)
-    if (disc === 'other') return acc // B1: excluir no-tri
+    if (disc === 'other') continue // B1: excluir no-tri
     // Semana en Europe/Madrid a partir del instante UTC (no de start_date_local)
     const lunes = lunesDeSemana(fechaMadrid(new Date(a.start_date)))
-    return { ...acc, [lunes]: (acc[lunes] || 0) + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, disc).tss || 0) }
-  }, {})
-
-  return Object.keys(porLunes)
-    .sort()
-    .slice(-n)
-    .map((lunes) => ({ semana: lunes, tss_total: round(porLunes[lunes], 0) }))
+    porLunes[lunes] = (porLunes[lunes] || 0) + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, disc).tss || 0)
+  }
+  const lunesHoy = lunesDeSemana(hoy)
+  const semanas = []
+  for (let i = n - 1; i >= 0; i--) {
+    const lunes = new Date(Date.parse(`${lunesHoy}T00:00:00Z`) - i * 7 * DIA_MS).toISOString().slice(0, 10)
+    semanas.push({ semana: lunes, tss_total: round(porLunes[lunes] || 0, 0) })
+  }
+  return semanas
 }
 
 // El perfil se pasa ya cargado (todos los perfiles se traen en UNA query batch
@@ -195,3 +192,6 @@ exports.handler = async (event) => {
     return respuesta(500, { error: 'Error interno' })
   }
 }
+
+// Solo para tests
+exports._semanasRecientes = semanasRecientes

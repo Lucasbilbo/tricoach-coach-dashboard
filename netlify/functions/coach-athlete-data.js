@@ -11,6 +11,7 @@ const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
+const { agruparSemanas } = require('./lib/semanas')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -65,14 +66,6 @@ const SPLIT_RUN = { minM: 800, maxM: 1200, metrosUnidad: 1000, ritmoMin: RITMO_M
 const SPLIT_SWIM = { minM: 80, maxM: 120, metrosUnidad: 100, ritmoMin: 0.8, ritmoMax: 6.0 }
 
 // Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
-function lunesDeSemana(fechaLocal) {
-  const [y, m, d] = fechaLocal.split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  const dow = date.getUTCDay() // 0=domingo
-  const offset = dow === 0 ? 6 : dow - 1
-  const monday = new Date(date.getTime() - offset * 86400000)
-  return monday.toISOString().slice(0, 10)
-}
 
 function transformarActividad(act, fcMax) {
   const duracionMin = act.moving_time ? round(act.moving_time / 60, 1) : null
@@ -234,48 +227,6 @@ function calcularRecords(actividades) {
   return { running, ciclismo, natacion }
 }
 
-function agruparSemanas(actividades) {
-  const porLunes = {}
-  for (const act of actividades) {
-    if (!act.fecha) continue
-    // B1: 'other' (golf, paseos, workout genérico) no cuenta en el volumen.
-    if (act.disciplina === 'other') continue
-    const lunes = lunesDeSemana(act.fecha)
-    if (!porLunes[lunes]) {
-      porLunes[lunes] = {
-        semana: lunes,
-        km_run: 0,
-        km_bike: 0,
-        km_swim: 0,
-        horas_totales: 0,
-        tss_total: 0,
-        n_sesiones: 0,
-      }
-    }
-    const s = porLunes[lunes]
-    const nueva = {
-      ...s,
-      km_run: s.km_run + (act.disciplina === 'run' ? act.distancia_km || 0 : 0),
-      km_bike: s.km_bike + (act.disciplina === 'bike' ? act.distancia_km || 0 : 0),
-      km_swim: s.km_swim + (act.disciplina === 'swim' ? act.distancia_km || 0 : 0),
-      horas_totales: s.horas_totales + (act.duracion_min || 0) / 60,
-      tss_total: s.tss_total + (act.tss_estimado || 0),
-      n_sesiones: s.n_sesiones + 1,
-    }
-    porLunes[lunes] = nueva
-  }
-  return Object.values(porLunes)
-    .map((s) => ({
-      ...s,
-      km_run: round(s.km_run, 1),
-      km_bike: round(s.km_bike, 1),
-      km_swim: round(s.km_swim, 2),
-      horas_totales: round(s.horas_totales, 1),
-      tss_total: round(s.tss_total, 0),
-    }))
-    .sort((a, b) => (a.semana < b.semana ? -1 : 1))
-}
-
 function respuesta(statusCode, payload) {
   return { statusCode, headers: CORS, body: JSON.stringify(payload) }
 }
@@ -357,7 +308,8 @@ exports.handler = async (event) => {
     // Metros de técnica/pies que el reloj no cuenta (de la sesión prescrita).
     const desde = fechaMadrid(new Date(after * 1000))
     sumarTecnica(actividades, await sesionesNatacion(supabaseGet, supabaseHost, SERVICE_KEY, athleteId, desde))
-    const semanas = agruparSemanas(actividades)
+    // Todas las semanas del rango hasta hoy, también las vacías (lesión, vacaciones).
+    const semanas = agruparSemanas(actividades, { desde, hasta: fechaMadrid(new Date()) })
 
     const atleta = { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' }
     if (!conRecords) return respuesta(200, { atleta, actividades, semanas })
