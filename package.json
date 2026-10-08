@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test test/*.test.js"
+    "test": "node --import ./test/_resolver.mjs --test test/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
