@@ -78,7 +78,7 @@ async function pedirActividadesEstado(userId, lista, actual) {
     const res = await fetch('/.netlify/functions/coach-athlete-data', {
       method: 'POST',
       headers: await authHeaders(),
-      body: JSON.stringify({ athleteId: userId, weeks: semanas }),
+      body: JSON.stringify({ athleteId: userId, weeks: semanas, records: false }),
     })
     if (!res.ok) return null
     const json = await res.json().catch(() => null)

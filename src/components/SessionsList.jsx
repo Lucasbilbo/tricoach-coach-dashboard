@@ -179,7 +179,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       const res = await fetch('/.netlify/functions/coach-athlete-data', {
         method: 'POST',
         headers: await authHeaders(),
-        body: JSON.stringify({ athleteId, weeks: semanas }),
+        body: JSON.stringify({ athleteId, weeks: semanas, records: false }),
       })
       if (res.ok) {
         const json = await res.json().catch(() => null)

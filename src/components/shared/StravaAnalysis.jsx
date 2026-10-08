@@ -88,13 +88,16 @@ export default function StravaAnalysis({
 
   useEffect(() => {
     if (!athleteId || cargaRef.current === athleteId) return
+    // Si el selector ya cubre la ventana de carga, `actividades` basta: no se
+    // pide a Strava lo mismo dos veces.
+    if (weeks >= SEMANAS_CARGA) return
     let activo = true
     async function cargarSerie() {
       try {
         const res = await fetch('/.netlify/functions/coach-athlete-data', {
           method: 'POST',
           headers: await authHeaders(),
-          body: JSON.stringify({ athleteId, weeks: SEMANAS_CARGA }),
+          body: JSON.stringify({ athleteId, weeks: SEMANAS_CARGA, records: false }),
         })
         if (!res.ok) return
         const json = await res.json().catch(() => null)
@@ -108,7 +111,7 @@ export default function StravaAnalysis({
     }
     cargarSerie()
     return () => { activo = false }
-  }, [athleteId])
+  }, [athleteId, weeks])
 
   const actsCarga = actividadesCarga || actividades
 

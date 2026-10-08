@@ -23,6 +23,11 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const FC_MAX_DEFAULT = 185
 const WEEKS_DEFAULT = 8
 const WEEKS_MAX = 52
+// Strava devuelve como mucho 200 por página y, con `after`, en orden ASCENDENTE:
+// sin paginar, un atleta con >200 actividades en la ventana perdería las MÁS
+// RECIENTES. Tope de páginas para no agotar el rate limit (100 lecturas/15 min).
+const STRAVA_PER_PAGE = 200
+const STRAVA_MAX_PAGINAS = 4
 // Ritmos fuera de este rango son outliers (GPS roto, cinta sin footpod) → null
 const RITMO_MIN_PLAUSIBLE = 2.0
 const RITMO_MAX_PLAUSIBLE = 20.0
@@ -121,6 +126,32 @@ function formatRitmoMinSeg(decimal) {
     seg = 0
   }
   return `${min}:${String(seg).padStart(2, '0')}`
+}
+
+// Actividades desde `after` (unix s), paginando si una página viene llena.
+// { ok, status, json, actividades }. Si falla la 1ª página → ok:false; si falla
+// una posterior se devuelve lo ya leído (mejor parcial que nada) y se registra.
+async function actividadesDesde(accessToken, after) {
+  const actividades = []
+  for (let page = 1; page <= STRAVA_MAX_PAGINAS; page++) {
+    const res = await withTimeout(
+      httpsRequest({
+        hostname: 'www.strava.com',
+        path: `/api/v3/athlete/activities?per_page=${STRAVA_PER_PAGE}&page=${page}&after=${after}`,
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }),
+      10000
+    )
+    if (res.status !== 200 || !Array.isArray(res.json)) {
+      if (page === 1) return { ok: false, status: res.status, json: res.json, actividades }
+      console.error('Strava paginación cortada en página', page, res.status)
+      break
+    }
+    actividades.push(...res.json)
+    if (res.json.length < STRAVA_PER_PAGE) break
+  }
+  return { ok: true, actividades }
 }
 
 // Splits métricos del detalle de una actividad; [] si falla (no rompe el resto)
@@ -275,6 +306,10 @@ exports.handler = async (event) => {
     return respuesta(400, { error: 'JSON inválido' })
   }
   const { athleteId } = parsed
+  // records:false → solo actividades/semanas (llamadas de carga ATL/CTL y de
+  // estado de sesiones). Se ahorran las ~15 peticiones de detalle de Strava
+  // para los splits de los PRs, que esas llamadas no usan.
+  const conRecords = parsed.records !== false
   const weeks = Math.min(Math.max(parseInt(parsed.weeks, 10) || WEEKS_DEFAULT, 1), WEEKS_MAX)
   if (!UUID_REGEX.test(athleteId || '')) {
     return respuesta(400, { error: 'athleteId debe ser un UUID válido' })
@@ -308,29 +343,24 @@ exports.handler = async (event) => {
 
     // 7. Actividades de Strava desde el inicio del rango
     const after = Math.floor(Date.now() / 1000) - weeks * 7 * 86400
-    const actRes = await withTimeout(
-      httpsRequest({
-        hostname: 'www.strava.com',
-        path: `/api/v3/athlete/activities?per_page=200&after=${after}`,
-        method: 'GET',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      10000
-    )
-    if (actRes.status !== 200 || !Array.isArray(actRes.json)) {
+    const actRes = await actividadesDesde(accessToken, after)
+    if (!actRes.ok) {
       console.error('Strava error', actRes.status, actRes.json)
       return respuesta(502, { error: 'Error consultando Strava' })
     }
 
     // 8. Transformar y agrupar
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
-    const actividades = actRes.json
+    const actividades = actRes.actividades
       .map((a) => transformarActividad(a, fcMax))
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
     // Metros de técnica/pies que el reloj no cuenta (de la sesión prescrita).
     const desde = fechaMadrid(new Date(after * 1000))
     sumarTecnica(actividades, await sesionesNatacion(supabaseGet, supabaseHost, SERVICE_KEY, athleteId, desde))
     const semanas = agruparSemanas(actividades)
+
+    const atleta = { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' }
+    if (!conRecords) return respuesta(200, { atleta, actividades, semanas })
 
     // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)
     const records = calcularRecords(actividades)
@@ -350,7 +380,7 @@ exports.handler = async (event) => {
     ])
 
     return respuesta(200, {
-      atleta: { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' },
+      atleta,
       actividades,
       semanas,
       records: {
