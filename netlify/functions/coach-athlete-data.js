@@ -6,6 +6,7 @@
 // del atleta en Supabase (service key, nunca expuesto al frontend).
 
 const { verifyAuth, canAccessAthlete } = require('./lib/auth')
+const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
@@ -268,10 +269,15 @@ exports.handler = async (event) => {
 
   try {
     // 4. Autorización: el propio atleta o un coach con relación en coach_athletes
-    const permitido = await canAccessAthlete(auth, athleteId)
+    // Autorización y rate limit en paralelo (el limiter es otra ida a Supabase)
+    const [permitido, dentroDeLimite] = await Promise.all([
+      canAccessAthlete(auth, athleteId),
+      allowLimite(conRecords ? 'athlete_data_full' : 'athlete_data_light', auth.uid),
+    ])
     if (!permitido) {
       return respuesta(403, { error: 'No autorizado para este atleta' })
     }
+    if (!dentroDeLimite) return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
 
     // 5. Leer perfil del atleta (tokens Strava) con service key
     const perfilRes = await withTimeout(

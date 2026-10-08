@@ -9,14 +9,19 @@ import process from 'node:process'
 const require = createRequire(import.meta.url)
 const ATHLETE = '11111111-1111-4111-8111-111111111111'
 
-function cargarHandler({ paginas, fallaPagina = null }) {
+function cargarHandler({ paginas, fallaPagina = null, limite = true }) {
   const llamadas = []
+  const buckets = []
   const stub = (rel, exports) => {
     const p = require.resolve(`../netlify/functions/lib/${rel}`)
     require.cache[p] = { id: p, filename: p, loaded: true, exports }
   }
   stub('auth', { verifyAuth: async () => ({ uid: ATHLETE }), canAccessAthlete: async () => true })
   stub('strava', { getStravaAccessToken: async () => 'tok' })
+  stub('rate-limit', {
+    allowLimite: async (nombre) => { buckets.push(nombre); return limite },
+    MENSAJE_429: 'Demasiadas consultas',
+  })
   stub('supabase-rest', {
     supabaseGet: async (_h, path) =>
       path.startsWith('/rest/v1/profiles')
@@ -38,7 +43,7 @@ function cargarHandler({ paginas, fallaPagina = null }) {
   })
   const fn = require.resolve('../netlify/functions/coach-athlete-data.js')
   delete require.cache[fn]
-  return { handler: require(fn).handler, llamadas }
+  return { handler: require(fn).handler, llamadas, buckets }
 }
 
 function acts(n, desdeId) {
@@ -92,4 +97,17 @@ test('si falla una página posterior devuelve lo ya leído; si falla la 1ª, 502
   r = cargarHandler({ paginas: [], fallaPagina: 1 })
   res = await r.handler(evento({ athleteId: ATHLETE, weeks: 26, records: false }))
   assert.equal(res.statusCode, 502)
+})
+
+test('rate limit: bucket ligero con records:false, completo por defecto; 429 sin tocar Strava', async () => {
+  let r = cargarHandler({ paginas: [acts(3, 1)] })
+  await r.handler(evento({ athleteId: ATHLETE, weeks: 26, records: false }))
+  await r.handler(evento({ athleteId: ATHLETE, weeks: 8 }))
+  assert.deepEqual(r.buckets, ['athlete_data_light', 'athlete_data_full'])
+
+  r = cargarHandler({ paginas: [acts(3, 1)], limite: false })
+  const res = await r.handler(evento({ athleteId: ATHLETE, weeks: 8 }))
+  assert.equal(res.statusCode, 429)
+  assert.equal(JSON.parse(res.body).code, 'RATE_LIMITED')
+  assert.equal(r.llamadas.length, 0)
 })

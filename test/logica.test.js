@@ -238,3 +238,11 @@ test('resumen: el volumen no cuenta "other"; ritmo de la última carrera', () =>
   assert.equal(r.ritmoUltima, '5:00')
   assert.equal(r.tssAcum, 100)
 })
+
+test('límites de Strava: holgados para el uso real y por debajo de la cuota', () => {
+  const { LIMITES } = require('../netlify/functions/lib/rate-limit.js')
+  for (const l of Object.values(LIMITES)) {
+    assert.equal(l.ventana, 900)
+    assert.ok(l.max >= 30, 'abrir varios atletas y cambiar el selector no debe bloquear')
+  }
+})

@@ -5,6 +5,7 @@
 // [{ athlete_id, nombre, km_semana, horas_semana, tss_semana, ultima_actividad_dias }]
 
 const { verifyAuth } = require('./lib/auth')
+const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
@@ -151,6 +152,9 @@ exports.handler = async (event) => {
   const auth = await verifyAuth(event)
   if (!auth) return respuesta(401, { error: 'Unauthorized' })
   if (!auth.isCoach) return respuesta(403, { error: 'Solo coaches' })
+  if (!(await allowLimite('dashboard_data', auth.uid))) {
+    return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
+  }
   const coachId = auth.uid
 
   try {
