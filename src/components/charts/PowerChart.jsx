@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from 'recharts'
-import { COLORS, DISCIPLINE_COLORS } from '../../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, FONTS } from '../../lib/theme'
 import {
   formatFechaCorta,
   mediaMovil,
@@ -17,8 +17,24 @@ import {
   tooltipBoxStyle,
 } from '../../lib/chartUtils'
 
+// Puntos: cada salida en ámbar de bici. Línea: media móvil en gris (contexto),
+// no en teal (el teal es natación).
 const MINIMO_ACTIVIDADES = 3
 const VENTANA_MEDIA = 3
+
+// Eje Y con marcas equiespaciadas y redondas (paso 5/10/20/25/50 W), con aire
+// arriba y abajo de los datos.
+function ejeRedondo(valores) {
+  const min = Math.min(...valores)
+  const max = Math.max(...valores)
+  const bruto = Math.max(max - min, 20) / 4
+  const paso = [5, 10, 20, 25, 50, 100].find((p) => p >= bruto) || 100
+  const desde = Math.floor((min - paso / 2) / paso) * paso
+  const hasta = Math.ceil((max + paso / 2) / paso) * paso
+  const ticks = []
+  for (let v = desde; v <= hasta; v += paso) ticks.push(v)
+  return { min: desde, max: hasta, ticks }
+}
 
 function PowerTooltip({ active, payload }) {
   if (!active || !payload || payload.length === 0) return null
@@ -58,30 +74,51 @@ export default function PowerChart({ actividades }) {
     fc: a.fc_media,
   }))
 
+  const eje = ejeRedondo(potencias)
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12, marginBottom: 10, color: COLORS.textSecondary }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 4, background: DISCIPLINE_COLORS.bike }} />
+          Potencia media por salida
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 14, height: 2, borderRadius: 1, background: COLORS.textSecondary }} />
+          Media de {VENTANA_MEDIA} salidas
+        </span>
+      </div>
+    <ResponsiveContainer width="100%" height={240}>
       <ComposedChart data={data}>
         <CartesianGrid stroke={gridStroke} vertical={false} />
         <XAxis dataKey="label" tick={tickStyle} axisLine={{ stroke: COLORS.cardBorder }} tickLine={false} />
         <YAxis
-          domain={['dataMin - 10', 'dataMax + 10']}
-          tick={tickStyle}
+          domain={[eje.min, eje.max]}
+          ticks={eje.ticks}
           axisLine={false}
           tickLine={false}
+          tick={{ ...tickStyle, fontFamily: FONTS.mono }}
           tickFormatter={(v) => `${Math.round(v)} W`}
           width={52}
         />
         <Tooltip content={<PowerTooltip />} cursor={{ stroke: COLORS.cardBorder }} />
         <Line
           dataKey="media"
-          stroke={COLORS.accent}
+          stroke={COLORS.textSecondary}
           strokeWidth={2}
           dot={false}
           connectNulls
+          isAnimationActive={false}
           name={`Media ${VENTANA_MEDIA} actividades`}
         />
-        <Scatter dataKey="potencia" fill={DISCIPLINE_COLORS.bike} name="Potencia" />
+        <Scatter
+          dataKey="potencia"
+          fill={DISCIPLINE_COLORS.bike}
+          name="Potencia"
+          shape={(p) => <circle cx={p.cx} cy={p.cy} r={4.5} fill={DISCIPLINE_COLORS.bike} stroke={COLORS.card} strokeWidth={2} />}
+        />
       </ComposedChart>
     </ResponsiveContainer>
+    </div>
   )
 }

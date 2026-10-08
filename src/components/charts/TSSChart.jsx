@@ -1,95 +1,58 @@
-import { useMemo } from 'react'
-import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-  ResponsiveContainer,
-} from 'recharts'
-import { COLORS, DISCIPLINE_COLORS } from '../../lib/theme'
-import { formatFechaCorta, tickStyle, gridStroke, tooltipBoxStyle, sumarDias, hoyMadrid } from '../../lib/chartUtils'
-import { computeCargaDiaria } from '../../lib/carga'
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
+import { COLORS, FONTS } from '../../lib/theme'
+import { formatFechaCorta, tickStyle, gridStroke, tooltipBoxStyle, hoyMadrid, lunesDeSemana } from '../../lib/chartUtils'
 
-const SEMANAS_MINIMAS_LINEAS = 8
+// Carga semanal: SOLO el TSS de cada semana (una suma). ATL/CTL son medias
+// diarias en otra escala y van en su propio gráfico (FormaChart); antes
+// compartían eje y las líneas quedaban aplastadas contra el suelo.
+const BAR_COLOR = COLORS.load
 
-const ATL_COLOR = '#2FBFAF' // Swim teal (fatiga aguda)
-const CTL_COLOR = '#E8934A' // Bike amber (fitness crónico)
-const BAR_COLOR = DISCIPLINE_COLORS.strength // Load violet (TSS)
-
-function TSSTooltip({ active, payload, label }) {
+function TSSTooltip({ active, payload }) {
   if (!active || !payload || payload.length === 0) return null
-  const punto = payload[0].payload
+  const p = payload[0].payload
   return (
     <div style={tooltipBoxStyle}>
-      <p style={{ margin: '0 0 4px', fontWeight: 600 }}>Semana del {label}</p>
-      <p style={{ margin: '2px 0', color: BAR_COLOR }}>TSS: {Math.round(punto.tss_total || 0)}</p>
-      {punto.atl != null && (
-        <p style={{ margin: '2px 0', color: ATL_COLOR }}>ATL: {Math.round(punto.atl)}</p>
-      )}
-      {punto.ctl != null && (
-        <p style={{ margin: '2px 0', color: CTL_COLOR }}>CTL: {Math.round(punto.ctl)}</p>
-      )}
+      <p style={{ margin: '0 0 4px', fontWeight: 600 }}>
+        Semana del {p.label}
+        {p.enCurso && <span style={{ color: COLORS.textSecondary, fontWeight: 400 }}> · en curso</span>}
+      </p>
+      <p style={{ margin: 0, fontFamily: FONTS.mono }}>TSS {Math.round(p.tss_total)}</p>
     </div>
   )
 }
 
-export default function TSSChart({ actividades, actividadesCarga, semanas }) {
-  const mostrarLineas = (semanas?.length || 0) >= SEMANAS_MINIMAS_LINEAS
-  const fuenteCarga = actividadesCarga || actividades
-
-  // EWMA 7/42 anclada a hoy (Europe/Madrid): la carga decae hasta hoy aunque la
-  // última actividad sea anterior. Se calienta con la serie larga (26 semanas)
-  // si el padre la pasa; el selector solo recorta las barras, no el cálculo.
-  // Memoizada: solo se recalcula si cambia la serie de carga (no en cada hover,
-  // filtro o "Ver más" del padre). Índice por fecha en un Map (antes un reduce
-  // con spread, O(n²) sobre ~180 días).
-  const { cargaPorFecha, ultimoDia } = useMemo(() => {
-    if (!mostrarLineas) return { cargaPorFecha: new Map(), ultimoDia: null }
-    const cargaDiaria = computeCargaDiaria(fuenteCarga || [], hoyMadrid())
-    return {
-      cargaPorFecha: new Map(cargaDiaria.map((dia) => [dia.fecha, dia])),
-      ultimoDia: cargaDiaria[cargaDiaria.length - 1] || null,
-    }
-  }, [fuenteCarga, mostrarLineas])
-
+export default function TSSChart({ semanas }) {
   if (!semanas || semanas.length === 0) return null
+  const lunesHoy = lunesDeSemana(hoyMadrid())
 
-  // Cada semana toma el valor de su domingo (o el último día si aún no llegó).
-  const data = semanas.map((s) => {
-    const dia = cargaPorFecha.get(sumarDias(s.semana, 6)) || ultimoDia
-    return {
-      label: formatFechaCorta(s.semana),
-      tss_total: s.tss_total || 0,
-      atl: mostrarLineas && dia ? dia.atl : null,
-      ctl: mostrarLineas && dia ? dia.ctl : null,
-    }
-  })
+  const data = semanas.map((s) => ({
+    label: formatFechaCorta(s.semana),
+    tss_total: s.tss_total || 0,
+    enCurso: s.semana === lunesHoy,
+  }))
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <ComposedChart data={data}>
-        <CartesianGrid stroke={gridStroke} vertical={false} />
-        <XAxis dataKey="label" tick={tickStyle} axisLine={{ stroke: COLORS.cardBorder }} tickLine={false} />
-        <YAxis tick={tickStyle} axisLine={false} tickLine={false} width={40} />
-        <Tooltip content={<TSSTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-        {mostrarLineas && (
-          <Legend
-            wrapperStyle={{ fontSize: 12, color: COLORS.textSecondary }}
-            iconType="plainline"
-          />
-        )}
-        <Bar dataKey="tss_total" name="TSS semanal" fill={BAR_COLOR} radius={[3, 3, 0, 0]} maxBarSize={42} legendType="rect" />
-        {mostrarLineas && (
-          <Line dataKey="atl" name="ATL (7 días)" stroke={ATL_COLOR} strokeWidth={2} dot={false} />
-        )}
-        {mostrarLineas && (
-          <Line dataKey="ctl" name="CTL (42 días)" stroke={CTL_COLOR} strokeWidth={2} dot={false} />
-        )}
-      </ComposedChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} barCategoryGap={2} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+          <CartesianGrid stroke={gridStroke} vertical={false} />
+          <XAxis dataKey="label" tick={tickStyle} axisLine={{ stroke: COLORS.cardBorder }} tickLine={false} minTickGap={8} />
+          <YAxis tick={{ ...tickStyle, fontFamily: FONTS.mono }} axisLine={false} tickLine={false} width={36} />
+          <Tooltip content={<TSSTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+          <Bar dataKey="tss_total" name="TSS semanal" radius={[4, 4, 0, 0]} maxBarSize={36}>
+            {data.map((d) => (
+              // La semana en curso aún no ha terminado: más tenue para que no se
+              // lea como una caída de carga.
+              <Cell key={d.label} fill={BAR_COLOR} fillOpacity={d.enCurso ? 0.45 : 1} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      {data.some((d) => d.enCurso) && (
+        <p style={{ margin: '6px 0 0', fontSize: 11, color: COLORS.textTertiary }}>
+          La barra tenue es la semana en curso.
+        </p>
+      )}
+    </div>
   )
 }
