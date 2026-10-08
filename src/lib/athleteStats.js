@@ -66,21 +66,26 @@ export function computeZonas(actividades) {
   })
 }
 
-// Progresión de ritmo running: media de ritmo run por semana, últimas N semanas
-// con datos. Altura ∝ mejora (ritmo más rápido = barra más alta), opacity creciente.
+// Progresión de ritmo running: ritmo medio de carrera por semana, últimas N
+// semanas con datos. Altura ∝ mejora (ritmo más rápido = barra más alta),
+// opacity creciente.
+// Ritmo medio PONDERADO por distancia (minutos totales / km totales): antes era
+// la media de los ritmos de cada salida, así que un trote de 3 km pesaba lo
+// mismo que una tirada de 20 km.
 export function computePaceTrend(actividades, nSemanas = 6) {
   const porSemana = {}
   for (const a of actividades) {
     if (a.disciplina !== 'run' || a.ritmo_min_km == null || !a.fecha) continue
     const lunes = lunesDeSemana(a.fecha)
-    if (!porSemana[lunes]) porSemana[lunes] = { suma: 0, n: 0 }
-    porSemana[lunes].suma += a.ritmo_min_km
-    porSemana[lunes].n += 1
+    if (!porSemana[lunes]) porSemana[lunes] = { min: 0, km: 0 }
+    const km = a.distancia_km > 0 ? a.distancia_km : 1
+    porSemana[lunes].min += a.ritmo_min_km * km
+    porSemana[lunes].km += km
   }
   const semanas = Object.keys(porSemana)
     .sort()
     .slice(-nSemanas)
-    .map((lunes) => ({ lunes, ritmo: porSemana[lunes].suma / porSemana[lunes].n }))
+    .map((lunes) => ({ lunes, ritmo: porSemana[lunes].min / porSemana[lunes].km }))
   if (semanas.length === 0) return []
 
   const ritmos = semanas.map((s) => s.ritmo)
