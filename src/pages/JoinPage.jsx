@@ -60,10 +60,7 @@ export default function JoinPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!token) {
-      setTokenValido(false)
-      return
-    }
+    if (!token) return // sin token: inválido, derivado abajo (tokenOk)
     let activo = true
 
     async function verificarToken() {
@@ -140,7 +137,10 @@ export default function JoinPage() {
   }
 
   // Cargando
-  if (tokenValido === null) {
+  // Sin token en la URL es inválido sin preguntar al servidor.
+  const tokenOk = token ? tokenValido : false
+
+  if (tokenOk === null) {
     return (
       <div style={pageStyle}>
         <p style={{ color: COLORS.textSecondary }}>Verificando invitación…</p>
@@ -149,7 +149,7 @@ export default function JoinPage() {
   }
 
   // Token inválido
-  if (!tokenValido) {
+  if (!tokenOk) {
     return (
       <div style={pageStyle}>
         <div style={{ ...cardStyle, textAlign: 'center' }}>

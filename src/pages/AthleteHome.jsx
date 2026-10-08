@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
@@ -112,6 +112,8 @@ export default function AthleteHome() {
   // Strava data
   const [weeks, setWeeks] = useState(8)
   const [datos, setDatos] = useState(null)
+  // userId:weeks de lo que hay en `datos` (evita volver a pedir al cambiar de pestaña)
+  const stravaClaveRef = useRef(null)
   const [cargandoStrava, setCargandoStrava] = useState(false)
   const [errorStrava, setErrorStrava] = useState('')
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
@@ -216,7 +218,8 @@ export default function AthleteHome() {
   // ── Paso 3: cargar datos Strava ───────────────────────────────────────
   useEffect(() => {
     if (!userId || activeTab !== 'analisis') return
-    if (datos && datos._weeks === weeks && datos._userId === userId) return
+    const clave = `${userId}:${weeks}`
+    if (stravaClaveRef.current === clave) return // ya cargado para este atleta y rango
     let activo = true
 
     async function cargarStrava() {
@@ -236,6 +239,7 @@ export default function AthleteHome() {
           setErrorStrava(json?.error || 'No se pudieron cargar los datos de Strava')
           return
         }
+        stravaClaveRef.current = clave
         setDatos({ ...json, _weeks: weeks, _userId: userId })
       } catch {
         if (activo) setErrorStrava('Error de conexión cargando datos de Strava')

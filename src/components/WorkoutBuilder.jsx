@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, inputStyle } from '../lib/theme'
@@ -22,7 +22,13 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [error, setError] = useState(null)
   const [mostrarInputFecha, setMostrarInputFecha] = useState(false)
 
-  useEffect(() => {
+  // Al abrir (o cambiar la sesión a editar) se reinicia el formulario. Se hace
+  // durante el render comparando con las props previas (patrón de React para
+  // "ajustar estado cuando cambia una prop"), no en un efecto: así no hay un
+  // render intermedio con el formulario de la sesión anterior.
+  const [previo, setPrevio] = useState({ isOpen: false, sessionExistente })
+  if (previo.isOpen !== isOpen || previo.sessionExistente !== sessionExistente) {
+    setPrevio({ isOpen, sessionExistente })
     if (isOpen) {
       const f = initForm(sessionExistente)
       setForm(f)
@@ -35,7 +41,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
         !!f.fecha && !DIAS_CHIPS.some((d) => d.value === f.fecha)
       )
     }
-  }, [isOpen, sessionExistente])
+  }
 
   if (!isOpen) return null
 
