@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   ComposedChart,
   Bar,
@@ -37,24 +38,29 @@ function TSSTooltip({ active, payload, label }) {
 }
 
 export default function TSSChart({ actividades, actividadesCarga, semanas }) {
-  if (!semanas || semanas.length === 0) return null
-
-  const mostrarLineas = semanas.length >= SEMANAS_MINIMAS_LINEAS
+  const mostrarLineas = (semanas?.length || 0) >= SEMANAS_MINIMAS_LINEAS
+  const fuenteCarga = actividadesCarga || actividades
 
   // EWMA 7/42 anclada a hoy (Europe/Madrid): la carga decae hasta hoy aunque la
   // última actividad sea anterior. Se calienta con la serie larga (26 semanas)
   // si el padre la pasa; el selector solo recorta las barras, no el cálculo.
-  // Cada semana toma el valor de su domingo (o el último día si aún no llegó).
-  let cargaPorFecha = {}
-  let ultimoDia = null
-  if (mostrarLineas) {
-    const cargaDiaria = computeCargaDiaria(actividadesCarga || actividades || [], hoyMadrid())
-    cargaPorFecha = cargaDiaria.reduce((acc, dia) => ({ ...acc, [dia.fecha]: dia }), {})
-    ultimoDia = cargaDiaria[cargaDiaria.length - 1] || null
-  }
+  // Memoizada: solo se recalcula si cambia la serie de carga (no en cada hover,
+  // filtro o "Ver más" del padre). Índice por fecha en un Map (antes un reduce
+  // con spread, O(n²) sobre ~180 días).
+  const { cargaPorFecha, ultimoDia } = useMemo(() => {
+    if (!mostrarLineas) return { cargaPorFecha: new Map(), ultimoDia: null }
+    const cargaDiaria = computeCargaDiaria(fuenteCarga || [], hoyMadrid())
+    return {
+      cargaPorFecha: new Map(cargaDiaria.map((dia) => [dia.fecha, dia])),
+      ultimoDia: cargaDiaria[cargaDiaria.length - 1] || null,
+    }
+  }, [fuenteCarga, mostrarLineas])
 
+  if (!semanas || semanas.length === 0) return null
+
+  // Cada semana toma el valor de su domingo (o el último día si aún no llegó).
   const data = semanas.map((s) => {
-    const dia = cargaPorFecha[sumarDias(s.semana, 6)] || ultimoDia
+    const dia = cargaPorFecha.get(sumarDias(s.semana, 6)) || ultimoDia
     return {
       label: formatFechaCorta(s.semana),
       tss_total: s.tss_total || 0,
@@ -81,7 +87,7 @@ export default function TSSChart({ actividades, actividadesCarga, semanas }) {
           <Line dataKey="atl" name="ATL (7 días)" stroke={ATL_COLOR} strokeWidth={2} dot={false} />
         )}
         {mostrarLineas && (
-          <Line dataKey="ctl" name="CTL (28 días)" stroke={CTL_COLOR} strokeWidth={2} dot={false} />
+          <Line dataKey="ctl" name="CTL (42 días)" stroke={CTL_COLOR} strokeWidth={2} dot={false} />
         )}
       </ComposedChart>
     </ResponsiveContainer>
