@@ -76,4 +76,30 @@ function clientIp(event) {
   )
 }
 
-module.exports = { allowRequest, clientIp }
+// Límites de las funciones que leen Strava (A1 de la auditoría 2026-09-24):
+// sin ellos, un usuario autenticado (o una cuenta comprometida, o un bucle de
+// la UI) podía agotar la cuota de Strava, que es COMPARTIDA por toda la app.
+// Muy por encima del uso real: abrir un atleta son 1–3 llamadas; cambiar el
+// selector de semanas, una más. Ventana de 15 min, como la de Strava.
+const VENTANA_STRAVA_S = 900
+const LIMITES = {
+  // coach-athlete-data con PRs: hasta ~19 peticiones a Strava por llamada
+  athlete_data_full: { max: 30, ventana: VENTANA_STRAVA_S },
+  // coach-athlete-data con records:false: 1–4 peticiones
+  athlete_data_light: { max: 90, ventana: VENTANA_STRAVA_S },
+  // coach-dashboard-data: 1 petición por atleta del coach
+  dashboard_data: { max: 30, ventana: VENTANA_STRAVA_S },
+  // coach-activity-detail: 2 peticiones (detalle + streams)
+  activity_detail: { max: 60, ventana: VENTANA_STRAVA_S },
+}
+
+// allowRequest con un límite de LIMITES por nombre. Fail-open igual.
+function allowLimite(nombre, subject) {
+  const l = LIMITES[nombre]
+  if (!l) return Promise.resolve(true)
+  return allowRequest(nombre, subject, l.max, l.ventana)
+}
+
+const MENSAJE_429 = 'Demasiadas consultas seguidas. Espera unos minutos y vuelve a intentarlo.'
+
+module.exports = { allowRequest, allowLimite, clientIp, LIMITES, MENSAJE_429 }
