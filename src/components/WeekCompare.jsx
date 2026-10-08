@@ -87,7 +87,6 @@ export default function WeekCompare({ semanas, onClose }) {
           aria-label="Cerrar"
           title="Cerrar"
           onClick={onClose}
-          aria-label="Cerrar"
           style={{
             background: 'transparent',
             border: `1px solid ${COLORS.cardBorder}`,
