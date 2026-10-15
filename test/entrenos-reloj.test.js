@@ -85,7 +85,7 @@ test('el texto del paso (nombre + material) va ANTES de la distancia: Intervals 
     disciplina: 'swim',
     workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', unidad: 'mtr', cantidad: 200, material: ['aletas', 'tabla'] }] },
   })
-  assert.equal(t, '- Pies · aletas, tabla · pulsa vuelta al acabar 200mtr press lap')
+  assert.equal(t, '- Pulsa vuelta al acabar · Pies · aletas, tabla 200mtr press lap')
 })
 
 test('el cue no cuela órdenes a Intervals (zonas, duraciones, ritmos, repeticiones)', () => {
@@ -110,7 +110,7 @@ test('natación: pausa en cada cambio de bloque; con material indica qué poners
     },
   })
   assert.equal(t.match(/15s press lap intensity=rest/g).length, 4) // poner aletas+tabla, siguiente (mismo material), cambiar a palas, quitar
-  assert.match(t, /- Siguiente: 200 metros Pies · aletas, tabla 15s press lap intensity=rest\n\n- Pies · aletas, tabla · pulsa vuelta al acabar 200mtr press lap/)
+  assert.match(t, /- Siguiente: 200 metros Pies · aletas, tabla 15s press lap intensity=rest\n\n- Pulsa vuelta al acabar · Pies · aletas, tabla 200mtr press lap/)
   assert.match(t, /- Quita el material · Siguiente: 200 metros 15s press lap intensity=rest\n\n- Vuelta a la calma 200mtr/)
 })
 
@@ -184,7 +184,7 @@ test('técnica/pies: tabla o nombre (pies, patada, técnica, drill) → acaba al
   assert.equal(esTecnica({ nombre: 'Progresivo', material: ['palas'] }), false)
   assert.equal(esTecnica({ nombre: 'Despiés', material: [] }), false)
   const t = buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 200, unidad: 'mtr', material: ['aletas', 'tabla'] }] } })
-  assert.equal(t, '- Pies · aletas, tabla · pulsa vuelta al acabar 200mtr press lap')
+  assert.equal(t, '- Pulsa vuelta al acabar · Pies · aletas, tabla 200mtr press lap')
   // en carrera, "pies" no cambia nada
   assert.doesNotMatch(buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 10, unidad: 'min', material: [] }] } }), /press lap/)
   assert.equal(metrosTecnica({ bloques: [
