@@ -102,7 +102,9 @@ function lineaPaso(paso, disciplina, cueNombre, objetivo) {
   let cue = cueStr(cueNombre, paso.material, disciplina)
   if (disciplina === 'swim' && !esDescanso(paso) && esTecnica(paso)) {
     objetivo = `${objetivo || ''} press lap`
-    cue = `${cue ? `${cue.trim()} · ` : ''}pulsa vuelta al acabar `
+    // La instrucción va DELANTE: si el reloj recorta un texto largo, lo que se
+    // pierde es el final (nombre/material), no el "pulsa vuelta".
+    cue = `Pulsa vuelta al acabar${cue ? ` · ${cue.trim()}` : ''} `
   }
   return '- ' + cue + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
 }
