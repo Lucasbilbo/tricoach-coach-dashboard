@@ -34,6 +34,18 @@ test('carrera: rango de ritmo y zona de pulso', () => {
   assert.match(t, /Serie 5x\n- 1km Z4 HR\n- Descanso parado 3m/)
 })
 
+test('cabecera de serie: el nombre del coach no compite con el Nx de Intervals', () => {
+  const t = buildIntervalsText(ses('swim', [
+    { tipo: 'repeat', nombre: 'Principal 8x100 Z3', repeticiones: 8, pasos: [paso(100, 'mtr', 'ritmo', '1:45'), paso(20, 's')] },
+  ]))
+  const cabecera = t.split('\n')[0]
+  assert.equal(cabecera, 'Principal 8 veces 100 Zona 3 8x')
+  assert.equal((cabecera.match(/\d+x/g) || []).length, 1) // un único Nx: el de las repeticiones
+  // Sin nombre sigue siendo 'Serie'; un nombre que se queda vacío tras limpiar, también
+  assert.match(buildIntervalsText(ses('run', [{ tipo: 'repeat', nombre: '', repeticiones: 3, pasos: [paso(1, 'km')] }])), /^Serie 3x\n/)
+  assert.match(buildIntervalsText(ses('run', [{ tipo: 'repeat', nombre: ' @ ', repeticiones: 3, pasos: [paso(1, 'km')] }])), /^Serie 3x\n/)
+})
+
 test('natación: sin ritmo inventado y con el material de cada paso', () => {
   const t = buildIntervalsText(ses('swim', [
     { tipo: 'warmup', ...paso(500, 'mtr', null, null, '75 crol 25 otro') },
