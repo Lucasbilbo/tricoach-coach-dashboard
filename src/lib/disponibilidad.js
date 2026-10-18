@@ -92,3 +92,56 @@ export function resumenSemana(datos, lunes) {
     return { fecha, ...disponibilidadDelDia(datos, fecha) }
   })
 }
+
+// ── Edición (lote B) ────────────────────────────────────────────────────────
+// Estado del editor de la plantilla: { '<dia>-<disciplina>': { max: number|null } }.
+// Clave presente = esa disciplina cabe ese día; max null = sin límite.
+export const claveCelda = (dia, disciplina) => `${dia}-${disciplina}`
+
+export function plantillaAEstado(filas) {
+  const estado = {}
+  for (const f of lista(filas)) {
+    if (!esFila(f) || !esDisciplina(f.disciplina)) continue
+    if (!Number.isInteger(f.dia_semana) || f.dia_semana < 1 || f.dia_semana > 7) continue
+    estado[claveCelda(f.dia_semana, f.disciplina)] = { max: limiteDe(f.max_minutos) }
+  }
+  return estado
+}
+
+// Qué hay que escribir para pasar de lo guardado a lo editado: solo celdas nuevas
+// o cambiadas (upsert) y las quitadas (borrar). Sin cambios → listas vacías.
+export function cambiosPlantilla(filasGuardadas, estadoEditado) {
+  const guardado = plantillaAEstado(filasGuardadas)
+  const editado = estadoEditado && typeof estadoEditado === 'object' ? estadoEditado : {}
+  const upsert = []
+  const borrar = []
+  for (const dia of [1, 2, 3, 4, 5, 6, 7]) {
+    for (const disciplina of DISCIPLINAS_DISPONIBILIDAD) {
+      const k = claveCelda(dia, disciplina)
+      const antes = guardado[k]
+      const ahora = editado[k]
+      if (ahora) {
+        const max = limiteDe(ahora.max)
+        if (!antes || antes.max !== max) upsert.push({ dia_semana: dia, disciplina, max_minutos: max })
+      } else if (antes) {
+        borrar.push({ dia_semana: dia, disciplina })
+      }
+    }
+  }
+  return { upsert, borrar }
+}
+
+// Filas a insertar para una excepción de una fecha.
+//   tipo 'no_disponible' → 1 fila sin disciplina; 'limitada' → 1 fila por disciplina marcada.
+//   disciplinas: { run: 60, bike: null } (null = sin límite). Devuelve [] si no es válida.
+export function filasExcepcion({ fecha, tipo, disciplinas, nota }) {
+  if (typeof fecha !== 'string' || !FECHA_RE.test(fecha)) return []
+  const notaLimpia = typeof nota === 'string' && nota.trim() ? nota.trim().slice(0, 200) : null
+  if (tipo === 'no_disponible') {
+    return [{ fecha, tipo, disciplina: null, max_minutos: null, nota: notaLimpia }]
+  }
+  if (tipo !== 'limitada') return []
+  return DISCIPLINAS_DISPONIBILIDAD
+    .filter((d) => disciplinas && Object.prototype.hasOwnProperty.call(disciplinas, d))
+    .map((d) => ({ fecha, tipo, disciplina: d, max_minutos: limiteDe(disciplinas[d]), nota: notaLimpia }))
+}

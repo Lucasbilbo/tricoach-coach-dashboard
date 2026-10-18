@@ -146,3 +146,42 @@ test('entradas raras no lanzan excepciones', () => {
   assert.equal(evaluarDisponibilidad({ plantilla }, LUN, 'swim', 'mucho').nivel, 'ok')
   assert.equal(evaluarDisponibilidad({ plantilla }, LUN, 'swim', NaN).nivel, 'ok')
 })
+
+test('plantillaAEstado y cambiosPlantilla: solo lo cambiado', async () => {
+  const { plantillaAEstado, cambiosPlantilla, claveCelda } = await import('../src/lib/disponibilidad.js')
+  const estado = plantillaAEstado(plantilla)
+  assert.deepEqual(estado[claveCelda(1, 'swim')], { max: 60 })
+  assert.deepEqual(estado[claveCelda(1, 'run')], { max: null })
+  assert.equal(estado[claveCelda(2, 'run')], undefined)
+  // sin tocar nada → sin cambios
+  assert.deepEqual(cambiosPlantilla(plantilla, estado), { upsert: [], borrar: [] })
+  // cambiar límite, añadir una celda nueva, quitar otra
+  const editado = { ...estado, [claveCelda(1, 'swim')]: { max: 45 }, [claveCelda(2, 'bike')]: { max: null } }
+  delete editado[claveCelda(7, 'run')]
+  const c = cambiosPlantilla(plantilla, editado)
+  assert.deepEqual(c.upsert, [
+    { dia_semana: 1, disciplina: 'swim', max_minutos: 45 },
+    { dia_semana: 2, disciplina: 'bike', max_minutos: null },
+  ])
+  assert.deepEqual(c.borrar, [{ dia_semana: 7, disciplina: 'run' }])
+  // pasar de límite a sin límite cuenta como cambio
+  assert.deepEqual(cambiosPlantilla(plantilla, { ...estado, [claveCelda(1, 'swim')]: { max: null } }).upsert,
+    [{ dia_semana: 1, disciplina: 'swim', max_minutos: null }])
+  // entradas raras
+  assert.deepEqual(cambiosPlantilla(null, null), { upsert: [], borrar: [] })
+  assert.deepEqual(plantillaAEstado([{ dia_semana: 9, disciplina: 'run' }, { dia_semana: 1, disciplina: 'golf' }]), {})
+})
+
+test('filasExcepcion: día libre, limitada y entradas inválidas', async () => {
+  const { filasExcepcion } = await import('../src/lib/disponibilidad.js')
+  assert.deepEqual(filasExcepcion({ fecha: LUN, tipo: 'no_disponible', nota: '  Viaje  ' }),
+    [{ fecha: LUN, tipo: 'no_disponible', disciplina: null, max_minutos: null, nota: 'Viaje' }])
+  assert.deepEqual(filasExcepcion({ fecha: LUN, tipo: 'limitada', disciplinas: { run: 40, swim: null }, nota: '' }), [
+    { fecha: LUN, tipo: 'limitada', disciplina: 'swim', max_minutos: null, nota: null },
+    { fecha: LUN, tipo: 'limitada', disciplina: 'run', max_minutos: 40, nota: null },
+  ])
+  assert.deepEqual(filasExcepcion({ fecha: LUN, tipo: 'limitada', disciplinas: {} }), [])
+  assert.deepEqual(filasExcepcion({ fecha: 'x', tipo: 'no_disponible' }), [])
+  assert.deepEqual(filasExcepcion({ fecha: LUN, tipo: 'otro' }), [])
+  assert.equal(filasExcepcion({ fecha: LUN, tipo: 'no_disponible', nota: 'a'.repeat(300) })[0].nota.length, 200)
+})
