@@ -1,5 +1,6 @@
--- PENDIENTE_010 — disponibilidad del atleta (plantilla semanal + excepciones por fecha)
--- NO SE APLICA SOLA. Revisar y aplicar a mano (Supabase SQL Editor o MCP).
+-- 010 — disponibilidad del atleta (plantilla semanal + excepciones por fecha)
+-- APLICADA en producción el 2026-10-18 (SQL Editor de Supabase). Verificada con pg_policies,
+-- role_table_grants y RLS activa en ambas tablas.
 --
 -- Para qué: el atleta declara qué disciplinas puede hacer cada día de la semana
 -- y cuántos minutos (o "sin límite"), y el coach lo ve al planificar. Los avisos

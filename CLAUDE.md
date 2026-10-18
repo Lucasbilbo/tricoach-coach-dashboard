@@ -162,7 +162,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–009 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–010 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 
