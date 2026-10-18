@@ -1,24 +1,24 @@
-// Editor de disponibilidad del atleta: plantilla semanal por disciplina (con
-// límite de minutos o "sin límite") y excepciones por fecha. Solo el atleta lo
-// ve y edita; el coach la lee en su panel (lotes C y D).
-import { useCallback, useEffect, useMemo, useState } from 'react'
+// Editor de disponibilidad del atleta: calendario semanal donde marcas, con dos
+// toques (inicio y fin), a qué horas puedes nadar, ir en bici, correr o hacer
+// fuerza. Más «días especiales» (viaje, día corto…). Solo el atleta lo edita; el
+// coach lo ve en su panel.
+import { useEffect, useMemo, useState } from 'react'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, buttonStyle, cardStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { SectionTitle } from './ui/Layout'
 import { hoyMadrid } from '../lib/chartUtils'
 import {
-  DISCIPLINAS_DISPONIBILIDAD, cambiosPlantilla, claveCelda, filasExcepcion, plantillaAEstado,
+  DISCIPLINAS_DISPONIBILIDAD, MIN_POR_SLOT, claveSlot, filasExcepcion, formatHora, formatTramo, mismaPlantilla,
+  pintarRango, slotsAVentanas, ventanasASlots,
 } from '../lib/disponibilidad'
 import { borrarExcepcion, cargarDisponibilidad, guardarExcepcion, guardarPlantilla } from '../lib/disponibilidadApi'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-const MINUTOS = [20, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300]
-const SIN_LIMITE = 'sin'
-
-function etiquetaMin(m) {
-  if (m < 60) return `${m} min`
-  const h = Math.floor(m / 60), r = m % 60
-  return r ? `${h} h ${r} min` : `${h} h`
-}
+const INICIAL = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+const SLOT_PRIMERO = 10 // 5:00
+const SLOT_ULTIMO = 45 // 22:30–23:00
+const SLOTS_VISIBLES = Array.from({ length: SLOT_ULTIMO - SLOT_PRIMERO + 1 }, (_, i) => SLOT_PRIMERO + i)
+const BORRAR = 'borrar'
+const HORAS_OPCIONES = Array.from({ length: (23 - 5) * 2 + 1 }, (_, i) => (5 * 60) + i * MIN_POR_SLOT) // 5:00 … 23:00
 
 function formatFecha(fecha) {
   const [y, m, d] = fecha.split('-').map(Number)
@@ -26,60 +26,51 @@ function formatFecha(fecha) {
   return `${['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][dia]} ${d}/${m}`
 }
 
-function SelectorLimite({ valor, onChange, etiqueta }) {
-  const opciones = MINUTOS.includes(valor) || valor === null ? MINUTOS : [...MINUTOS, valor].sort((a, b) => a - b)
+// Fondo de una celda con una o varias disciplinas (franjas verticales).
+function fondoCelda(discs) {
+  if (discs.length === 0) return 'transparent'
+  if (discs.length === 1) return `${DISCIPLINE_COLORS[discs[0]]}CC`
+  const paso = 100 / discs.length
+  return `linear-gradient(90deg, ${discs.map((d, i) => `${DISCIPLINE_COLORS[d]}CC ${i * paso}% ${(i + 1) * paso}%`).join(', ')})`
+}
+
+function BotonPincel({ clave, activo, onClick }) {
+  const color = clave === BORRAR ? COLORS.textSecondary : DISCIPLINE_COLORS[clave]
   return (
-    <select
-      aria-label={etiqueta}
-      value={valor === null ? SIN_LIMITE : String(valor)}
-      onChange={(e) => onChange(e.target.value === SIN_LIMITE ? null : Number(e.target.value))}
-      style={{ ...inputStyle, width: 'auto', padding: '6px 8px', fontSize: 12, fontFamily: FONTS.mono }}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activo}
+      style={{
+        padding: '7px 14px', borderRadius: 999, fontSize: 13, fontFamily: FONTS.sans, cursor: 'pointer',
+        border: `1px solid ${activo ? color : COLORS.cardBorder}`,
+        background: activo ? (clave === BORRAR ? COLORS.cardBorder : `${color}33`) : 'transparent',
+        color: activo ? COLORS.textPrimary : COLORS.textSecondary, fontWeight: activo ? 600 : 400,
+      }}
     >
-      <option value={SIN_LIMITE}>Sin límite</option>
-      {opciones.map((m) => <option key={m} value={m}>{etiquetaMin(m)}</option>)}
-    </select>
+      {clave === BORRAR ? 'Borrar' : DISCIPLINE_LABELS[clave]}
+    </button>
   )
 }
 
-// Fila "disciplina on/off + límite" reutilizada por la plantilla y las excepciones.
-function ChipDisciplina({ disciplina, activa, max, onToggle, onMax, etiquetaDia }) {
-  const color = DISCIPLINE_COLORS[disciplina]
-  const nombre = DISCIPLINE_LABELS[disciplina]
+function SelectHora({ valor, onChange, etiqueta }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-pressed={activa}
-        aria-label={`${nombre}${etiquetaDia ? ` ${etiquetaDia}` : ''}`}
-        style={{
-          padding: '6px 12px', borderRadius: 999, fontSize: 13, fontFamily: FONTS.sans, cursor: 'pointer',
-          border: `1px solid ${activa ? color : COLORS.cardBorder}`,
-          background: activa ? `${color}22` : 'transparent',
-          color: activa ? COLORS.textPrimary : COLORS.textSecondary,
-          fontWeight: activa ? 600 : 400,
-        }}
-      >
-        {nombre}
-      </button>
-      {activa && <SelectorLimite valor={max} onChange={onMax} etiqueta={`Límite de ${nombre}${etiquetaDia ? ` ${etiquetaDia}` : ''}`} />}
-    </div>
+    <select aria-label={etiqueta} value={valor} onChange={(e) => onChange(Number(e.target.value))}
+      style={{ ...inputStyle, width: 'auto', padding: '8px 10px', fontFamily: FONTS.mono }}>
+      {HORAS_OPCIONES.map((m) => <option key={m} value={m}>{formatHora(m)}</option>)}
+    </select>
   )
 }
 
 export default function DisponibilidadEditor({ athleteId }) {
   const [guardada, setGuardada] = useState({ plantilla: [], excepciones: [] })
-  const [estado, setEstado] = useState({})
+  const [slots, setSlots] = useState(() => new Set())
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState('')
-
-  const recargar = useCallback(async () => {
-    const datos = await cargarDisponibilidad(athleteId)
-    setGuardada(datos)
-    setEstado(plantillaAEstado(datos.plantilla))
-  }, [athleteId])
+  const [pincel, setPincel] = useState('swim')
+  const [ancla, setAncla] = useState(null) // { dia, slot } del primer toque
 
   useEffect(() => {
     let activo = true
@@ -87,36 +78,42 @@ export default function DisponibilidadEditor({ athleteId }) {
       .then((datos) => {
         if (!activo) return
         setGuardada(datos)
-        setEstado(plantillaAEstado(datos.plantilla))
+        setSlots(ventanasASlots(datos.plantilla))
       })
       .catch((e) => activo && setError(e?.message || 'No se pudo cargar tu disponibilidad'))
       .finally(() => activo && setCargando(false))
     return () => { activo = false }
   }, [athleteId])
 
-  const cambios = useMemo(() => cambiosPlantilla(guardada.plantilla, estado), [guardada.plantilla, estado])
-  const hayCambios = cambios.upsert.length + cambios.borrar.length > 0
+  async function recargar() {
+    const datos = await cargarDisponibilidad(athleteId)
+    setGuardada(datos)
+    setSlots(ventanasASlots(datos.plantilla))
+    return datos
+  }
+
+  const hayCambios = !mismaPlantilla(guardada.plantilla, slots)
   const configurada = guardada.plantilla.length > 0
 
-  function alternar(dia, disciplina) {
+  function tocarCelda(dia, slot) {
     setAviso('')
-    setEstado((prev) => {
-      const k = claveCelda(dia, disciplina)
-      const sig = { ...prev }
-      if (sig[k]) delete sig[k]; else sig[k] = { max: null }
-      return sig
-    })
-  }
-  function fijarMax(dia, disciplina, max) {
-    setEstado((prev) => ({ ...prev, [claveCelda(dia, disciplina)]: { max } }))
+    if (!ancla || ancla.dia !== dia) {
+      setAncla({ dia, slot })
+      return
+    }
+    setSlots((prev) => (pincel === BORRAR
+      ? pintarRango(prev, dia, ancla.slot, slot, null, true)
+      : pintarRango(prev, dia, ancla.slot, slot, pincel)))
+    setAncla(null)
   }
 
   async function guardar() {
     setGuardando(true); setError(''); setAviso('')
     try {
-      await guardarPlantilla(athleteId, cambios)
+      await guardarPlantilla(athleteId, slotsAVentanas(slots), guardada.plantilla.map((f) => f.id))
       await recargar()
-      setAviso('Guardado. Tu entrenador ya ve estos cambios.')
+      setAncla(null)
+      setAviso('Guardado. Tu entrenador ya ve tus horas.')
     } catch (e) {
       setError(e?.message || 'No se pudo guardar')
     } finally {
@@ -124,15 +121,17 @@ export default function DisponibilidadEditor({ athleteId }) {
     }
   }
 
-  // ── Excepciones ───────────────────────────────────────────────────────
+  // ── Días especiales ───────────────────────────────────────────────────
   const hoy = hoyMadrid()
   const [fechaEx, setFechaEx] = useState('')
   const [tipoEx, setTipoEx] = useState('no_disponible')
-  const [discEx, setDiscEx] = useState({})
+  const [tramosEx, setTramosEx] = useState([])
+  const [nuevoTramo, setNuevoTramo] = useState({ disciplina: 'run', inicio_min: 18 * 60, fin_min: 19 * 60 })
   const [notaEx, setNotaEx] = useState('')
   const [guardandoEx, setGuardandoEx] = useState(false)
 
-  const filasNuevas = filasExcepcion({ fecha: fechaEx, tipo: tipoEx, disciplinas: discEx, nota: notaEx })
+  const filasNuevas = filasExcepcion({ fecha: fechaEx, tipo: tipoEx, tramos: tramosEx, nota: notaEx })
+  const tramoValido = nuevoTramo.fin_min > nuevoTramo.inicio_min
   const proximas = useMemo(() => {
     const porFecha = new Map()
     for (const e of guardada.excepciones) {
@@ -148,10 +147,10 @@ export default function DisponibilidadEditor({ athleteId }) {
     try {
       await guardarExcepcion(athleteId, fechaEx, filasNuevas)
       await recargar()
-      setFechaEx(''); setDiscEx({}); setNotaEx('')
-      setAviso('Excepción guardada.')
+      setFechaEx(''); setTramosEx([]); setNotaEx('')
+      setAviso('Día especial guardado.')
     } catch (e) {
-      setError(e?.message || 'No se pudo guardar la excepción')
+      setError(e?.message || 'No se pudo guardar el día especial')
     } finally {
       setGuardandoEx(false)
     }
@@ -172,45 +171,39 @@ export default function DisponibilidadEditor({ athleteId }) {
     <>
       <section style={{ marginBottom: 32 }}>
         <SectionTitle>Tu semana tipo</SectionTitle>
-        <p style={{ color: COLORS.textSecondary, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
-          Marca qué puedes entrenar cada día y cuánto tiempo, por disciplina. «Sin límite» = tienes el tiempo que haga falta.
+        <p style={{ color: COLORS.textSecondary, fontSize: 13, margin: '0 0 12px', lineHeight: 1.5 }}>
+          Elige una disciplina y toca la hora de inicio y la de fin en el día que quieras.
           {!configurada && ' Mientras no marques nada, tu entrenador no recibe ningún aviso.'}
         </p>
-        <div style={{ ...cardStyle, padding: 0 }}>
-          {DIAS.map((nombre, i) => {
-            const dia = i + 1
-            return (
-              <div key={dia} style={{
-                display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', padding: '12px 16px',
-                borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}`,
-              }}>
-                <div style={{ width: 84, fontSize: 14, fontWeight: 600 }}>{nombre}</div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', flex: 1 }}>
-                  {DISCIPLINAS_DISPONIBILIDAD.map((d) => {
-                    const celda = estado[claveCelda(dia, d)]
-                    return (
-                      <ChipDisciplina
-                        key={d}
-                        disciplina={d}
-                        etiquetaDia={nombre}
-                        activa={!!celda}
-                        max={celda ? celda.max : null}
-                        onToggle={() => alternar(dia, d)}
-                        onMax={(m) => fijarMax(dia, d, m)}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          {DISCIPLINAS_DISPONIBILIDAD.map((d) => <BotonPincel key={d} clave={d} activo={pincel === d} onClick={() => { setPincel(d); setAncla(null) }} />)}
+          <BotonPincel clave={BORRAR} activo={pincel === BORRAR} onClick={() => { setPincel(BORRAR); setAncla(null) }} />
         </div>
+        <p role="status" style={{ fontSize: 12, margin: '0 0 8px', minHeight: 18, color: ancla ? COLORS.accent : COLORS.textTertiary }}>
+          {ancla
+            ? `${DIAS[ancla.dia - 1]} desde ${formatHora(ancla.slot * MIN_POR_SLOT)}: toca la hora donde termina (en el mismo día).`
+            : 'Toca la hora donde empieza.'}
+        </p>
+
+        <div style={{ ...cardStyle, padding: 8, overflowX: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(7, minmax(40px, 1fr))', gap: 2, minWidth: 340 }}>
+            <div />
+            {INICIAL.map((l, i) => (
+              <div key={l} title={DIAS[i]} style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, padding: '4px 0' }}>{l}</div>
+            ))}
+            {SLOTS_VISIBLES.map((slot) => (
+              <Fila key={slot} slot={slot} slots={slots} ancla={ancla} onTocar={tocarCelda} />
+            ))}
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
           <button onClick={guardar} disabled={!hayCambios || guardando} style={{ ...buttonStyle, opacity: !hayCambios || guardando ? 0.5 : 1 }}>
             {guardando ? 'Guardando…' : 'Guardar semana'}
           </button>
           {hayCambios && (
-            <button onClick={() => setEstado(plantillaAEstado(guardada.plantilla))} disabled={guardando} style={ghostButtonStyle}>
+            <button onClick={() => { setSlots(ventanasASlots(guardada.plantilla)); setAncla(null) }} disabled={guardando} style={ghostButtonStyle}>
               Descartar cambios
             </button>
           )}
@@ -223,7 +216,7 @@ export default function DisponibilidadEditor({ athleteId }) {
       <section style={{ marginBottom: 32 }}>
         <SectionTitle>Días especiales</SectionTitle>
         <p style={{ color: COLORS.textSecondary, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
-          Un viaje, una cena, un día corto… La excepción sustituye a tu semana tipo ese día entero.
+          Un viaje, una cena, un día corto… Ese día manda lo que pongas aquí en vez de tu semana tipo.
         </p>
 
         {proximas.length > 0 && (
@@ -236,8 +229,8 @@ export default function DisponibilidadEditor({ athleteId }) {
                 <div style={{ width: 84, fontFamily: FONTS.mono, fontSize: 13 }}>{formatFecha(fecha)}</div>
                 <div style={{ flex: 1, fontSize: 13, color: COLORS.textSecondary }}>
                   {filas[0].tipo === 'no_disponible'
-                    ? 'Día libre'
-                    : filas.map((f) => `${DISCIPLINE_LABELS[f.disciplina]} ${f.max_minutos == null ? '(sin límite)' : `≤ ${etiquetaMin(f.max_minutos)}`}`).join(' · ')}
+                    ? 'No puedo entrenar'
+                    : filas.map((f) => `${DISCIPLINE_LABELS[f.disciplina]} ${formatTramo(f)}`).join(' · ')}
                   {filas.find((f) => f.nota)?.nota ? ` — ${filas.find((f) => f.nota).nota}` : ''}
                 </div>
                 <button onClick={() => quitarExcepcion(fecha)} style={{ ...ghostButtonStyle, padding: '6px 10px', fontSize: 12 }}>Quitar</button>
@@ -249,33 +242,48 @@ export default function DisponibilidadEditor({ athleteId }) {
         <div style={{ ...cardStyle, display: 'grid', gap: 12 }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
-              type="date" aria-label="Fecha de la excepción" min={hoy} value={fechaEx}
+              type="date" aria-label="Fecha del día especial" min={hoy} value={fechaEx}
               onChange={(e) => setFechaEx(e.target.value)}
               style={{ ...inputStyle, width: 'auto', fontFamily: FONTS.mono }}
             />
-            <select aria-label="Tipo de excepción" value={tipoEx} onChange={(e) => setTipoEx(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
+            <select aria-label="Tipo de día especial" value={tipoEx} onChange={(e) => setTipoEx(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
               <option value="no_disponible">No puedo entrenar</option>
-              <option value="limitada">Solo puedo…</option>
+              <option value="limitada">Solo puedo a estas horas…</option>
             </select>
           </div>
+
           {tipoEx === 'limitada' && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {DISCIPLINAS_DISPONIBILIDAD.map((d) => (
-                <ChipDisciplina
-                  key={d}
-                  disciplina={d}
-                  activa={Object.prototype.hasOwnProperty.call(discEx, d)}
-                  max={discEx[d] ?? null}
-                  onToggle={() => setDiscEx((p) => {
-                    const s = { ...p }
-                    if (Object.prototype.hasOwnProperty.call(s, d)) delete s[d]; else s[d] = null
-                    return s
-                  })}
-                  onMax={(m) => setDiscEx((p) => ({ ...p, [d]: m }))}
-                />
-              ))}
+            <div style={{ display: 'grid', gap: 10 }}>
+              {tramosEx.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {tramosEx.map((t, i) => (
+                    <button key={`${t.disciplina}-${t.inicio_min}-${i}`} type="button"
+                      onClick={() => setTramosEx((p) => p.filter((_, j) => j !== i))}
+                      aria-label={`Quitar ${DISCIPLINE_LABELS[t.disciplina]} ${formatTramo(t)}`}
+                      style={{ ...ghostButtonStyle, padding: '5px 10px', fontSize: 12, borderColor: DISCIPLINE_COLORS[t.disciplina] }}>
+                      {DISCIPLINE_LABELS[t.disciplina]} {formatTramo(t)} ✕
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <select aria-label="Disciplina del tramo" value={nuevoTramo.disciplina}
+                  onChange={(e) => setNuevoTramo((p) => ({ ...p, disciplina: e.target.value }))}
+                  style={{ ...inputStyle, width: 'auto' }}>
+                  {DISCIPLINAS_DISPONIBILIDAD.map((d) => <option key={d} value={d}>{DISCIPLINE_LABELS[d]}</option>)}
+                </select>
+                <span style={{ fontSize: 13, color: COLORS.textSecondary }}>de</span>
+                <SelectHora valor={nuevoTramo.inicio_min} etiqueta="Hora de inicio" onChange={(v) => setNuevoTramo((p) => ({ ...p, inicio_min: v }))} />
+                <span style={{ fontSize: 13, color: COLORS.textSecondary }}>a</span>
+                <SelectHora valor={nuevoTramo.fin_min} etiqueta="Hora de fin" onChange={(v) => setNuevoTramo((p) => ({ ...p, fin_min: v }))} />
+                <button type="button" disabled={!tramoValido} onClick={() => setTramosEx((p) => [...p, nuevoTramo])}
+                  style={{ ...ghostButtonStyle, opacity: tramoValido ? 1 : 0.5 }}>
+                  Añadir tramo
+                </button>
+              </div>
             </div>
           )}
+
           <input
             type="text" maxLength={200} placeholder="Nota para tu entrenador (opcional)" aria-label="Nota"
             value={notaEx} onChange={(e) => setNotaEx(e.target.value)} style={inputStyle}
@@ -288,6 +296,37 @@ export default function DisponibilidadEditor({ athleteId }) {
           </div>
         </div>
       </section>
+    </>
+  )
+}
+
+// Una fila del calendario: etiqueta de hora (solo en punto) + 7 celdas.
+function Fila({ slot, slots, ancla, onTocar }) {
+  const enPunto = slot % 2 === 0
+  return (
+    <>
+      <div style={{ fontSize: 10, fontFamily: FONTS.mono, color: COLORS.textTertiary, textAlign: 'right', paddingRight: 4, lineHeight: '20px' }}>
+        {enPunto ? formatHora(slot * MIN_POR_SLOT) : ''}
+      </div>
+      {DIAS.map((nombre, i) => {
+        const dia = i + 1
+        const discs = DISCIPLINAS_DISPONIBILIDAD.filter((d) => slots.has(claveSlot(dia, slot, d)))
+        const esAncla = ancla && ancla.dia === dia && ancla.slot === slot
+        return (
+          <button
+            key={dia}
+            type="button"
+            onClick={() => onTocar(dia, slot)}
+            aria-label={`${nombre} ${formatHora(slot * MIN_POR_SLOT)}${discs.length ? `, ${discs.map((d) => DISCIPLINE_LABELS[d]).join(' y ')}` : ''}`}
+            style={{
+              height: 20, padding: 0, cursor: 'pointer', borderRadius: 3,
+              border: esAncla ? `2px solid ${COLORS.textPrimary}` : `1px solid ${enPunto ? COLORS.cardBorder : 'transparent'}`,
+              borderBottomColor: COLORS.cardBorder,
+              background: fondoCelda(discs),
+            }}
+          />
+        )
+      })}
     </>
   )
 }

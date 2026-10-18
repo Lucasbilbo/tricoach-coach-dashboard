@@ -1,28 +1,28 @@
 // Acceso a datos de la disponibilidad del atleta (cliente de Supabase + RLS).
-// Solo el atleta escribe; el coach lee. Lo impone la base de datos (migración 010).
+// Solo el atleta escribe; el coach lee. Lo impone la base de datos (migraciones 010/011).
 import { supabase } from './supabase'
 
 export async function cargarDisponibilidad(athleteId) {
   const [semana, fecha] = await Promise.all([
-    supabase.from('atleta_disponibilidad_semana').select('dia_semana, disciplina, max_minutos, updated_at').eq('athlete_id', athleteId),
-    supabase.from('atleta_disponibilidad_fecha').select('id, fecha, tipo, disciplina, max_minutos, nota, updated_at').eq('athlete_id', athleteId).order('fecha'),
+    supabase.from('atleta_disponibilidad_semana').select('id, dia_semana, disciplina, inicio_min, fin_min').eq('athlete_id', athleteId),
+    supabase.from('atleta_disponibilidad_fecha').select('id, fecha, tipo, disciplina, inicio_min, fin_min, nota').eq('athlete_id', athleteId).order('fecha'),
   ])
   if (semana.error) throw semana.error
   if (fecha.error) throw fecha.error
   return { plantilla: semana.data || [], excepciones: fecha.data || [] }
 }
 
-// cambios: salida de cambiosPlantilla(). Escribe primero y borra después.
-export async function guardarPlantilla(athleteId, cambios) {
+// Sustituye la semana tipo: inserta los tramos nuevos y DESPUÉS borra los viejos
+// (por id), así un fallo a medias duplica tramos pero nunca deja la semana vacía.
+export async function guardarPlantilla(athleteId, filasNuevas, idsViejos) {
   const ahora = new Date().toISOString()
-  if (cambios.upsert.length > 0) {
-    const filas = cambios.upsert.map((c) => ({ ...c, athlete_id: athleteId, updated_at: ahora }))
-    const { error } = await supabase.from('atleta_disponibilidad_semana').upsert(filas, { onConflict: 'athlete_id,dia_semana,disciplina' })
+  if (filasNuevas.length > 0) {
+    const { error } = await supabase.from('atleta_disponibilidad_semana')
+      .insert(filasNuevas.map((f) => ({ ...f, athlete_id: athleteId, updated_at: ahora })))
     if (error) throw error
   }
-  for (const b of cambios.borrar) {
-    const { error } = await supabase.from('atleta_disponibilidad_semana').delete()
-      .eq('athlete_id', athleteId).eq('dia_semana', b.dia_semana).eq('disciplina', b.disciplina)
+  if (idsViejos.length > 0) {
+    const { error } = await supabase.from('atleta_disponibilidad_semana').delete().eq('athlete_id', athleteId).in('id', idsViejos)
     if (error) throw error
   }
 }
