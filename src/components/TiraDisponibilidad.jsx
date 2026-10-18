@@ -2,7 +2,7 @@
 // (disciplina y límite) y los minutos que ya le has prescrito. Si alguna sesión
 // no encaja, el día se marca; solo informa, nunca bloquea.
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS } from '../lib/theme'
-import { DISCIPLINAS_DISPONIBILIDAD, evaluarDisponibilidad, minutosPlanificados, resumenSemana } from '../lib/disponibilidad'
+import { DISCIPLINAS_DISPONIBILIDAD, evaluarDisponibilidad, formatTramo, formatTramoCorto, minutosPlanificados, resumenSemana } from '../lib/disponibilidad'
 
 const INICIAL_DIA = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const AMBAR = '#E8B84A'
@@ -15,7 +15,7 @@ export default function TiraDisponibilidad({ lunes, datos, sesiones }) {
     <div
       role="group"
       aria-label="Disponibilidad del atleta esta semana"
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6, marginBottom: 12 }}
+      style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', overflowX: 'auto', gap: 6, marginBottom: 12 }}
     >
       {dias.map((dia, i) => {
         const delDia = (sesiones || []).filter((s) => s.fecha === dia.fecha)
@@ -40,13 +40,13 @@ export default function TiraDisponibilidad({ lunes, datos, sesiones }) {
               <div style={{ color: COLORS.textTertiary }}>Libre</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                {DISCIPLINAS_DISPONIBILIDAD.filter((d) => Object.prototype.hasOwnProperty.call(dia.disciplinas, d)).map((d) => (
+                {DISCIPLINAS_DISPONIBILIDAD.filter((d) => dia.disciplinas[d]).map((d) => (
                   <span
                     key={d}
-                    title={`${DISCIPLINE_LABELS[d]}: ${dia.disciplinas[d] === null ? 'sin límite' : `hasta ${dia.disciplinas[d]} min`}`}
-                    style={{ color: DISCIPLINE_COLORS[d], fontFamily: FONTS.mono, fontWeight: 600 }}
+                    title={`${DISCIPLINE_LABELS[d]}: ${dia.disciplinas[d].map(formatTramo).join(', ')}`}
+                    style={{ color: DISCIPLINE_COLORS[d], fontFamily: FONTS.mono, fontWeight: 600, display: 'block', width: '100%' }}
                   >
-                    {DISCIPLINE_LABELS[d][0]}{dia.disciplinas[d] === null ? '∞' : dia.disciplinas[d]}
+                    {DISCIPLINE_LABELS[d][0]} {dia.disciplinas[d].map(formatTramoCorto).join(' ')}
                   </span>
                 ))}
                 {Object.keys(dia.disciplinas).length === 0 && <span style={{ color: COLORS.textTertiary }}>—</span>}
