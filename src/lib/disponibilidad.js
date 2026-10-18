@@ -145,3 +145,31 @@ export function filasExcepcion({ fecha, tipo, disciplinas, nota }) {
     .filter((d) => disciplinas && Object.prototype.hasOwnProperty.call(disciplinas, d))
     .map((d) => ({ fecha, tipo, disciplina: d, max_minutos: limiteDe(disciplinas[d]), nota: notaLimpia }))
 }
+
+// ── Presentación para el coach (lotes C y D) ────────────────────────────────
+
+// Minutos prescritos en una lista de sesiones. Las sesiones por distancia no
+// traen duración (duracion_min null): se cuentan aparte, no se estiman.
+export function minutosPlanificados(sesiones) {
+  let minutos = 0
+  let sinDuracion = 0
+  for (const s of lista(sesiones)) {
+    if (!esFila(s)) continue
+    if (typeof s.duracion_min === 'number' && Number.isFinite(s.duracion_min) && s.duracion_min > 0) minutos += s.duracion_min
+    else sinDuracion += 1
+  }
+  return { minutos, sinDuracion }
+}
+
+const NOMBRES = { swim: 'natación', bike: 'ciclismo', run: 'carrera', strength: 'fuerza' }
+
+// Frase del aviso informativo para el coach, o null si no hay nada que decir.
+export function textoAviso(evaluacion, disciplina) {
+  if (!evaluacion || evaluacion.nivel !== 'aviso') return null
+  const nota = evaluacion.nota ? ` («${evaluacion.nota}»)` : ''
+  const nombre = NOMBRES[disciplina] || 'esta disciplina'
+  if (evaluacion.motivo === 'dia_libre') return `El atleta marcó este día como no disponible${nota}.`
+  if (evaluacion.motivo === 'disciplina_no_disponible') return `El atleta no indicó disponibilidad para ${nombre} este día${nota}.`
+  if (evaluacion.motivo === 'excede_minutos') return `Supera el tiempo que el atleta puede dedicar a ${nombre} este día (máx. ${evaluacion.limite} min)${nota}.`
+  return null
+}

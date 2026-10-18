@@ -185,3 +185,22 @@ test('filasExcepcion: día libre, limitada y entradas inválidas', async () => {
   assert.deepEqual(filasExcepcion({ fecha: LUN, tipo: 'otro' }), [])
   assert.equal(filasExcepcion({ fecha: LUN, tipo: 'no_disponible', nota: 'a'.repeat(300) })[0].nota.length, 200)
 })
+
+test('minutosPlanificados: suma duraciones y cuenta las que no tienen', async () => {
+  const { minutosPlanificados } = await import('../src/lib/disponibilidad.js')
+  assert.deepEqual(minutosPlanificados([{ duracion_min: 60 }, { duracion_min: 45 }, { duracion_min: null }, {}]), { minutos: 105, sinDuracion: 2 })
+  assert.deepEqual(minutosPlanificados([]), { minutos: 0, sinDuracion: 0 })
+  assert.deepEqual(minutosPlanificados(null), { minutos: 0, sinDuracion: 0 })
+  assert.deepEqual(minutosPlanificados([null, { duracion_min: 0 }]), { minutos: 0, sinDuracion: 1 })
+})
+
+test('textoAviso: frases por motivo y silencio si no hay aviso', async () => {
+  const { textoAviso } = await import('../src/lib/disponibilidad.js')
+  const datos = { plantilla, excepciones: [{ fecha: MAR, tipo: 'no_disponible', disciplina: null, max_minutos: null, nota: 'Viaje' }] }
+  assert.match(textoAviso(evaluarDisponibilidad(datos, MAR, 'run', 30), 'run'), /no disponible \(«Viaje»\)/)
+  assert.match(textoAviso(evaluarDisponibilidad(datos, LUN, 'bike', 30), 'bike'), /ciclismo/)
+  assert.match(textoAviso(evaluarDisponibilidad(datos, LUN, 'swim', 90), 'swim'), /máx\. 60 min/)
+  assert.equal(textoAviso(evaluarDisponibilidad(datos, LUN, 'swim', 30), 'swim'), null)
+  assert.equal(textoAviso(evaluarDisponibilidad({}, LUN, 'swim', 30), 'swim'), null)
+  assert.equal(textoAviso(null, 'swim'), null)
+})
