@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { computeCargaDiaria, computeCargaHoy } from '../src/lib/carga.js'
-import { lunesDeSemana, sumarDias, decimalToRitmo, ritmoToDecimal, formatFechaCorta, formatHorasMin } from '../src/lib/chartUtils.js'
+import { lunesDeSemana, sumarDias, decimalToRitmo, ritmoToDecimal, formatFechaCorta, formatHorasMin, hoyMadrid } from '../src/lib/chartUtils.js'
 import { computePaceTrend, buildTransitionColumns, computeZonas, computeResumenStats } from '../src/lib/athleteStats.js'
 
 const require = createRequire(import.meta.url)
@@ -245,4 +245,13 @@ test('límites de Strava: holgados para el uso real y por debajo de la cuota', (
     assert.equal(l.ventana, 900)
     assert.ok(l.max >= 30, 'abrir varios atletas y cambiar el selector no debe bloquear')
   }
+})
+
+// ── hoyMadrid (fuente única en chartUtils) ──────────────────────────────
+test('hoyMadrid: fecha de Madrid con `now` inyectado, incluidos los cambios de hora', () => {
+  assert.equal(hoyMadrid(new Date('2026-12-31T23:30:00Z')), '2027-01-01') // 00:30 CET
+  assert.equal(hoyMadrid(new Date('2026-10-24T22:30:00Z')), '2026-10-25') // 00:30 CEST, día del cambio
+  assert.equal(hoyMadrid(new Date('2026-10-25T22:30:00Z')), '2026-10-25') // 23:30 CET, ya en horario de invierno
+  assert.equal(hoyMadrid(new Date('2026-10-25T23:30:00Z')), '2026-10-26') // 00:30 CET
+  assert.match(hoyMadrid(), /^\d{4}-\d{2}-\d{2}$/) // sin argumento: hoy, formato ISO
 })

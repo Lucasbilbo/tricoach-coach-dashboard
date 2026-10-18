@@ -22,14 +22,15 @@ export function formatDiaMes(fecha) {
   return `${d} ${MESES_CORTOS[m - 1]}`
 }
 
-// Hoy en Europe/Madrid como 'YYYY-MM-DD'
-export function hoyMadrid() {
+// Hoy en Europe/Madrid como 'YYYY-MM-DD'. FUENTE ÚNICA: el resto del código la
+// importa de aquí (season.js la re-exporta). `now` solo se inyecta en tests.
+export function hoyMadrid(now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date())
+  }).format(now)
 }
 
 // 'YYYY-MM-DD' + n días → 'YYYY-MM-DD' (aritmética en UTC, sin DST)
