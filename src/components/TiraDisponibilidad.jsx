@@ -6,6 +6,8 @@ import { DISCIPLINAS_DISPONIBILIDAD, evaluarDisponibilidad, formatTramo, formatT
 
 const INICIAL_DIA = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const AMBAR = '#E8B84A'
+// Una letra distinta por disciplina (Ciclismo y Carrera empiezan igual).
+const LETRA = { swim: 'N', bike: 'B', run: 'C', strength: 'F' }
 
 export default function TiraDisponibilidad({ lunes, datos, sesiones }) {
   const dias = resumenSemana(datos, lunes)
@@ -46,7 +48,7 @@ export default function TiraDisponibilidad({ lunes, datos, sesiones }) {
                     title={`${DISCIPLINE_LABELS[d]}: ${dia.disciplinas[d].map(formatTramo).join(', ')}`}
                     style={{ color: DISCIPLINE_COLORS[d], fontFamily: FONTS.mono, fontWeight: 600, display: 'block', width: '100%' }}
                   >
-                    {DISCIPLINE_LABELS[d][0]} {dia.disciplinas[d].map(formatTramoCorto).join(' ')}
+                    {LETRA[d]} {dia.disciplinas[d].map(formatTramoCorto).join(' ')}
                   </span>
                 ))}
                 {Object.keys(dia.disciplinas).length === 0 && <span style={{ color: COLORS.textTertiary }}>—</span>}
