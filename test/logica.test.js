@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { computeCargaDiaria, computeCargaHoy } from '../src/lib/carga.js'
-import { lunesDeSemana, sumarDias, decimalToRitmo, ritmoToDecimal, formatFechaCorta, formatHorasMin } from '../src/lib/chartUtils.js'
+import { lunesDeSemana, sumarDias, decimalToRitmo, ritmoToDecimal, formatFechaCorta, formatHorasMin, hoyMadrid, diaSemanaISO } from '../src/lib/chartUtils.js'
 import { computePaceTrend, buildTransitionColumns, computeZonas, computeResumenStats } from '../src/lib/athleteStats.js'
 
 const require = createRequire(import.meta.url)
@@ -244,5 +244,33 @@ test('límites de Strava: holgados para el uso real y por debajo de la cuota', (
   for (const l of Object.values(LIMITES)) {
     assert.equal(l.ventana, 900)
     assert.ok(l.max >= 30, 'abrir varios atletas y cambiar el selector no debe bloquear')
+  }
+})
+
+// ── hoyMadrid (fuente única en chartUtils) ──────────────────────────────
+test('hoyMadrid: fecha de Madrid con `now` inyectado, incluidos los cambios de hora', () => {
+  assert.equal(hoyMadrid(new Date('2026-12-31T23:30:00Z')), '2027-01-01') // 00:30 CET
+  assert.equal(hoyMadrid(new Date('2026-10-24T22:30:00Z')), '2026-10-25') // 00:30 CEST, día del cambio
+  assert.equal(hoyMadrid(new Date('2026-10-25T22:30:00Z')), '2026-10-25') // 23:30 CET, ya en horario de invierno
+  assert.equal(hoyMadrid(new Date('2026-10-25T23:30:00Z')), '2026-10-26') // 00:30 CET
+  assert.match(hoyMadrid(), /^\d{4}-\d{2}-\d{2}$/) // sin argumento: hoy, formato ISO
+})
+
+// ── diaSemanaISO ────────────────────────────────────────────────────────
+test('diaSemanaISO: lunes=1 … domingo=7, también en los cambios de hora', () => {
+  assert.equal(diaSemanaISO('2026-10-19'), 1) // lunes
+  assert.equal(diaSemanaISO('2026-10-18'), 7) // domingo
+  const semana = ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25']
+  assert.deepEqual(semana.map(diaSemanaISO), [1, 2, 3, 4, 5, 6, 7])
+  assert.equal(diaSemanaISO('2026-03-29'), 7) // cambio a horario de verano 2026
+  assert.equal(diaSemanaISO('2026-10-25'), 7) // cambio a horario de invierno 2026
+  assert.equal(diaSemanaISO('2027-03-28'), 7) // cambio a horario de verano 2027
+})
+
+test('diaSemanaISO es coherente con lunesDeSemana en un rango largo', () => {
+  for (let i = 0; i < 800; i++) {
+    const f = sumarDias('2026-01-01', i)
+    const dias = Math.round((Date.parse(`${f}T00:00:00Z`) - Date.parse(`${lunesDeSemana(f)}T00:00:00Z`)) / 86400000)
+    assert.equal(diaSemanaISO(f), dias + 1, f)
   }
 })

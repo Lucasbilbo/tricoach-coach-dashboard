@@ -1,5 +1,6 @@
--- PENDIENTE_009 — autorización y rendimiento de las RLS del panel del coach
--- NO SE APLICA SOLA. Revisar y aplicar a mano (Supabase SQL editor o MCP).
+-- 009 — autorización y rendimiento de las RLS del panel del coach
+-- APLICADA en producción el 2026-10-18 (SQL Editor de Supabase). Verificada con
+-- pg_policies, role_table_grants y pruebas por rol (coach, atleta y anon).
 -- Preparada la noche del 2026-10-08 a partir del estado REAL de producción
 -- (pg_policies, role_table_grants, pg_indexes y advisors, en solo lectura).
 --

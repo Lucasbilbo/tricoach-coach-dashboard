@@ -22,14 +22,15 @@ export function formatDiaMes(fecha) {
   return `${d} ${MESES_CORTOS[m - 1]}`
 }
 
-// Hoy en Europe/Madrid como 'YYYY-MM-DD'
-export function hoyMadrid() {
+// Hoy en Europe/Madrid como 'YYYY-MM-DD'. FUENTE ÚNICA: el resto del código la
+// importa de aquí (season.js la re-exporta). `now` solo se inyecta en tests.
+export function hoyMadrid(now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date())
+  }).format(now)
 }
 
 // 'YYYY-MM-DD' + n días → 'YYYY-MM-DD' (aritmética en UTC, sin DST)
@@ -46,6 +47,14 @@ export function lunesDeSemana(fechaLocal) {
   const offset = dow === 0 ? 6 : dow - 1
   const monday = new Date(date.getTime() - offset * 86400000)
   return monday.toISOString().slice(0, 10)
+}
+
+// Día de la semana ISO de una fecha local YYYY-MM-DD: 1 = lunes … 7 = domingo.
+// Misma aritmética UTC sobre la cadena que lunesDeSemana (sin DST).
+export function diaSemanaISO(fechaLocal) {
+  const [y, m, d] = fechaLocal.split('-').map(Number)
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay() // 0 = domingo
+  return dow === 0 ? 7 : dow
 }
 
 // Acepta número decimal (5.23) o string "5:14" → decimal en min/km

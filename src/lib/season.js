@@ -1,5 +1,7 @@
-// season.js — helpers puros de la Temporada (sin imports para poder probarlos
-// con `node --test`). Colores alineados con DISCIPLINE_COLORS de theme.js.
+// season.js — helpers puros de la Temporada (solo importa hoyMadrid de chartUtils,
+// que tampoco depende de React, así que se prueban con `node --test`). Colores alineados con DISCIPLINE_COLORS de theme.js.
+
+import { hoyMadrid } from './chartUtils'
 
 export const DEPORTES = {
   run: { label: 'Carrera', color: '#E85D5D' },
@@ -34,9 +36,9 @@ export const COLOR_AVISO = '#E8934A'
 // Días de margen para avisar de una inscripción próxima.
 export const DIAS_AVISO_INSCRIPCION = 30
 
-export function hoyMadrid(now = new Date()) {
-  return now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
-}
+// Una sola implementación en chartUtils; se re-exporta para no tocar a los
+// importadores de season.js.
+export { hoyMadrid }
 
 function aUTC(fecha) {
   const [y, m, d] = fecha.split('-').map(Number)

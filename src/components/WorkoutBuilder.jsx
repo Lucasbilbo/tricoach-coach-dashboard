@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useDisponibilidad } from '../hooks/useDisponibilidad'
+import { evaluarDisponibilidad, textoAviso } from '../lib/disponibilidad'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { COLORS, inputStyle } from '../lib/theme'
@@ -22,6 +24,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [errorIntervals, setErrorIntervals] = useState(false)
   const [error, setError] = useState(null)
   const [mostrarInputFecha, setMostrarInputFecha] = useState(false)
+  const disponibilidad = useDisponibilidad(athleteId, isOpen)
 
   // Al abrir (o cambiar la sesión a editar) se reinicia el formulario. Se hace
   // durante el render comparando con las props previas (patrón de React para
@@ -45,6 +48,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   if (!isOpen) return null
+
+  // Aviso informativo de disponibilidad del atleta (nunca bloquea el guardado)
+  const avisoDisponibilidad = form.fecha && form.disciplina
+    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques)), form.disciplina)
+    : null
 
   // ── Manipulación de bloques ─────────────────────────────────────────────
 
@@ -454,6 +462,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               )}
             </div>
           </div>
+
+          {avisoDisponibilidad && (
+            <p role="status" style={{ margin: '0 0 14px', padding: '8px 10px', borderRadius: 8, fontSize: 12, lineHeight: 1.45, color: '#E8B84A', border: '1px solid rgba(232,184,74,0.45)', background: 'rgba(232,184,74,0.08)' }}>
+              {avisoDisponibilidad} Puedes guardarla igualmente.
+            </p>
+          )}
 
           {/* Nombre */}
           <div style={{ marginBottom: 14 }}>

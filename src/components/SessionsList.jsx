@@ -4,10 +4,12 @@ import { authHeaders } from '../lib/authHeaders'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, iconButtonStyle, railStyle } from '../lib/theme'
 import Icon from './ui/Icon'
-import { MESES_CORTOS, lunesDeSemana, formatDiaMes } from '../lib/chartUtils'
+import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
+import TiraDisponibilidad from './TiraDisponibilidad'
+import { useDisponibilidad } from '../hooks/useDisponibilidad'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -24,15 +26,6 @@ function formatFechaSesion(fecha) {
   const [y, m, d] = fecha.split('-').map(Number)
   const date = new Date(Date.UTC(y, m - 1, d))
   return `${DIAS_CORTOS[date.getUTCDay()]} ${d} ${MESES_CORTOS[m - 1]}`
-}
-
-function hoyMadrid() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Madrid',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
 }
 
 // Fecha (YYYY-MM-DD, Europe/Madrid) de hace `weeks` semanas: inicio de la
@@ -130,6 +123,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [actividadesEstado, setActividadesEstado] = useState(null)
   const [coberturaDesde, setCoberturaDesde] = useState(null)
   const estadoCacheRef = useRef({ key: null })
+  const disponibilidad = useDisponibilidad(athleteId)
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -377,6 +371,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       <div style={cabeceraSemanaStyle}>
         {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
       </div>
+      {lunes !== 'sin-fecha' && (
+        <TiraDisponibilidad lunes={lunes} datos={disponibilidad} sesiones={sesionesGrupo} />
+      )}
       {sesionesGrupo.length === 0 && esActual ? (
         <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
           Sin sesiones esta semana

@@ -52,7 +52,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   whitelist de `coaches` y relación real en `coach_athletes` (o coach = atleta).
   Motivo: las RLS de `coach_sessions` dejaban a cualquier usuario autenticado
   insertar filas con `coach_id` = él y el `athlete_id` de otro (2026-10-08).
-  La raíz en BD: `supabase/migrations/PENDIENTE_009_autorizacion_rls_panel.sql`.
+  La raíz en BD: `supabase/migrations/009_autorizacion_rls_panel.sql` (aplicada 2026-10-18).
 - OAuth de Strava con `state` firmado (HMAC-SHA256 + nonce + expiración) en
   `lib/oauth-state.js` — anti-CSRF de vinculación.
 - Rate limit best-effort vía RPC `check_rate_limit` (`lib/rate-limit.js`), aplicado
@@ -162,7 +162,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–008 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–010 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 

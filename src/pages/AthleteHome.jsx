@@ -12,6 +12,7 @@ import WorkoutDetail from '../components/WorkoutDetail'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
 import SeasonPanel from '../components/season/SeasonPanel'
+import DisponibilidadEditor from '../components/DisponibilidadEditor'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -356,6 +357,7 @@ export default function AthleteHome() {
             { clave: 'sesiones', etiqueta: 'Entrenos' },
             { clave: 'analisis', etiqueta: 'Análisis' },
             { clave: 'temporada', etiqueta: 'Temporada' },
+            { clave: 'disponibilidad', etiqueta: 'Disponibilidad' },
           ]}
         />
 
@@ -563,6 +565,9 @@ export default function AthleteHome() {
         {activeTab === 'temporada' && userId && (
           <SeasonPanel athleteId={userId} atletaNombre={perfil?.nombre} />
         )}
+
+        {/* ══ TAB: DISPONIBILIDAD ══════════════════════════════════════ */}
+        {activeTab === 'disponibilidad' && userId && <DisponibilidadEditor athleteId={userId} />}
 
         {/* ── Modales ─────────────────────────────────────────────────── */}
         {comparadorAbierto && (
