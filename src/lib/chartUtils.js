@@ -49,6 +49,14 @@ export function lunesDeSemana(fechaLocal) {
   return monday.toISOString().slice(0, 10)
 }
 
+// Día de la semana ISO de una fecha local YYYY-MM-DD: 1 = lunes … 7 = domingo.
+// Misma aritmética UTC sobre la cadena que lunesDeSemana (sin DST).
+export function diaSemanaISO(fechaLocal) {
+  const [y, m, d] = fechaLocal.split('-').map(Number)
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay() // 0 = domingo
+  return dow === 0 ? 7 : dow
+}
+
 // Acepta número decimal (5.23) o string "5:14" → decimal en min/km
 export function ritmoToDecimal(ritmo) {
   if (ritmo == null) return null
