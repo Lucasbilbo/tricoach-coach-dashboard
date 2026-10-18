@@ -1,5 +1,6 @@
--- PENDIENTE_011 — disponibilidad por TRAMOS HORARIOS (sustituye al modelo de minutos de la 010)
--- NO SE APLICA SOLA. Revisar y aplicar a mano (Supabase SQL Editor).
+-- 011 — disponibilidad por TRAMOS HORARIOS (sustituye al modelo de minutos de la 010)
+-- APLICADA en producción el 2026-10-18 (SQL Editor de Supabase). Verificada: 4 políticas por tabla,
+-- RLS activa, anon sin permisos, authenticated solo DELETE/INSERT/SELECT/UPDATE.
 --
 -- Por qué: el atleta marca en un calendario "nado de 7:00 a 8:00, bici de 18:00
 -- a 20:00" en lugar de límites de minutos. Cada fila es un tramo
