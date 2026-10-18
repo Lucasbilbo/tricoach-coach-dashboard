@@ -8,6 +8,8 @@ import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/cha
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
+import TiraDisponibilidad from './TiraDisponibilidad'
+import { useDisponibilidad } from '../hooks/useDisponibilidad'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -121,6 +123,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [actividadesEstado, setActividadesEstado] = useState(null)
   const [coberturaDesde, setCoberturaDesde] = useState(null)
   const estadoCacheRef = useRef({ key: null })
+  const disponibilidad = useDisponibilidad(athleteId)
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -368,6 +371,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       <div style={cabeceraSemanaStyle}>
         {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
       </div>
+      {lunes !== 'sin-fecha' && (
+        <TiraDisponibilidad lunes={lunes} datos={disponibilidad} sesiones={sesionesGrupo} />
+      )}
       {sesionesGrupo.length === 0 && esActual ? (
         <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
           Sin sesiones esta semana
