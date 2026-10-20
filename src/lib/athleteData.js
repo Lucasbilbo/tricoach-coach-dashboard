@@ -2,6 +2,7 @@
 // Todos los componentes piden los datos del atleta por aquí, no con fetch directo.
 import { authHeaders } from './authHeaders'
 import { createAthleteDataCache } from './athleteDataCache'
+import { registrarCache } from './clientCache'
 
 async function request(athleteId, weeks, records) {
   const res = await fetch('/.netlify/functions/coach-athlete-data', {
@@ -15,6 +16,7 @@ async function request(athleteId, weeks, records) {
 }
 
 const cache = createAthleteDataCache({ request })
+registrarCache(cache.clear)
 
 // { ok, status, json } — json puede ser null si el cuerpo no era JSON.
 // Los objetos devueltos se comparten entre consumidores: no mutarlos.
