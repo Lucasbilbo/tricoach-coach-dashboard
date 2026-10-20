@@ -46,6 +46,12 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   cachea errores. Se invalida con `invalidarDatosAtleta(athleteId)` al guardar,
   editar o borrar sesiones (los metros de técnica salen de `coach_sessions`) y
   con el botón "Actualizar" del análisis. No usar `fetch` directo a esa función.
+- **Panel del coach**: `coach-dashboard-data` y el resumen de temporadas pasan
+  por `src/lib/panelData.js` (`valueCache.js`, 5 min, sin cachear fallos). Se
+  invalidan al cambiar sesiones (`invalidarDatosAtleta` también invalida el
+  dashboard) y al guardar/borrar pruebas (`invalidarTemporadas`).
+- **Cambio de usuario**: `src/lib/clientCache.js` vacía todas las cachés
+  registradas (`registrarCache`) en `onAuthStateChange` si cambia el uid.
 - **Servidor**: splits de Strava cacheados por actividad 24 h en memoria de la
   instancia (`lib/ttl-cache.js`, tope 500; solo respuestas válidas).
 - **Medición**: `coach-athlete-data` devuelve `Server-Timing` (`total`,
@@ -54,6 +60,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Medido en producción 2026-10-20: 1ª carga 2 peticiones (~3,5–4 s, 15 splits a
   Strava); cambio de selector 1 petición con los 15 splits desde caché; volver a
   un rango ya visto o reentrar desde el dashboard: 0 peticiones.
+  Volver de un atleta al dashboard: 0 peticiones (antes ~4 s + ~2 s).
 
 ## Autenticación de las Netlify Functions
 
