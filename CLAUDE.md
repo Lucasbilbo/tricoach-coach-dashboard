@@ -240,7 +240,15 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `test/disponibilidad.test.js`). Sin datos del atleta → nunca hay avisos.
 - **Coach**: `TiraDisponibilidad` encima de cada semana en Sesiones (qué puede
   hacer cada día + minutos ya prescritos; día en ámbar si alguna sesión no
-  encaja) y aviso en `WorkoutBuilder`. Solo INFORMA, nunca bloquea.
+  encaja) y aviso en `WorkoutBuilder`.
+- **No se ofrecen combinaciones imposibles** (2026-10): en la tira, un día sin
+  NINGUNA disciplina posible (`no_disponible` o con datos pero sin tramos) no es
+  botón; en `WorkoutBuilder`, los chips de fecha y los botones de disciplina que
+  no encajan con la otra selección salen apagados y `disabled` (helper `noEncaja`,
+  sin duración: solo día + disciplina). La opción YA seleccionada nunca se
+  bloquea (sesiones antiguas, cambios de disponibilidad) y "Otra fecha" permite
+  forzar cualquier día; el aviso ámbar de `textoAviso` sigue ahí para esos casos
+  y para `excede_minutos`, que NO bloquea. Sin datos del atleta no se bloquea nada.
 - **Planificar**: Sesiones muestra siempre la semana actual y las 2 siguientes
   aunque estén vacías (`src/lib/planificacion.js`, `semanasFuturas`), sin huecos
   hasta la última con sesiones; "Planificar otra semana" añade más. Los días de

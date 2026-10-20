@@ -55,6 +55,16 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques)), form.disciplina)
     : null
 
+  // Combinaciones imposibles: si el atleta no puede hacer esa disciplina ese
+  // día, el chip/botón no se puede elegir (devuelve el motivo, o null si encaja
+  // o no hay datos). Sin duración: solo mira el día y la disciplina, no el
+  // tramo. La opción YA seleccionada nunca se bloquea (sesiones antiguas,
+  // cambios de disponibilidad) y "Otra fecha" permite forzarla igualmente.
+  const noEncaja = (fecha, disciplina) =>
+    fecha && disciplina
+      ? textoAviso(evaluarDisponibilidad(disponibilidad, fecha, disciplina), disciplina)
+      : null
+
   // ── Manipulación de bloques ─────────────────────────────────────────────
 
   function updateBloque(idx, changes) {
@@ -339,25 +349,32 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           <div style={{ marginBottom: 16 }}>
             <label style={sectionLabel}>Disciplina</label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {DISCIPLINAS.map((d) => (
-                <button
-                  key={d.value}
-                  onClick={() => setForm((prev) => ({ ...prev, disciplina: d.value, bloques: [] }))}
-                  style={{
-                    background: form.disciplina === d.value ? COLORS.accent : 'transparent',
-                    color: form.disciplina === d.value ? '#0B0D12' : COLORS.textSecondary,
-                    border: `1px solid ${form.disciplina === d.value ? COLORS.accent : COLORS.cardBorder}`,
-                    borderRadius: 6,
-                    padding: '6px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: "'Archivo', sans-serif",
-                  }}
-                >
-                  {d.label}
-                </button>
-              ))}
+              {DISCIPLINAS.map((d) => {
+                const sel = form.disciplina === d.value
+                const bloqueo = sel ? null : noEncaja(form.fecha, d.value)
+                return (
+                  <button
+                    key={d.value}
+                    disabled={!!bloqueo}
+                    title={bloqueo || undefined}
+                    onClick={() => setForm((prev) => ({ ...prev, disciplina: d.value, bloques: [] }))}
+                    style={{
+                      background: sel ? COLORS.accent : 'transparent',
+                      color: sel ? '#0B0D12' : COLORS.textSecondary,
+                      border: `1px solid ${sel ? COLORS.accent : COLORS.cardBorder}`,
+                      borderRadius: 6,
+                      padding: '6px 14px',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: bloqueo ? 'not-allowed' : 'pointer',
+                      opacity: bloqueo ? 0.35 : 1,
+                      fontFamily: "'Archivo', sans-serif",
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -412,9 +429,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             >
               {DIAS_CHIPS.map((dia) => {
                 const sel = form.fecha === dia.value
+                const bloqueo = sel ? null : noEncaja(dia.value, form.disciplina)
                 return (
                   <button
                     key={dia.value}
+                    disabled={!!bloqueo}
+                    title={bloqueo || undefined}
                     onClick={() => setForm((prev) => ({ ...prev, fecha: dia.value }))}
                     style={{
                       background: sel ? COLORS.accent : 'transparent',
@@ -424,7 +444,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                       padding: '5px 10px',
                       fontSize: 11,
                       fontWeight: sel ? 700 : 400,
-                      cursor: 'pointer',
+                      cursor: bloqueo ? 'not-allowed' : 'pointer',
+                      opacity: bloqueo ? 0.35 : 1,
                       fontFamily: "'Archivo', sans-serif",
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
