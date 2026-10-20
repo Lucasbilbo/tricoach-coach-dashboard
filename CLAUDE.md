@@ -38,6 +38,23 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - DB/Auth: Supabase (cliente JS solo en el frontend con la anon key).
 - Datos: Strava API v3 · Entrega: Intervals.icu API.
 
+## Rendimiento y caché (2026-10)
+
+- **Cliente**: TODA lectura de `coach-athlete-data` pasa por `pedirDatosAtleta`
+  (`src/lib/athleteData.js` → `athleteDataCache.js`): deduplica peticiones en
+  vuelo, reutiliza respuestas OK 5 min (clave atleta|weeks|records) y nunca
+  cachea errores. Se invalida con `invalidarDatosAtleta(athleteId)` al guardar,
+  editar o borrar sesiones (los metros de técnica salen de `coach_sessions`) y
+  con el botón "Actualizar" del análisis. No usar `fetch` directo a esa función.
+- **Servidor**: splits de Strava cacheados por actividad 24 h en memoria de la
+  instancia (`lib/ttl-cache.js`, tope 500; solo respuestas válidas).
+- **Medición**: `coach-athlete-data` devuelve `Server-Timing` (`total`,
+  `strava-lista`, `strava-splits`, `splits-cache`). Netlify solo retiene ~1 h de
+  observabilidad en este plan; medir con DevTools o `performance.getEntriesByType`.
+- Medido en producción 2026-10-20: 1ª carga 2 peticiones (~3,5–4 s, 15 splits a
+  Strava); cambio de selector 1 petición con los 15 splits desde caché; volver a
+  un rango ya visto o reentrar desde el dashboard: 0 peticiones.
+
 ## Autenticación de las Netlify Functions
 
 - Las funciones que devuelven o mutan datos exigen `Authorization: Bearer <jwt>`
