@@ -87,7 +87,12 @@ test('natación: número suelto son metros; en otras disciplinas pide unidad', (
   assert.equal(errores.length, 0)
   assert.deepEqual(bloques.map((b) => b.tipo), ['warmup', 'repeat', 'cooldown'])
   assert.equal(bloques[0].cantidad, 400)
-  assert.match(parsearEntreno('45 Z2', 'run').errores[0], /Falta la duración/)
+  // En run/bike, un número suelto ≤ 240 se asume minutos (tolerancia deliberada):
+  // "45 Z2" → 45 min Z2, sin error.
+  const r45 = parsearEntreno('45 Z2', 'run')
+  assert.equal(r45.errores.length, 0)
+  assert.equal(r45.bloques[0].cantidad, 45)
+  assert.equal(r45.bloques[0].unidad, 'min')
 })
 
 test('comas y ; separan bloques; "con palas" no deja "con" en el nombre', () => {

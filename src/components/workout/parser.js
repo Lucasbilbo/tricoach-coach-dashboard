@@ -31,7 +31,7 @@ const MATERIALES = [
   ['chapas', 'chapas'],
 ]
 
-const RE_CANTIDAD = /(\d+(?:[.,]\d+)?)\s*(min(?:utos?)?|'|’|seg(?:undos?)?|s|"|”|h|km|mts|mtr|m)(?![a-záéíóúñ])/i
+const RE_CANTIDAD = /(\d+(?:[.,]\d+)?)\s*(min(?:utos?)?\.?|’|’|'|seg(?:undos?)?|s|"|”|h|km|mts|mtr|m)(?![a-záéíóúñ])/i
 const RE_RITMO = /\b(\d{1,2}:[0-5]\d)(?:\s*-\s*(\d{1,2}:[0-5]\d))?\b/
 const RE_ZONA = /\bz([1-5])(?:\s*-\s*z?[1-5])?\b/i
 const RE_PORCENTAJE = /\b(\d{2,3})\s*%/
@@ -41,7 +41,7 @@ const RE_VC = /^(vc|vuelta(\s+a\s+la\s+calma)?|enfriar\w*)\b/i
 function unidadDe(u) {
   const x = u.toLowerCase()
   if (x.startsWith('min') || x === "'" || x === '’') return 'min'
-  if (x.startsWith('seg') || x === 's' || x === '"' || x === '”') return 's'
+  if (x.startsWith('seg') || x === 's' || x.charCodeAt(0) === 0x201d || x.charCodeAt(0) === 0x22) return 's'
   if (x === 'h') return 'h'
   if (x === 'km') return 'km'
   return 'mtr'
@@ -101,12 +101,22 @@ function parsearPaso(texto, disciplina) {
     resto = resto.replace(mc[0], ' ')
   } else {
     // Natación: un número suelto son metros ("400 cal", "100 palas").
-    const mn = disciplina === 'swim' ? resto.match(/(?<![\d:.,])(\d{2,4})(?![\d:.,])/) : null
+    // Run/bike/strength: un número suelto ≤ 240 que va seguido de zona, ritmo
+    // o al final del paso se asume minutos ("15 Z1" → 15').
+    const mn = resto.match(/(?<![\d:.,])(\d{1,4})(?![\d:.,])/)
     if (!mn) {
       return { error: `Falta la duración o distancia en "${texto.trim()}" (usa 15', 400m, 5km…)` }
     }
-    cantidad = Number(mn[1])
-    unidad = 'mtr'
+    const n = Number(mn[1])
+    if (disciplina === 'swim') {
+      cantidad = n
+      unidad = 'mtr'
+    } else {
+      // Número suelto ≤ 240 → minutos (15 Z1, 30 suave, 45).
+      // Número > 240 → metros (poco común pero posible en pista: 400 Z4).
+      cantidad = n
+      unidad = n <= 240 ? 'min' : 'mtr'
+    }
     resto = resto.replace(mn[0], ' ')
   }
 
@@ -143,7 +153,7 @@ function parsearPaso(texto, disciplina) {
   }
 }
 
-const RE_DESCANSO = /\b(?:rec(?:up\w*)?|descanso|desc|pausa|r)\.?\s*(\d+(?:[.,]\d+)?\s*(?:min(?:utos?)?|'|’|seg(?:undos?)?|s|"|”))/i
+const RE_DESCANSO = /\b(?:rec(?:up\w*)?|descanso|desc|pausa|r)\.?\s*(\d+(?:[.,]\d+)?\s*(?:min(?:utos?)?\.?|’|’|'|seg(?:undos?)?|s|"|”))/i
 
 // Serie sin paréntesis: "8x100m 1:45 rec 20"" → 8 × (100m 1:45 / 20" descanso).
 function serieSimple(repeticiones, textoPaso, disciplina, nombreSerie = '') {

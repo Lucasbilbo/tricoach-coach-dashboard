@@ -32,7 +32,12 @@ export default function TiraDisponibilidad({ lunes, datos, sesiones, onDia, hoy 
         const { minutos, sinDuracion } = minutosPlanificados(delDia)
         const choca = delDia.some((s) => evaluarDisponibilidad(datos, dia.fecha, s.disciplina, s.duracion_min).nivel === 'aviso')
         const libre = dia.origen === 'dia_libre'
-        const pulsable = !!onDia && esPlanificable(dia.fecha, hoy)
+        // Sin actividad posible = día libre (no_disponible) o sin ninguna disciplina
+        // disponible (hay datos pero ese día no tiene tramos configurados).
+        const sinActividad =
+          libre ||
+          (dia.origen !== 'sin_datos' && Object.keys(dia.disciplinas).length === 0)
+        const pulsable = !!onDia && esPlanificable(dia.fecha, hoy) && !sinActividad
         const Caja = pulsable ? 'button' : 'div'
         const nombreDia = `${NOMBRE_DIA[i]} ${Number(dia.fecha.slice(8))}`
         return (
@@ -54,7 +59,8 @@ export default function TiraDisponibilidad({ lunes, datos, sesiones, onDia, hoy 
               // Reset de <button> para que se vea igual que la tarjeta
               textAlign: 'left', color: 'inherit', font: 'inherit', fontSize: 11, display: 'flex',
               flexDirection: 'column', alignItems: 'stretch', position: 'relative',
-              cursor: pulsable ? 'pointer' : 'default', opacity: onDia && !pulsable ? 0.55 : 1,
+              cursor: pulsable ? 'pointer' : 'default',
+              opacity: onDia && (!esPlanificable(dia.fecha, hoy) || sinActividad) ? 0.45 : 1,
             }}
           >
             <div style={{ color: COLORS.textSecondary, fontFamily: FONTS.mono, marginBottom: 4 }}>
