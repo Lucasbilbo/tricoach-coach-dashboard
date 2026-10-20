@@ -52,6 +52,16 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   dashboard) y al guardar/borrar pruebas (`invalidarTemporadas`).
 - **Cambio de usuario**: `src/lib/clientCache.js` vacía todas las cachés
   registradas (`registrarCache`) en `onAuthStateChange` si cambia el uid.
+- **Actividades de Strava en Supabase** (migración 012, aplicada 2026-10-20):
+  tablas `strava_actividades` (resumen tal cual de `/athlete/activities` en
+  `datos` jsonb) y `strava_sync` (cobertura y última sync por atleta). RLS sin
+  policies: solo la service key. Lógica en `netlify/functions/lib/actividades-store.js`,
+  usada por `coach-athlete-data` y `coach-dashboard-data`: ventana no cubierta o
+  `force` → Strava entero y se guarda; sync < 5 min → solo BD; más vieja →
+  Strava desde (última sync − 7 días) + BD; Strava caído con ventana cubierta →
+  BD. Si las tablas fallan, cae a Strava directo. El token de Strava solo se
+  refresca si hay que llamar. "Actualizar" manda `force:true` 15 s
+  (`forzarDatosAtleta`). NO hay webhook de Strava en ningún proyecto.
 - **Servidor**: splits de Strava cacheados por actividad 24 h en memoria de la
   instancia (`lib/ttl-cache.js`, tope 500; solo respuestas válidas).
 - **Medición**: `coach-athlete-data` devuelve `Server-Timing` (`total`,
@@ -61,6 +71,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   Strava); cambio de selector 1 petición con los 15 splits desde caché; volver a
   un rango ya visto o reentrar desde el dashboard: 0 peticiones.
   Volver de un atleta al dashboard: 0 peticiones (antes ~4 s + ~2 s).
+  Con la copia en Supabase: recargar un atleta ya sincronizado ~1,7 s sin tocar
+  Strava (antes ~4–5 s); mismos KPIs que leyendo de Strava. 172 actividades de
+  26 semanas ≈ 1,2 MB.
 
 ## Autenticación de las Netlify Functions
 
@@ -186,7 +199,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–011 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–012 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 
