@@ -123,3 +123,12 @@ test('los splits de una actividad se piden a Strava una sola vez (caché de la i
   assert.equal(r2.statusCode, 200)
   assert.equal(detalles(), tras1) // la 2ª respuesta no vuelve a pedir detalles
 })
+
+test('la respuesta lleva Server-Timing con las llamadas a Strava y los aciertos de caché', async () => {
+  const { handler } = cargarHandler({ paginas: [acts(3, 1)] })
+  const r1 = await handler(evento({ athleteId: ATHLETE, weeks: 8 }))
+  assert.match(r1.headers['Server-Timing'], /^total;dur=\d+, strava-lista;desc="1", strava-splits;desc="\d+"/)
+  const r2 = await handler(evento({ athleteId: ATHLETE, weeks: 12 }))
+  assert.match(r2.headers['Server-Timing'], /splits-cache;desc="\d+"/)
+  assert.doesNotMatch(r2.headers['Server-Timing'], /strava-splits/)
+})

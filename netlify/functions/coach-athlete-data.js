@@ -10,6 +10,7 @@ const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { crearTtlCache } = require('./lib/ttl-cache')
+const { crearMedidor } = require('./lib/server-timing')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
@@ -126,9 +127,10 @@ function formatRitmoMinSeg(decimal) {
 // Actividades desde `after` (unix s), paginando si una página viene llena.
 // { ok, status, json, actividades }. Si falla la 1ª página → ok:false; si falla
 // una posterior se devuelve lo ya leído (mejor parcial que nada) y se registra.
-async function actividadesDesde(accessToken, after) {
+async function actividadesDesde(accessToken, after, medidor) {
   const actividades = []
   for (let page = 1; page <= STRAVA_MAX_PAGINAS; page++) {
+    if (medidor) medidor.contar('strava-lista')
     const res = await withTimeout(
       httpsRequest({
         hostname: 'www.strava.com',
@@ -156,9 +158,13 @@ async function actividadesDesde(accessToken, after) {
 const splitsCache = crearTtlCache({ ttlMs: 24 * 60 * 60 * 1000, max: 500 })
 
 // Splits métricos del detalle de una actividad; [] si falla (no rompe el resto)
-async function obtenerSplits(activityId, accessToken) {
+async function obtenerSplits(activityId, accessToken, medidor) {
   const guardado = splitsCache.get(activityId)
-  if (guardado) return guardado
+  if (guardado) {
+    if (medidor) medidor.contar('splits-cache')
+    return guardado
+  }
+  if (medidor) medidor.contar('strava-splits')
   try {
     const res = await withTimeout(
       httpsRequest({
@@ -179,14 +185,14 @@ async function obtenerSplits(activityId, accessToken) {
 
 // Mejor split individual (min por `metrosUnidad` metros) de las N actividades
 // más recientes de una disciplina. null si no hay splits válidos.
-async function prDesdeSplits(actividadesDisciplina, accessToken, nActividades, cfg) {
+async function prDesdeSplits(actividadesDisciplina, accessToken, nActividades, cfg, medidor) {
   const ids = actividadesDisciplina
     .slice(0, nActividades)
     .map((a) => a.id)
     .filter(Boolean)
   if (ids.length === 0) return null
 
-  const listas = await Promise.all(ids.map((id) => obtenerSplits(id, accessToken)))
+  const listas = await Promise.all(ids.map((id) => obtenerSplits(id, accessToken, medidor)))
   const ritmos = listas
     .flat()
     .filter((s) => s.distance >= cfg.minM && s.distance <= cfg.maxM && s.moving_time > 0)
@@ -238,13 +244,15 @@ function calcularRecords(actividades) {
   return { running, ciclismo, natacion }
 }
 
-function respuesta(statusCode, payload) {
-  return { statusCode, headers: CORS, body: JSON.stringify(payload) }
+function respuesta(statusCode, payload, medidor) {
+  const headers = medidor ? { ...CORS, 'Server-Timing': medidor.cabecera() } : CORS
+  return { statusCode, headers, body: JSON.stringify(payload) }
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return respuesta(405, { error: 'Method Not Allowed' })
+  const medidor = crearMedidor()
 
   // 1. Validar env vars
   const SUPABASE_URL = process.env.SUPABASE_URL
@@ -310,7 +318,7 @@ exports.handler = async (event) => {
 
     // 7. Actividades de Strava desde el inicio del rango
     const after = Math.floor(Date.now() / 1000) - weeks * 7 * 86400
-    const actRes = await actividadesDesde(accessToken, after)
+    const actRes = await actividadesDesde(accessToken, after, medidor)
     if (!actRes.ok) {
       console.error('Strava error', actRes.status, actRes.json)
       return respuesta(502, { error: 'Error consultando Strava' })
@@ -328,7 +336,7 @@ exports.handler = async (event) => {
     const semanas = agruparSemanas(actividades, { desde, hasta: fechaMadrid(new Date()) })
 
     const atleta = { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' }
-    if (!conRecords) return respuesta(200, { atleta, actividades, semanas })
+    if (!conRecords) return respuesta(200, { atleta, actividades, semanas }, medidor)
 
     // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)
     const records = calcularRecords(actividades)
@@ -337,13 +345,15 @@ exports.handler = async (event) => {
         actividades.filter((a) => a.disciplina === 'run'),
         accessToken,
         PR_SPLITS_RUN_ACTIVIDADES,
-        SPLIT_RUN
+        SPLIT_RUN,
+        medidor
       ),
       prDesdeSplits(
         actividades.filter((a) => a.disciplina === 'swim'),
         accessToken,
         PR_SPLITS_SWIM_ACTIVIDADES,
-        SPLIT_SWIM
+        SPLIT_SWIM,
+        medidor
       ),
     ])
 
@@ -357,7 +367,7 @@ exports.handler = async (event) => {
         running: { ...records.running, '1km': pr1km ?? records.running['1km'] },
         natacion: { ...records.natacion, '100m': pr100m ?? records.natacion['100m'] },
       },
-    })
+    }, medidor)
   } catch (err) {
     console.error('coach-athlete-data error:', err.message)
     return respuesta(500, { error: 'Error interno' })
