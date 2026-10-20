@@ -133,7 +133,8 @@ export default function StravaAnalysis({
   const carga = useMemo(() => computeCargaHoy(actsCarga, hoyMadrid()), [actsCarga])
   const zonas = computeZonas(actividades)
   const paceTrend = computePaceTrend(actividades)
-  const columnas = buildTransitionColumns(actividades, semanas)
+  // Memoizada: paginar, filtrar por disciplina o abrir el detalle no la recalculan
+  const columnas = useMemo(() => buildTransitionColumns(actividades, semanas), [actividades, semanas])
 
   const hayPotencia =
     actividades.filter((a) => a.disciplina === 'bike' && a.potencia_media != null).length >= 3
