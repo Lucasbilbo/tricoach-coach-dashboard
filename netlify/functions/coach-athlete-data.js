@@ -11,6 +11,9 @@ const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { crearTtlCache } = require('./lib/ttl-cache')
 const { crearMedidor } = require('./lib/server-timing')
+const { actividadesDesde } = require('./lib/strava-lista')
+const supabaseRest = require('./lib/supabase-rest')
+const { crearStore, dbSupabase } = require('./lib/actividades-store')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
@@ -27,11 +30,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const FC_MAX_DEFAULT = 185
 const WEEKS_DEFAULT = 8
 const WEEKS_MAX = 52
-// Strava devuelve como mucho 200 por página y, con `after`, en orden ASCENDENTE:
-// sin paginar, un atleta con >200 actividades en la ventana perdería las MÁS
-// RECIENTES. Tope de páginas para no agotar el rate limit (100 lecturas/15 min).
-const STRAVA_PER_PAGE = 200
-const STRAVA_MAX_PAGINAS = 4
 // Ritmos fuera de este rango son outliers (GPS roto, cinta sin footpod) → null
 const RITMO_MIN_PLAUSIBLE = 2.0
 const RITMO_MAX_PLAUSIBLE = 20.0
@@ -122,33 +120,6 @@ function formatRitmoMinSeg(decimal) {
     seg = 0
   }
   return `${min}:${String(seg).padStart(2, '0')}`
-}
-
-// Actividades desde `after` (unix s), paginando si una página viene llena.
-// { ok, status, json, actividades }. Si falla la 1ª página → ok:false; si falla
-// una posterior se devuelve lo ya leído (mejor parcial que nada) y se registra.
-async function actividadesDesde(accessToken, after, medidor) {
-  const actividades = []
-  for (let page = 1; page <= STRAVA_MAX_PAGINAS; page++) {
-    if (medidor) medidor.contar('strava-lista')
-    const res = await withTimeout(
-      httpsRequest({
-        hostname: 'www.strava.com',
-        path: `/api/v3/athlete/activities?per_page=${STRAVA_PER_PAGE}&page=${page}&after=${after}`,
-        method: 'GET',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      10000
-    )
-    if (res.status !== 200 || !Array.isArray(res.json)) {
-      if (page === 1) return { ok: false, status: res.status, json: res.json, actividades }
-      console.error('Strava paginación cortada en página', page, res.status)
-      break
-    }
-    actividades.push(...res.json)
-    if (res.json.length < STRAVA_PER_PAGE) break
-  }
-  return { ok: true, actividades }
 }
 
 // Los splits de una actividad terminada no cambian: se reutilizan 24 h mientras
@@ -308,19 +279,23 @@ exports.handler = async (event) => {
       return respuesta(409, { error: 'El atleta no tiene Strava conectado' })
     }
 
-    // 6. Access token válido (refresca+persiste si expira). Vista de 1 atleta:
-    // si el refresh falla, 502 (a diferencia del dashboard, que degrada).
+    // 6. Access token válido (refresca+persiste si expira), solo si hay que ir a
+    // Strava. Vista de 1 atleta: si hace falta y falla, 502 (el dashboard degrada).
     const env = { supabaseHost, SERVICE_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET }
-    const accessToken = await getStravaAccessToken(perfil, env)
-    if (!accessToken) {
-      return respuesta(502, { error: 'No se pudo refrescar el token de Strava' })
-    }
+    let tokenPromesa = null
+    const obtenerToken = () => (tokenPromesa = tokenPromesa || getStravaAccessToken(perfil, env))
 
-    // 7. Actividades de Strava desde el inicio del rango
+    // 7. Actividades desde el inicio del rango: copia en Supabase + lo nuevo de
+    // Strava (lib/actividades-store.js). `force` (botón Actualizar) resincroniza.
     const after = Math.floor(Date.now() / 1000) - weeks * 7 * 86400
-    const actRes = await actividadesDesde(accessToken, after, medidor)
+    const store = crearStore({
+      db: dbSupabase({ supabaseHost, SERVICE_KEY, rest: supabaseRest }),
+      listar: (token, desde) => actividadesDesde(token, desde, medidor),
+    })
+    const actRes = await store.obtener({ athleteId, afterUnix: after, obtenerToken, force: parsed.force === true, medidor })
     if (!actRes.ok) {
-      console.error('Strava error', actRes.status, actRes.json)
+      if (actRes.motivo === 'token') return respuesta(502, { error: 'No se pudo refrescar el token de Strava' })
+      console.error('Strava error', actRes.status)
       return respuesta(502, { error: 'Error consultando Strava' })
     }
 
@@ -340,7 +315,9 @@ exports.handler = async (event) => {
 
     // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)
     const records = calcularRecords(actividades)
-    const [pr1km, pr100m] = await Promise.all([
+    // Sin token (refresh fallido) los PRs cortos se quedan con la aproximación por rangos
+    const accessToken = await obtenerToken()
+    const [pr1km, pr100m] = !accessToken ? [null, null] : await Promise.all([
       prDesdeSplits(
         actividades.filter((a) => a.disciplina === 'run'),
         accessToken,

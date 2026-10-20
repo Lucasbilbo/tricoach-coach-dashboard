@@ -35,4 +35,31 @@ function supabasePatch(host, path, key, payload) {
   })
 }
 
-module.exports = { supabaseGet, supabasePatch }
+// POST (insert/upsert). `prefer` p. ej. 'resolution=merge-duplicates,return=minimal'
+function supabasePost(host, path, key, payload, prefer = 'return=minimal') {
+  const body = JSON.stringify(payload)
+  return httpsRequest({
+    hostname: host,
+    path,
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      Prefer: prefer,
+    },
+    body,
+  })
+}
+
+function supabaseDelete(host, path, key) {
+  return httpsRequest({
+    hostname: host,
+    path,
+    method: 'DELETE',
+    headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: 'return=minimal' },
+  })
+}
+
+module.exports = { supabaseGet, supabasePatch, supabasePost, supabaseDelete }

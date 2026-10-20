@@ -27,6 +27,8 @@ function cargarHandler({ paginas, fallaPagina = null, limite = true }) {
       path.startsWith('/rest/v1/profiles')
         ? { status: 200, json: [{ id: ATHLETE, nombre: 'Lucas', strava_token: 't', strava_refresh_token: 'r', fc_maxima: 185 }] }
         : { status: 200, json: [] },
+    supabasePost: async () => ({ status: 201, json: null }),
+    supabaseDelete: async () => ({ status: 204, json: null }),
   })
   stub('http', {
     withTimeout: (p) => p,
@@ -41,8 +43,12 @@ function cargarHandler({ paginas, fallaPagina = null, limite = true }) {
       return { status: 200, json: { splits_metric: [] } } // detalle de actividad
     },
   })
+  // Los módulos que usan los stubs se recargan en cada montaje (si no, se quedan
+  // con el http/supabase-rest simulado del test anterior)
+  for (const m of ['../netlify/functions/coach-athlete-data.js', '../netlify/functions/lib/strava-lista.js', '../netlify/functions/lib/actividades-store.js']) {
+    delete require.cache[require.resolve(m)]
+  }
   const fn = require.resolve('../netlify/functions/coach-athlete-data.js')
-  delete require.cache[fn]
   return { handler: require(fn).handler, llamadas, buckets }
 }
 
@@ -127,7 +133,9 @@ test('los splits de una actividad se piden a Strava una sola vez (caché de la i
 test('la respuesta lleva Server-Timing con las llamadas a Strava y los aciertos de caché', async () => {
   const { handler } = cargarHandler({ paginas: [acts(3, 1)] })
   const r1 = await handler(evento({ athleteId: ATHLETE, weeks: 8 }))
-  assert.match(r1.headers['Server-Timing'], /^total;dur=\d+, strava-lista;desc="1", strava-splits;desc="\d+"/)
+  assert.match(r1.headers['Server-Timing'], /^total;dur=\d+, /)
+  assert.match(r1.headers['Server-Timing'], /strava-lista;desc="1"/)
+  assert.match(r1.headers['Server-Timing'], /strava-splits;desc="\d+"/)
   const r2 = await handler(evento({ athleteId: ATHLETE, weeks: 12 }))
   assert.match(r2.headers['Server-Timing'], /splits-cache;desc="\d+"/)
   assert.doesNotMatch(r2.headers['Server-Timing'], /strava-splits/)

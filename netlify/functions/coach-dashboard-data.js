@@ -6,12 +6,15 @@
 
 const { verifyAuth } = require('./lib/auth')
 const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
-const { withTimeout, httpsRequest } = require('./lib/http')
+const { withTimeout } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, cargaActividad, fechaMadrid, mapDisciplina } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 const { lunesDeSemana } = require('./lib/semanas')
+const supabaseRest = require('./lib/supabase-rest')
+const { actividadesDesde, ultimaActividad } = require('./lib/strava-lista')
+const { crearStore, dbSupabase } = require('./lib/actividades-store')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +28,8 @@ const FC_MAX_DEFAULT = 185
 const DIA_MS = 86400000
 const VENTANA_DIAS = 7
 const SEMANAS_SPARKLINE = 4
+// Ventana leída: cubre los 7 días y las 4 semanas de calendario del sparkline
+const VENTANA_LECTURA_DIAS = 35
 
 // Las N semanas de CALENDARIO que acaban en la actual (Europe/Madrid), de más
 // antigua a más reciente, con TSS agregado y a 0 si no hubo actividad. Antes
@@ -68,24 +73,22 @@ async function procesarAtleta(athleteId, perfil, env) {
     const conNombre = { ...base, nombre: perfil.nombre || perfil.email || 'Atleta' }
     if (!perfil.strava_token || !perfil.strava_refresh_token) return conNombre
 
-    const accessToken = await getStravaAccessToken(perfil, env)
-    if (!accessToken) return conNombre
+    // Token solo si hay que ir a Strava (la copia en Supabase suele bastar)
+    let tokenPromesa = null
+    const obtenerToken = () => (tokenPromesa = tokenPromesa || getStravaAccessToken(perfil, env))
 
-    // Una sola llamada sin filtro de fecha: sirve para los 7 días y para
-    // saber cuándo fue la última actividad aunque sea anterior a la ventana
-    const actRes = await withTimeout(
-      httpsRequest({
-        hostname: 'www.strava.com',
-        path: '/api/v3/athlete/activities?per_page=100',
-        method: 'GET',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }),
-      10000
-    )
-    if (actRes.status !== 200 || !Array.isArray(actRes.json)) return conNombre
-
-    const actividades = actRes.json
     const ahoraMs = Date.now()
+    const store = crearStore({
+      db: dbSupabase({ supabaseHost: env.supabaseHost, SERVICE_KEY: env.SERVICE_KEY, rest: supabaseRest }),
+      listar: (token, desde) => actividadesDesde(token, desde),
+    })
+    const actRes = await store.obtener({
+      athleteId,
+      afterUnix: Math.floor(ahoraMs / 1000) - VENTANA_LECTURA_DIAS * 86400,
+      obtenerToken,
+    })
+    if (!actRes.ok) return conNombre
+    const actividades = actRes.actividades
     const corteSemana = ahoraMs - VENTANA_DIAS * DIA_MS
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
 
@@ -113,7 +116,15 @@ async function procesarAtleta(athleteId, perfil, env) {
       totales.km += nadosSemana.reduce((s, a) => s + (a.metros_tecnica || 0), 0) / 1000
     }
 
-    const ultimaFecha = actividades.length > 0 ? new Date(actividades[0].start_date).getTime() : null
+    // Última actividad aunque sea anterior a la ventana. Si nunca se ha visto
+    // ninguna (atleta parado > 5 semanas), una consulta mínima a Strava.
+    let ultimaIso = actRes.ultimaActividadAt
+    if (!ultimaIso) {
+      const token = await obtenerToken()
+      const ultima = token ? await ultimaActividad(token).catch(() => null) : null
+      ultimaIso = ultima?.start_date || null
+    }
+    const ultimaFecha = ultimaIso ? new Date(ultimaIso).getTime() : null
     const ultimaDias = ultimaFecha != null ? Math.floor((ahoraMs - ultimaFecha) / DIA_MS) : null
 
     return {
