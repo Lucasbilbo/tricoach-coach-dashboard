@@ -3,6 +3,7 @@
 import { authHeaders } from './authHeaders'
 import { createAthleteDataCache } from './athleteDataCache'
 import { registrarCache } from './clientCache'
+import { invalidarDashboard } from './panelData'
 
 async function request(athleteId, weeks, records) {
   const res = await fetch('/.netlify/functions/coach-athlete-data', {
@@ -21,5 +22,9 @@ registrarCache(cache.clear)
 // { ok, status, json } — json puede ser null si el cuerpo no era JSON.
 // Los objetos devueltos se comparten entre consumidores: no mutarlos.
 export const pedirDatosAtleta = cache.get
-export const invalidarDatosAtleta = cache.invalidate
+// Cambiar sesiones del atleta también cambia sus km de 7 días en el dashboard
+export function invalidarDatosAtleta(athleteId) {
+  cache.invalidate(athleteId)
+  invalidarDashboard()
+}
 export const limpiarDatosAtleta = cache.clear

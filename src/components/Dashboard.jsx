@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import SeasonOverview from './season/SeasonOverview'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { authHeaders } from '../lib/authHeaders'
+import { datosDashboard } from '../lib/panelData'
 import { COLORS, DISCIPLINE_COLORS, cardStyle, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle, inputStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { Metric, PageHeader, SectionTitle } from './ui/Layout'
@@ -133,22 +133,15 @@ export default function Dashboard() {
           .maybeSingle()
         if (activo) setEsTambienAtleta(!!comoAtleta)
 
-        // El coach se deriva del JWT en el backend: no se manda coachId
-        const res = await fetch('/.netlify/functions/coach-dashboard-data', {
-          method: 'POST',
-          headers: await authHeaders(),
-          body: JSON.stringify({}),
-        })
-
-        const json = await res.json()
-        if (!activo) return
-
-        if (!res.ok) {
-          setError(json?.error || 'No se pudieron cargar los atletas')
+        let lista
+        try {
+          lista = await datosDashboard()
+        } catch (err) {
+          if (activo) setError(err.message)
           return
         }
-
-        setAtletas(Array.isArray(json) ? json : [])
+        if (!activo) return
+        setAtletas(lista)
 
         // Cargar invitaciones
         const { data: invs } = await supabase

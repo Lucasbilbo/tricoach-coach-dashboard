@@ -9,7 +9,7 @@ import {
   proximasPruebas,
   textoAutoria,
 } from '../../lib/season'
-import { resumenTemporadas } from '../../lib/seasonApi'
+import { resumenTemporadasCache } from '../../lib/panelData'
 import { EstadoPill, IconoAviso, PrioridadBadge, SportDot } from './SeasonBits'
 
 const tituloBloque = {
@@ -43,7 +43,7 @@ export default function SeasonOverview() {
 
   useEffect(() => {
     let activo = true
-    resumenTemporadas()
+    resumenTemporadasCache()
       .then((json) => activo && setDatos(json))
       .catch((err) => activo && setError(err.message))
     return () => {

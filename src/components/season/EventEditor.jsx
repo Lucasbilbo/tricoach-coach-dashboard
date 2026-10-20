@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { COLORS, FONTS, buttonStyle, inputStyle } from '../../lib/theme'
 import { DEPORTES, ESTADOS, ORDEN_ESTADOS, eventoAFormulario, eventoVacio } from '../../lib/season'
 import { guardarEvento, borrarEvento } from '../../lib/seasonApi'
+import { invalidarTemporadas } from '../../lib/panelData'
 import { Chip, SportDot } from './SeasonBits'
 
 const sectionLabel = {
@@ -52,6 +53,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
     setError('')
     try {
       await guardarEvento(athleteId, form, evento?.id)
+      invalidarTemporadas()
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -64,6 +66,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
     setError('')
     try {
       await borrarEvento(athleteId, evento.id)
+      invalidarTemporadas()
       onSaved()
     } catch (err) {
       setError(err.message)
