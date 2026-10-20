@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
+import { pedirDatosAtleta, forzarDatosAtleta } from '../lib/athleteData'
 import { hoyMadrid } from '../lib/chartUtils'
 import { COLORS, pageStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
 import Icon from './ui/Icon'
@@ -112,7 +112,7 @@ export default function AthleteView() {
               {/* Los datos de Strava se reutilizan 5 min; esto fuerza una lectura nueva */}
               <button
                 onClick={() => {
-                  invalidarDatosAtleta(id)
+                  forzarDatosAtleta(id)
                   setRefrescos((v) => v + 1)
                 }}
                 disabled={cargando}

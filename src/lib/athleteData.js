@@ -5,12 +5,19 @@ import { createAthleteDataCache } from './athleteDataCache'
 import { registrarCache } from './clientCache'
 import { invalidarDashboard } from './panelData'
 
+// Atletas para los que el usuario pidió "Actualizar": las peticiones de los
+// próximos segundos llevan force:true y el backend resincroniza con Strava
+// (también limpia actividades borradas allí). Caduca sola.
+const FORZAR_MS = 15000
+const forzados = new Map() // athleteId → hasta (ms)
+
 async function request(athleteId, weeks, records) {
+  const force = (forzados.get(athleteId) || 0) > Date.now()
   const res = await fetch('/.netlify/functions/coach-athlete-data', {
     method: 'POST',
     headers: await authHeaders(),
-    // records:false solo se envía cuando hace falta (mismo body que antes)
-    body: JSON.stringify(records ? { athleteId, weeks } : { athleteId, weeks, records: false }),
+    // records:false y force solo se envían cuando hacen falta
+    body: JSON.stringify({ athleteId, weeks, ...(records ? {} : { records: false }), ...(force ? { force: true } : {}) }),
   })
   const json = await res.json().catch(() => null)
   return { ok: res.ok, status: res.status, json }
@@ -28,3 +35,9 @@ export function invalidarDatosAtleta(athleteId) {
   invalidarDashboard()
 }
 export const limpiarDatosAtleta = cache.clear
+
+// Botón "Actualizar": olvida lo cacheado y pide al backend datos recién traídos de Strava
+export function forzarDatosAtleta(athleteId) {
+  forzados.set(athleteId, Date.now() + FORZAR_MS)
+  invalidarDatosAtleta(athleteId)
+}
