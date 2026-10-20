@@ -9,7 +9,7 @@ import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/cha
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
-import TiraDisponibilidad from './TiraDisponibilidad'
+import SemanaCalendario from './SemanaCalendario'
 import { semanasFuturas } from '../lib/planificacion'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
 
@@ -376,7 +376,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
       </div>
       {lunes !== 'sin-fecha' && (
-        <TiraDisponibilidad
+        <SemanaCalendario
           lunes={lunes}
           datos={disponibilidad}
           sesiones={sesionesGrupo}

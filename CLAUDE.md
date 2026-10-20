@@ -238,12 +238,32 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Lógica PURA en `src/lib/disponibilidad.js` (`disponibilidadDelDia`,
   `evaluarDisponibilidad`, `resumenSemana`, `textoAviso`; tests en
   `test/disponibilidad.test.js`). Sin datos del atleta → nunca hay avisos.
-- **Coach**: `TiraDisponibilidad` encima de cada semana en Sesiones (qué puede
-  hacer cada día + minutos ya prescritos; día en ámbar si alguna sesión no
-  encaja) y aviso en `WorkoutBuilder`.
-- **No se ofrecen combinaciones imposibles** (2026-10): en la tira, un día sin
-  NINGUNA disciplina posible (`no_disponible` o con datos pero sin tramos) no es
-  botón; en `WorkoutBuilder`, los chips de fecha y los botones de disciplina que
+- **Coach**: `SemanaCalendario` encima de cada semana en Sesiones y aviso en
+  `WorkoutBuilder`. Es un CALENDARIO, no una lista: los días son columnas y las
+  HORAS van en el eje vertical, que es donde hay sitio para que una ventana de
+  2h30 se vea. Decisiones que NO hay que deshacer sin motivo:
+  - **Carriles fijos** natación · bici · carrera · fuerza: cada deporte cae
+    siempre en la misma vertical aunque ese día falte, para poder escanear la
+    semana en diagonal. Repartirlos según lo que haya ese día hace bailar los
+    colores y lo rompe.
+  - **La ventana horaria se calcula de los tramos reales del atleta**
+    (`ventana()`, redondeo a la hora ± 30 min, mínimo 7 h) para que no haya
+    espacio muerto; por defecto 6:00–22:00 si no hay datos.
+  - En la cabecera, minutos ya prescritos PEGADOS al número del día (si se van
+    al otro extremo parecen del día siguiente), en ámbar si alguna sesión no
+    encaja. El detalle de cada sesión NO se repite aquí: está en la lista de
+    abajo, que es la que tiene las acciones.
+  - Intento previo descartado (2026-10): las mismas franjas como barras
+    horizontales dentro de la celda del día. A 160 px de ancho el tiempo no se
+    puede leer — si el eje de tiempo va en horizontal en 7 columnas, se pierde.
+- Pendiente de `SemanaCalendario`: en móvil 7 columnas se quedan estrechas y el
+  proyecto es móvil primero sin scroll horizontal (probablemente un día por
+  fila). Y las sesiones se dibujan al pie, no a su hora, porque `coach_sessions`
+  solo tiene `fecha`: con una columna `hora` el entreno sería un bloque dentro
+  de la banda y el choque se vería solo.
+- **No se ofrecen combinaciones imposibles** (2026-10): en el calendario, un día
+  sin NINGUNA disciplina posible (`no_disponible` o con datos pero sin tramos) no
+  es botón; en `WorkoutBuilder`, los chips de fecha y los botones de disciplina que
   no encajan con la otra selección salen apagados y `disabled` (helper `noEncaja`,
   sin duración: solo día + disciplina). La opción YA seleccionada nunca se
   bloquea (sesiones antiguas, cambios de disponibilidad) y "Otra fecha" permite
@@ -252,7 +272,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - **Planificar**: Sesiones muestra siempre la semana actual y las 2 siguientes
   aunque estén vacías (`src/lib/planificacion.js`, `semanasFuturas`), sin huecos
   hasta la última con sesiones; "Planificar otra semana" añade más. Los días de
-  hoy en adelante de la tira son botones → `WorkoutBuilder` con la fecha puesta.
+  hoy en adelante del calendario son botones → `WorkoutBuilder` con la fecha
+  puesta.
 - Pendiente (decidido no hacer aún): copiar semana entera, avisar al coach
   cuando el atleta cambia su disponibilidad.
 
