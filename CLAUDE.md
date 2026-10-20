@@ -225,6 +225,29 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Este panel es un proyecto INDEPENDIENTE de TriCoach (la app de coaching con IA):
   comparten la instancia de Supabase, pero no hay que enlazar nada entre ambos.
 
+## Disponibilidad y planificación semanal (2026-10)
+
+- **Atleta** (pestaña "Disponibilidad" en `/home`, `DisponibilidadEditor`): marca
+  TRAMOS HORARIOS por día de la semana y disciplina en bloques de 30 min ("nado
+  7:00–8:00, bici 18:00–20:00") y excepciones por fecha que sustituyen ese día:
+  `no_disponible` o `limitada` (sus tramos). Solo el atleta escribe; su coach lee.
+- Tablas `atleta_disponibilidad_semana` / `atleta_disponibilidad_fecha`
+  (migración 011, aplicada 2026-10-18; RLS: lee atleta o coach vinculado vía
+  `coach_athletes`, escribe solo `athlete_id = auth.uid()`). Cliente en
+  `src/lib/disponibilidadApi.js`, hook `useDisponibilidad` (si falla → vacío).
+- Lógica PURA en `src/lib/disponibilidad.js` (`disponibilidadDelDia`,
+  `evaluarDisponibilidad`, `resumenSemana`, `textoAviso`; tests en
+  `test/disponibilidad.test.js`). Sin datos del atleta → nunca hay avisos.
+- **Coach**: `TiraDisponibilidad` encima de cada semana en Sesiones (qué puede
+  hacer cada día + minutos ya prescritos; día en ámbar si alguna sesión no
+  encaja) y aviso en `WorkoutBuilder`. Solo INFORMA, nunca bloquea.
+- **Planificar**: Sesiones muestra siempre la semana actual y las 2 siguientes
+  aunque estén vacías (`src/lib/planificacion.js`, `semanasFuturas`), sin huecos
+  hasta la última con sesiones; "Planificar otra semana" añade más. Los días de
+  hoy en adelante de la tira son botones → `WorkoutBuilder` con la fecha puesta.
+- Pendiente (decidido no hacer aún): copiar semana entera, avisar al coach
+  cuando el atleta cambia su disponibilidad.
+
 ## Variables de entorno
 
 Frontend (`.env`, prefijo `VITE_`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
