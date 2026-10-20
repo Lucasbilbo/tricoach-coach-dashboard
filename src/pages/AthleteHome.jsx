@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { pedirDatosAtleta } from '../lib/athleteData'
 import { misConexiones } from '../lib/connections'
 import { ESTADO, asignarActividades, estadoDeSesion, fechaHaceSemanas, semanasNecesarias } from '../lib/estadoSesion'
 import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
@@ -76,13 +77,9 @@ async function pedirActividadesEstado(userId, lista, actual) {
   if (!semanas || !userId) return null
   if (actual?.actividades && actual.semanas >= semanas) return null
   try {
-    const res = await fetch('/.netlify/functions/coach-athlete-data', {
-      method: 'POST',
-      headers: await authHeaders(),
-      body: JSON.stringify({ athleteId: userId, weeks: semanas, records: false }),
-    })
+    const res = await pedirDatosAtleta(userId, semanas, { records: false })
     if (!res.ok) return null
-    const json = await res.json().catch(() => null)
+    const json = res.json
     return json?.actividades ? { actividades: json.actividades, desde: fechaHaceSemanas(hoy, semanas), semanas } : null
   } catch {
     return null
@@ -229,14 +226,10 @@ export default function AthleteHome() {
       try {
         // El atleta pide SUS datos: el backend lo autoriza porque el uid del
         // JWT coincide con athleteId
-        const res = await fetch('/.netlify/functions/coach-athlete-data', {
-          method: 'POST',
-          headers: await authHeaders(),
-          body: JSON.stringify({ athleteId: userId, weeks }),
-        })
-        const json = await res.json()
+        const res = await pedirDatosAtleta(userId, weeks)
+        const json = res.json
         if (!activo) return
-        if (!res.ok) {
+        if (!res.ok || !json) {
           setErrorStrava(json?.error || 'No se pudieron cargar los datos de Strava')
           return
         }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
 import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, iconButtonStyle, railStyle } from '../lib/theme'
 import Icon from './ui/Icon'
@@ -173,13 +174,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       setCoberturaDesde(fechaMadridHace(semanas))
       const key = `${athleteId}:${semanas}`
       if (estadoCacheRef.current.key === key) return // ya cargado para esta ventana
-      const res = await fetch('/.netlify/functions/coach-athlete-data', {
-        method: 'POST',
-        headers: await authHeaders(),
-        body: JSON.stringify({ athleteId, weeks: semanas, records: false }),
-      })
+      const res = await pedirDatosAtleta(athleteId, semanas, { records: false })
       if (res.ok) {
-        const json = await res.json().catch(() => null)
+        const json = res.json
         if (senal && !senal.activo) return
         if (json?.actividades) {
           estadoCacheRef.current = { key }
@@ -197,6 +194,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   // la próxima carga volverá a decidir reutilizar o pedir la ventana.
   function invalidarEstado() {
     estadoCacheRef.current = { key: null }
+    invalidarDatosAtleta(athleteId) // los metros de técnica salen de coach_sessions
   }
 
   useEffect(() => {

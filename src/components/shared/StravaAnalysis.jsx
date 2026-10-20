@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid, sumarDias } from '../../lib/chartUtils'
-import { authHeaders } from '../../lib/authHeaders'
+import { pedirDatosAtleta } from '../../lib/athleteData'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle } from '../../lib/theme'
 import { FILTROS_DISCIPLINA, descargarCsv } from '../../lib/activityFormat'
@@ -103,13 +103,9 @@ export default function StravaAnalysis({
     let activo = true
     async function cargarSerie() {
       try {
-        const res = await fetch('/.netlify/functions/coach-athlete-data', {
-          method: 'POST',
-          headers: await authHeaders(),
-          body: JSON.stringify({ athleteId, weeks: SEMANAS_CARGA, records: false }),
-        })
+        const res = await pedirDatosAtleta(athleteId, SEMANAS_CARGA, { records: false })
+        const json = res.json
         if (!res.ok) return
-        const json = await res.json().catch(() => null)
         if (activo && json?.actividades) {
           cargaRef.current = athleteId
           setActividadesCarga(json.actividades)

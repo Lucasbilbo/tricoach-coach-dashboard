@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { authHeaders } from '../lib/authHeaders'
+import { pedirDatosAtleta } from '../lib/athleteData'
 import { hoyMadrid } from '../lib/chartUtils'
 import { COLORS, pageStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
 import Icon from './ui/Icon'
@@ -47,16 +47,11 @@ export default function AthleteView() {
 
         // El coach se deriva del JWT en el backend; athleteId se verifica
         // allí contra coach_athletes
-        const res = await fetch('/.netlify/functions/coach-athlete-data', {
-          method: 'POST',
-          headers: await authHeaders(),
-          body: JSON.stringify({ athleteId: id, weeks }),
-        })
-
-        const json = await res.json()
+        const res = await pedirDatosAtleta(id, weeks)
+        const json = res.json
         if (!activo) return
 
-        if (!res.ok) {
+        if (!res.ok || !json) {
           setError(json?.error || 'No se pudieron cargar los datos del atleta')
           return
         }

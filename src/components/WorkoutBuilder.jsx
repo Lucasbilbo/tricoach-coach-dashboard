@@ -3,6 +3,7 @@ import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import { evaluarDisponibilidad, textoAviso } from '../lib/disponibilidad'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
+import { invalidarDatosAtleta } from '../lib/athleteData'
 import { COLORS, inputStyle } from '../lib/theme'
 import { buildIntervalsText } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
@@ -167,6 +168,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
         .update(registro)
         .eq('id', sessionId)
       if (dbError) throw new Error('No se pudo actualizar la sesión')
+      invalidarDatosAtleta(athleteId) // los metros de técnica salen de coach_sessions
       return sessionId
     } else {
       const { data, error: dbError } = await supabase
@@ -176,6 +178,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
         .single()
       if (dbError) throw new Error('No se pudo guardar la sesión')
       setSessionId(data.id)
+      invalidarDatosAtleta(athleteId)
       return data.id
     }
   }
