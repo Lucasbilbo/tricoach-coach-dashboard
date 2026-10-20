@@ -3,13 +3,14 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, iconButtonStyle, railStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import WorkoutBuilder from './WorkoutBuilder'
 import WorkoutDetail from './WorkoutDetail'
 import ActivityDetail from './ActivityDetail'
 import TiraDisponibilidad from './TiraDisponibilidad'
+import { semanasFuturas } from '../lib/planificacion'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
 
 const DISC_LABELS = {
@@ -115,6 +116,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [sesionEditando, setSesionEditando] = useState(null)
+  // Semanas vacías extra pedidas con "Planificar otra semana"
+  const [semanasExtra, setSemanasExtra] = useState(0)
   const [reenviando, setReenviando] = useState(null)
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
@@ -364,17 +367,26 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
 
   // Cabecera de semana + sus sesiones. La semana actual (esActual) muestra un
   // mensaje si no tiene sesiones, en vez de omitirse.
-  const renderSemana = (lunes, sesionesGrupo, esActual) => (
+  // Pulsar un día de la tira: creador de entrenos con esa fecha ya puesta
+  const planificarDia = (fecha) => setSesionEditando({ fecha })
+
+  const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false) => (
     <div key={lunes}>
       <div style={cabeceraSemanaStyle}>
         {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
       </div>
       {lunes !== 'sin-fecha' && (
-        <TiraDisponibilidad lunes={lunes} datos={disponibilidad} sesiones={sesionesGrupo} />
+        <TiraDisponibilidad
+          lunes={lunes}
+          datos={disponibilidad}
+          sesiones={sesionesGrupo}
+          hoy={hoyMadrid()}
+          onDia={planificable ? planificarDia : undefined}
+        />
       )}
-      {sesionesGrupo.length === 0 && esActual ? (
+      {sesionesGrupo.length === 0 && (esActual || planificable) ? (
         <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
-          Sin sesiones esta semana
+          {esActual ? 'Sin sesiones esta semana' : 'Sin sesiones'} · pulsa un día para planificar
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -389,30 +401,43 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const grupos = agruparPorSemana(sesiones)
   const semanaActual = lunesDeSemana(hoyMadrid())
   const grupoActual = grupos.find((g) => g.lunes === semanaActual)
-  const futuras = grupos.filter((g) => g.lunes > semanaActual)
+  // Futuras: SIEMPRE las próximas semanas aunque estén vacías (para planificar
+  // viendo la disponibilidad), sin huecos, hasta la última con sesiones.
+  const sesionesPorLunes = Object.fromEntries(grupos.map((g) => [g.lunes, g.sesiones]))
+  const futuras = semanasFuturas(semanaActual, grupos.map((g) => g.lunes), semanasExtra)
+    .map((lunes) => ({ lunes, sesiones: sesionesPorLunes[lunes] || [] }))
   const pasadas = grupos.filter((g) => g.lunes < semanaActual).reverse()
 
   return (
     <div>
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
 
-      {sesiones.length === 0 ? (
+      {sesiones.length === 0 && (
         // B4: estado vacío claro para el coach (en vez de solo "Sin sesiones esta semana").
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 32 }}>
+        <div style={{ ...cardStyle, textAlign: 'center', padding: 32, marginBottom: 24 }}>
           <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
             Aún no has prescrito sesiones a este atleta
           </p>
           <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-            Usa «Prescribir entreno» para crear la primera.
+            Usa «Prescribir entreno» o pulsa un día de la semana para crear la primera.
           </p>
         </div>
-      ) : (
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Semana actual: siempre visible, con mensaje si no hay sesiones */}
-        {renderSemana(semanaActual, grupoActual ? grupoActual.sesiones : [], true)}
+        {renderSemana(semanaActual, grupoActual ? grupoActual.sesiones : [], true, true)}
 
-        {/* Semanas futuras: ascendente (más próxima primero) */}
-        {futuras.map((g) => renderSemana(g.lunes, g.sesiones, false))}
+        {/* Semanas futuras: ascendente (más próxima primero), también vacías */}
+        {futuras.map((g) => renderSemana(g.lunes, g.sesiones, false, true))}
+
+        <button
+          type="button"
+          onClick={() => setSemanasExtra((n) => n + 1)}
+          style={{ ...ghostButtonStyle, alignSelf: 'flex-start', padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <Icon name="plus" size={15} strokeWidth={2} />
+          Planificar otra semana
+        </button>
 
         {/* Histórico (semanas pasadas): colapsado por defecto, descendente */}
         {pasadas.length > 0 && (
@@ -448,7 +473,6 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           </div>
         )}
       </div>
-      )}
 
       {sesionEditando && (
         <WorkoutBuilder
