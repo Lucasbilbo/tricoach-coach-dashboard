@@ -9,6 +9,7 @@ const { verifyAuth, canAccessAthlete } = require('./lib/auth')
 const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
+const { crearTtlCache } = require('./lib/ttl-cache')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
@@ -148,8 +149,16 @@ async function actividadesDesde(accessToken, after) {
   return { ok: true, actividades }
 }
 
+// Los splits de una actividad terminada no cambian: se reutilizan 24 h mientras
+// la instancia esté caliente (cada cambio de selector de semanas con records los
+// pedía de nuevo a Strava, una llamada por actividad, y eso gasta cuota).
+// Solo se cachean respuestas válidas; un fallo no se queda pegado.
+const splitsCache = crearTtlCache({ ttlMs: 24 * 60 * 60 * 1000, max: 500 })
+
 // Splits métricos del detalle de una actividad; [] si falla (no rompe el resto)
 async function obtenerSplits(activityId, accessToken) {
+  const guardado = splitsCache.get(activityId)
+  if (guardado) return guardado
   try {
     const res = await withTimeout(
       httpsRequest({
@@ -161,6 +170,7 @@ async function obtenerSplits(activityId, accessToken) {
       10000
     )
     if (res.status !== 200 || !res.json || !Array.isArray(res.json.splits_metric)) return []
+    splitsCache.set(activityId, res.json.splits_metric)
     return res.json.splits_metric
   } catch {
     return []
