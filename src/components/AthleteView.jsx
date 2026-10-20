@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { pedirDatosAtleta } from '../lib/athleteData'
+import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
 import { hoyMadrid } from '../lib/chartUtils'
 import { COLORS, pageStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
 import Icon from './ui/Icon'
@@ -28,6 +28,7 @@ export default function AthleteView() {
   )
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
+  const [refrescos, setRefrescos] = useState(0)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function AthleteView() {
     return () => {
       activo = false
     }
-  }, [id, weeks, navigate])
+  }, [id, weeks, navigate, refrescos])
 
   const actividades = datos?.actividades || []
   const semanas = datos?.semanas || []
@@ -107,9 +108,24 @@ export default function AthleteView() {
               onChange={setWeeks}
               options={RANGOS_SEMANAS.map((r) => ({ value: r, label: `${r} sem` }))}
             />
-            <button onClick={() => setComparadorAbierto(true)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13 }}>
-              Comparar semanas
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Los datos de Strava se reutilizan 5 min; esto fuerza una lectura nueva */}
+              <button
+                onClick={() => {
+                  invalidarDatosAtleta(id)
+                  setRefrescos((v) => v + 1)
+                }}
+                disabled={cargando}
+                aria-label="Actualizar datos de Strava"
+                style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: cargando ? 0.5 : 1 }}
+              >
+                <Icon name="refresh" size={15} strokeWidth={2} />
+                Actualizar
+              </button>
+              <button onClick={() => setComparadorAbierto(true)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13 }}>
+                Comparar semanas
+              </button>
+            </div>
           </div>
         )}
 
