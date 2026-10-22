@@ -4,6 +4,7 @@ import { authHeaders } from './authHeaders'
 import { createAthleteDataCache } from './athleteDataCache'
 import { registrarCache } from './clientCache'
 import { invalidarDashboard } from './panelData'
+import { invalidarPlanCarga } from './planCarga'
 
 // Atletas para los que el usuario pidió "Actualizar": las peticiones de los
 // próximos segundos llevan force:true y el backend resincroniza con Strava
@@ -30,9 +31,11 @@ registrarCache(cache.clear)
 // Los objetos devueltos se comparten entre consumidores: no mutarlos.
 export const pedirDatosAtleta = cache.get
 // Cambiar sesiones del atleta también cambia sus km de 7 días en el dashboard
+// y su carga planificada
 export function invalidarDatosAtleta(athleteId) {
   cache.invalidate(athleteId)
   invalidarDashboard()
+  invalidarPlanCarga(athleteId)
 }
 export const limpiarDatosAtleta = cache.clear
 

@@ -17,6 +17,10 @@ import SeasonPanel from '../components/season/SeasonPanel'
 import DisponibilidadEditor from '../components/DisponibilidadEditor'
 import AgendaAtleta from '../components/AgendaAtleta'
 import { formatHora } from '../lib/disponibilidad'
+import { cargarFeedback } from '../lib/feedbackApi'
+import { resumenFeedback } from '../lib/feedback'
+import { FeedbackEditor } from '../components/FeedbackSesion'
+import Cumplimiento from '../components/Cumplimiento'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -131,17 +135,22 @@ export default function AthleteHome() {
   const [hayMasPasadas, setHayMasPasadas] = useState(false)
   const [cargandoMas, setCargandoMas] = useState(false)
   const [estadoActs, setEstadoActs] = useState({ actividades: null, desde: null, semanas: 0 })
+  // Cómo le fue cada sesión (sesion_feedback): Map<session_id, feedback>
+  const [feedbacks, setFeedbacks] = useState(() => new Map())
+  const [feedbackAbierto, setFeedbackAbierto] = useState({})
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
   // Sube al mover un entreno desde la agenda: recarga la lista de próximos
   const [recargaSesiones, setRecargaSesiones] = useState(0)
 
-  // ── Paso 1: cargar userId + perfil ────────────────────────────────────
+  // ── Paso 1+2 fusionados: sesión + perfil + sesiones en paralelo ──────
+  // Antes había dos useEffects en cadena (getSession → setUserId → sesiones),
+  // lo que añadía un render extra de latencia. Ahora se lanza todo a la vez.
   useEffect(() => {
     let activo = true
 
-    async function cargarPerfil() {
+    async function cargarPerfilYSesiones() {
       const { data: sessionData } = await supabase.auth.getSession()
       const uid = sessionData?.session?.user?.id
       if (!uid) {
@@ -151,35 +160,17 @@ export default function AthleteHome() {
       if (!activo) return
       setUserId(uid)
 
-      // Solo el nombre desde el cliente; las conexiones llegan como booleanos
-      // del backend (los tokens de Strava/Intervals no salen del servidor).
-      const [perfilRes, conexiones] = await Promise.all([
+      const hoy = hoyMadrid()
+      setCargandoSesiones(true)
+
+      // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
+      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback] = await Promise.all([
         supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
         misConexiones(),
-      ])
-
-      if (!activo) return
-      setPerfil({ ...(perfilRes.data || {}), conexiones })
-    }
-
-    cargarPerfil()
-    return () => { activo = false }
-  }, [navigate])
-
-  // ── Paso 2: cargar sesiones prescritas ───────────────────────────────
-  useEffect(() => {
-    if (!userId) return
-    let activo = true
-
-    async function cargarSesiones() {
-      setCargandoSesiones(true)
-      const hoy = hoyMadrid()
-
-      const [proximasRes, pasadasRes] = await Promise.all([
         supabase
           .from('coach_sessions')
           .select('*')
-          .eq('athlete_id', userId)
+          .eq('athlete_id', uid)
           .gte('fecha', hoy)
           .order('fecha', { ascending: true })
           .order('hora_inicio_min', { ascending: true, nullsFirst: true })
@@ -187,13 +178,17 @@ export default function AthleteHome() {
         supabase
           .from('coach_sessions')
           .select('*')
-          .eq('athlete_id', userId)
+          .eq('athlete_id', uid)
           .lt('fecha', hoy)
           .order('fecha', { ascending: false })
           .range(0, PAGINA_PASADAS),
+        cargarFeedback(uid),
       ])
 
       if (!activo) return
+      setPerfil({ ...(perfilRes.data || {}), conexiones })
+      setFeedbacks(mapaFeedback)
+
       // Distinguir un error de carga de un "no hay entrenamientos" legítimo (F4b)
       if (proximasRes.error || pasadasRes.error) {
         setErrorSesiones(true)
@@ -210,14 +205,15 @@ export default function AthleteHome() {
       }
       setCargandoSesiones(false)
       if (!proximasRes.error && !pasadasRes.error) {
-        const r = await pedirActividadesEstado(userId, (pasadasRes.data || []).slice(0, PAGINA_PASADAS), null)
+        const r = await pedirActividadesEstado(uid, (pasadasRes.data || []).slice(0, PAGINA_PASADAS), null)
         if (activo && r) setEstadoActs(r)
       }
     }
 
-    cargarSesiones()
+    cargarPerfilYSesiones()
     return () => { activo = false }
-  }, [userId, recargaSesiones])
+  // recargaSesiones también dispara este effect para refrescar las sesiones
+  }, [navigate, recargaSesiones])
 
   // ── Paso 3: cargar datos Strava ───────────────────────────────────────
   useEffect(() => {
@@ -275,6 +271,15 @@ export default function AthleteHome() {
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  function actualizarFeedback(id, fb) {
+    setFeedbacks((prev) => {
+      const m = new Map(prev)
+      if (fb) m.set(id, fb)
+      else m.delete(id)
+      return m
+    })
   }
 
   function marcarEnviado(id) {
@@ -418,6 +423,24 @@ export default function AthleteHome() {
                           )}
                         </div>
 
+                        {relativo === 'Hoy' && (
+                          <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
+                            <button
+                              onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+                              style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
+                              aria-expanded={!!feedbackAbierto[sesion.id]}
+                            >
+                              <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
+                              {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
+                            </button>
+                            {feedbackAbierto[sesion.id] && (
+                              <div style={{ padding: '4px 0 8px' }}>
+                                <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {abierta && tieneDetalle && (
                           <div style={{ marginTop: 6, paddingBottom: 4 }}>
                             <WorkoutDetail sesion={sesion} mostrarNotas={false} />
@@ -456,27 +479,41 @@ export default function AthleteHome() {
                   {pasadas.map((sesion, i) => {
                     const tieneDetalle = tieneEntreno(sesion.workout_steps)
                     const abierta = !!expandidas[sesion.id]
+                    const estado = estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)
+                    const fb = feedbacks.get(sesion.id)
                     return (
                       <div key={sesion.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}` }}>
+                        {/* Siempre desplegable: dentro está el feedback (y el entreno si lo hay) */}
                         <button
-                          onClick={() => tieneDetalle && toggleDetalle(sesion.id)}
-                          aria-expanded={tieneDetalle ? abierta : undefined}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: tieneDetalle ? 'pointer' : 'default', color: COLORS.textPrimary }}
+                          onClick={() => toggleDetalle(sesion.id)}
+                          aria-expanded={abierta}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: 'pointer', color: COLORS.textPrimary }}
                         >
                           <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other }} />
                           <span style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ display: 'block', fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
                             <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
                               <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span> · {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
+                              {fb ? (
+                                <span style={{ color: COLORS.textPrimary }}> · {resumenFeedback(fb) || 'Feedback enviado'}</span>
+                              ) : estado === ESTADO.completada ? (
+                                <span style={{ color: COLORS.textPrimary }}> · Cuenta cómo fue</span>
+                              ) : null}
                             </span>
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
-                            <EstadoPasada estado={estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)} />
+                          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                            <EstadoPasada estado={estado} />
+                            {estado === ESTADO.completada && <Cumplimiento sesion={sesion} actividad={asignacion.get(sesion.id)} />}
                           </span>
                         </button>
-                        {abierta && tieneDetalle && (
+                        {abierta && (
                           <div style={{ padding: '0 16px 14px 31px' }}>
-                            <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+                            <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />
+                            {tieneDetalle && (
+                              <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                                <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

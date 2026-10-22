@@ -191,6 +191,35 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `AdjuntoEntreno.jsx` (editor + vista). Quitar una captura no la borra del
   bucket (la sesión guardada podría seguir usándola).
 - **Duplicar** sesión (SessionsList): copia sin id ni envío, solo falta el día.
+
+### Plan → hecho → cómo fue (2026-10-22)
+- **Feedback del atleta** (migración 015, aplicada): tabla `sesion_feedback`, una
+  fila por sesión (PK `session_id`): RPE 1–10, sensaciones 1–5, comentario,
+  molestias (+ dónde). RLS: lee atleta o coach vinculado; escribe solo el atleta
+  y solo sobre sesiones SUYAS (verificado simulando usuarios). Lógica pura
+  `src/lib/feedback.js`, datos `feedbackApi.js`, UI `FeedbackSesion.jsx`
+  (editor en /home: historial siempre desplegable + "¿Cómo te fue?" hoy; Jon lo
+  ve en la tarjeta, molestias en rojo). NO se usa como carga (sRPE) a propósito:
+  solo cambiaría actividades sin pulso y el TSS se calcula en dos sitios.
+- **Cumplimiento** (`src/lib/cumplimiento.js`, `Cumplimiento.jsx`): "62 de 75
+  min" junto a Completada, ámbar/rojo con % fuera de 80–120 % (bandas de
+  TrainingPeaks). Por duración o, si todos los pasos van por distancia, por
+  metros (los descansos no cuentan). **Natación NUNCA por duración**: Strava no
+  cuenta los descansos (70' bien hechos salían ~55 %).
+- **TSS previsto** (`src/lib/tssPrevisto.js`): hrTSS por paso con la intensidad
+  del objetivo (punto medio de la zona de `zonaFc`; sin objetivo Z1 en
+  bici/carrera; natación/fuerza sin FC por `TSS_POR_HORA_SIN_FC`, copia con test
+  de igualdad). **Calibrado por atleta y disciplina** (`lib/proyeccion.js`
+  `calibrar`): mediana real/previsto de sus sesiones hechas con hrTSS real (≥3).
+  Sin calibrar se quedaba corto 1,5–2,5×; calibrado, error mediano 9 % (Lucas,
+  leave-one-out, 2026-10).
+- **Proyección** de CTL/ATL en `FormaChart` (discontinua) con las sesiones
+  pendientes, SOLO hasta la última planificada: más allá la CTL caería sola y
+  sería engañoso. Si la próxima prueba A confirmada/inscrito cae dentro: "Llega
+  a X con CTL · TSB" (forma de la víspera). Cabecera de cada semana en Sesiones:
+  "TSS 210 de ~320". Datos en `lib/planCarga.js` (caché 5 min; se invalida con
+  `invalidarDatosAtleta` y al editar la temporada). Tests: `test/feedback`,
+  `cumplimiento`, `tss-previsto`, `proyeccion`.
 - **Plantillas**: tabla `coach_plantillas` (migración 008, RLS `coach_id = auth.uid()`).
   Si la tabla no existe, la sección no se muestra.
 - Estado Hecha/Pendiente: `src/lib/estadoSesion.js` (fuente única coach + atleta;
@@ -209,7 +238,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–014 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–015 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 

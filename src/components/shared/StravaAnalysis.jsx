@@ -11,6 +11,8 @@ import {
   buildTransitionColumns,
 } from '../../lib/athleteStats'
 import { computeCargaHoy } from '../../lib/carga'
+import { pedirPlanCarga } from '../../lib/planCarga'
+import { proyectar } from '../../lib/proyeccion'
 
 // Semanas de histórico para CALENTAR la EWMA de ATL/CTL. La carga se calcula
 // SIEMPRE sobre esta ventana (independiente del selector, que solo recorta lo
@@ -119,6 +121,23 @@ export default function StravaAnalysis({
   }, [athleteId, weeks])
 
   const actsCarga = actividadesCarga || actividades
+
+  // Sesiones prescritas + temporada → proyección de la forma con lo planificado.
+  // Best-effort: si falla, el gráfico sale como siempre.
+  const [plan, setPlan] = useState(null)
+  useEffect(() => {
+    if (!athleteId) return
+    let activo = true
+    pedirPlanCarga(athleteId)
+      .then((p) => { if (activo) setPlan(p) })
+      .catch(() => { if (activo) setPlan(null) })
+    return () => { activo = false }
+  }, [athleteId])
+  const proyeccion = useMemo(() => {
+    // Sin la serie de 26 semanas la calibración y el arranque saldrían cortos
+    if (!plan || !actividadesCarga) return null
+    return proyectar({ actividades: actividadesCarga, sesiones: plan.sesiones, eventos: plan.eventos, hoy: hoyMadrid() })
+  }, [plan, actividadesCarga])
 
   const actividadesFiltradas =
     filtroDisciplina === 'todos'
@@ -273,7 +292,7 @@ export default function StravaAnalysis({
           </ChartCard>
           <ChartCard title="Forma (CTL · ATL)" flush>
             <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} />
+              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} proyeccion={proyeccion} />
             </Suspense>
           </ChartCard>
         </div>
