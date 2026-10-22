@@ -185,7 +185,10 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
   // Click en hueco de un día planificable (coach): nueva sesión a esa hora.
   const planificar = (dia) => (e) => {
     if (!onDia) return
-    const hora = minutoEn(e)
+    // La media hora en la que has pulsado (hacia abajo, no la más cercana: un
+    // clic a las 15:20 en un tramo que acaba a las 15:30 es 15:00, no 15:30).
+    const r = e.currentTarget.getBoundingClientRect()
+    const hora = Math.min(Math.max(Math.floor((MIN + (e.clientY - r.top) / px) / 30) * 30, 0), 1410)
     onDia(dia.fecha, dia.fecha === ahora.fecha && hora < ahora.min ? null : hora)
   }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDisponibilidad } from '../hooks/useDisponibilidad'
+import { useDisponibilidadConEstado } from '../hooks/useDisponibilidad'
 import { evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
 import { ahoraMadrid, disciplinasALaHora, horasPosibles } from '../lib/agenda'
 import { supabase } from '../lib/supabase'
@@ -37,7 +37,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // "Otra disciplina" las enseña todas (el coach puede forzar).
   const [todasDisciplinas, setTodasDisciplinas] = useState(false)
   const [ahora] = useState(() => ahoraMadrid())
-  const disponibilidad = useDisponibilidad(athleteId, isOpen)
+  const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
 
   // Al abrir (o cambiar la sesión a editar) se reinicia el formulario. Se hace
   // durante el render comparando con las props previas (patrón de React para
@@ -93,6 +93,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const alaHora = form.fecha && Number.isInteger(form.hora)
     ? disciplinasALaHora(disponibilidad, form.fecha, form.hora)
     : null
+  // Con hora pero sin los datos aún: no se pintan todas para luego quitar unas.
+  const esperandoDisponibilidad = Number.isInteger(form.hora) && !disponibilidadCargada && !form.disciplina
   const filtrarPorHora = !!alaHora && alaHora.length > 0 && !todasDisciplinas
   const disciplinasVisibles = DISCIPLINAS.filter((d) => !filtrarPorHora || alaHora.includes(d.value) || form.disciplina === d.value)
   // Si a esa hora solo cabe una, se elige sola (ajuste de estado en render).
@@ -394,7 +396,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           <div style={{ marginBottom: 16 }}>
             <label style={sectionLabel}>Disciplina</label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {disciplinasVisibles.map((d) => {
+              {esperandoDisponibilidad && (
+                <span style={{ fontSize: 12.5, color: COLORS.textTertiary, minHeight: 32, display: 'inline-flex', alignItems: 'center' }}>
+                  Mirando qué puede hacer a esa hora…
+                </span>
+              )}
+              {!esperandoDisponibilidad && disciplinasVisibles.map((d) => {
                 const sel = form.disciplina === d.value
                 const bloqueo = sel || filtrarPorHora ? null : noEncaja(form.fecha, d.value)
                 return (
