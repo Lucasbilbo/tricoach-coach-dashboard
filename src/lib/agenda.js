@@ -106,3 +106,12 @@ export function tituloSesion(s) {
   if (n && n.trim()) return n.trim()
   return s?.descripcion || DISCIPLINE_LABELS[s?.disciplina] || 'Sesión'
 }
+
+// Disciplinas que el atleta puede hacer a ESA hora ese día (algún tramo la
+// contiene). null = sin datos del atleta (no se filtra nada).
+export function disciplinasALaHora(datos, fecha, hora) {
+  const dia = disponibilidadDelDia(datos, fecha)
+  if (dia.origen === 'sin_datos') return null
+  if (!Number.isInteger(hora)) return DISCIPLINAS_DISPONIBILIDAD.filter((d) => dia.disciplinas[d])
+  return DISCIPLINAS_DISPONIBILIDAD.filter((d) => (dia.disciplinas[d] || []).some((t) => hora >= t.inicio_min && hora < t.fin_min))
+}

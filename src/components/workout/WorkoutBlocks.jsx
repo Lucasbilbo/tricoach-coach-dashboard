@@ -1,108 +1,117 @@
 // Sub-componentes de bloque del WorkoutBuilder (C3: extraídos del componente).
 // Son de presentación pura: reciben el bloque y callbacks; la manipulación del
 // estado vive en el WorkoutBuilder.
-import { COLORS, inputStyle } from '../../lib/theme'
+//
+// Maquetación (revisión 2026-10-22): los campos van en una rejilla que llena
+// el ancho (antes anchos fijos de 70–110 px: en el móvil se cortaban "Sin
+// objetivo" y "ej: Descanso"), la zona en su propia fila y la etiqueta a lo
+// ancho. Cada paso de una serie lleva su número y su papelera arriba.
+import { COLORS, FONTS, inputStyle } from '../../lib/theme'
 import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER } from './constants'
 import Icon from '../ui/Icon'
 import { labelSm, miniBtn, addBtnStyle } from './styles'
 import { MaterialChips, ZonasChips } from './WorkoutChips'
 
-// Subir / bajar / quitar un bloque, con iconos (antes ↑ ↓ 🗑).
+const rejilla = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }
+const campo = { ...inputStyle, width: '100%', minWidth: 0 }
+const tarjeta = {
+  background: 'rgba(255,255,255,0.03)',
+  border: `1px solid ${COLORS.cardBorder}`,
+  borderRadius: 10,
+  padding: 12,
+  marginBottom: 8,
+}
+const iconBtn = { ...miniBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, padding: 0 }
+
+// Subir / bajar / quitar un bloque, con iconos.
 function BotonesBloque({ idx, total, onMove, onRemove }) {
-  const btn = { ...miniBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, padding: 0 }
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
-      <button onClick={() => onMove(idx, -1)} disabled={idx === 0} style={{ ...btn, opacity: idx === 0 ? 0.35 : 1 }} aria-label="Subir bloque">
+    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+      <button type="button" onClick={() => onMove(idx, -1)} disabled={idx === 0} style={{ ...iconBtn, opacity: idx === 0 ? 0.35 : 1 }} aria-label="Subir bloque">
         <Icon name="chevronDown" size={15} style={{ transform: 'rotate(180deg)' }} />
       </button>
-      <button onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={{ ...btn, opacity: idx === total - 1 ? 0.35 : 1 }} aria-label="Bajar bloque">
+      <button type="button" onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={{ ...iconBtn, opacity: idx === total - 1 ? 0.35 : 1 }} aria-label="Bajar bloque">
         <Icon name="chevronDown" size={15} />
       </button>
-      <button onClick={() => onRemove(idx)} style={btn} aria-label="Quitar bloque">
+      <button type="button" onClick={() => onRemove(idx)} style={iconBtn} aria-label="Quitar bloque">
         <Icon name="trash" size={14} />
       </button>
     </div>
   )
 }
 
-export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove }) {
+// Cantidad · unidad · objetivo (· valor) + zona. Compartido por bloque y paso.
+function CamposPaso({ datos, disciplina, onCambio }) {
   const unidades = UNIDADES[disciplina] || UNIDADES.other
   const objetivos = OBJETIVOS[disciplina] || []
-
-  const titulo = bloque.tipo === 'warmup' ? 'Calentamiento'
-    : bloque.tipo === 'cooldown' ? 'Vuelta a la calma'
-    : 'Paso'
-
+  const conValor = datos.objetivo_tipo && datos.objetivo_tipo !== 'zona'
   return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: `1px solid ${COLORS.cardBorder}`,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>{titulo}</span>
-        <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
-      </div>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+    <>
+      <div style={rejilla}>
         <div>
           <label style={labelSm}>Cantidad</label>
           <input
             type="number"
             min="1"
-            value={bloque.cantidad || ''}
-            onChange={(e) => onUpdate(idx, { cantidad: Number(e.target.value) })}
-            style={{ ...inputStyle, width: 80 }}
+            inputMode="decimal"
+            value={datos.cantidad || ''}
+            onChange={(e) => onCambio({ cantidad: Number(e.target.value) })}
+            style={{ ...campo, fontFamily: FONTS.mono }}
           />
         </div>
         <div>
           <label style={labelSm}>Unidad</label>
-          <select
-            value={bloque.unidad || unidades[0]}
-            onChange={(e) => onUpdate(idx, { unidad: e.target.value })}
-            style={{ ...inputStyle, width: 80 }}
-          >
+          <select value={datos.unidad || unidades[0]} onChange={(e) => onCambio({ unidad: e.target.value })} style={campo}>
             {unidades.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
         </div>
         {objetivos.length > 0 && (
-          <>
-            <div>
-              <label style={labelSm}>Objetivo</label>
-              <select
-                value={bloque.objetivo_tipo || ''}
-                onChange={(e) => onUpdate(idx, { objetivo_tipo: e.target.value || null, objetivo_valor: null })}
-                style={{ ...inputStyle, width: 110 }}
-              >
-                {objetivos.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            {bloque.objetivo_tipo && (
-              bloque.objetivo_tipo === 'zona' ? (
-                <ZonasChips
-                  valor={bloque.objetivo_valor}
-                  onSelect={(z) => onUpdate(idx, { objetivo_valor: z })}
-                />
-              ) : (
-                <div>
-                  <label style={labelSm}>Valor</label>
-                  <input
-                    type="text"
-                    value={bloque.objetivo_valor || ''}
-                    onChange={(e) => onUpdate(idx, { objetivo_valor: e.target.value })}
-                    placeholder={OBJETIVO_PLACEHOLDER[disciplina]?.[bloque.objetivo_tipo] || ''}
-                    style={{ ...inputStyle, width: 80 }}
-                  />
-                </div>
-              )
-            )}
-          </>
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={labelSm}>Objetivo</label>
+            <select
+              value={datos.objetivo_tipo || ''}
+              onChange={(e) => onCambio({ objetivo_tipo: e.target.value || null, objetivo_valor: null })}
+              style={campo}
+            >
+              {objetivos.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        )}
+        {conValor && (
+          <div>
+            <label style={labelSm}>Valor</label>
+            <input
+              type="text"
+              value={datos.objetivo_valor || ''}
+              onChange={(e) => onCambio({ objetivo_valor: e.target.value })}
+              placeholder={OBJETIVO_PLACEHOLDER[disciplina]?.[datos.objetivo_tipo] || ''}
+              style={{ ...campo, fontFamily: FONTS.mono }}
+            />
+          </div>
         )}
       </div>
+      {datos.objetivo_tipo === 'zona' && (
+        <div style={{ marginTop: 8 }}>
+          <ZonasChips valor={datos.objetivo_valor} onSelect={(z) => onCambio({ objetivo_valor: z })} />
+        </div>
+      )}
+    </>
+  )
+}
+
+export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove }) {
+  const titulo = bloque.tipo === 'warmup' ? 'Calentamiento'
+    : bloque.tipo === 'cooldown' ? 'Vuelta a la calma'
+    : 'Paso'
+
+  return (
+    <div style={tarjeta}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>{titulo}</span>
+        <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
+      </div>
+
+      <CamposPaso datos={bloque} disciplina={disciplina} onCambio={(c) => onUpdate(idx, c)} />
 
       <div style={{ marginTop: 8 }}>
         <label style={labelSm}>Nombre / cue (opcional)</label>
@@ -111,7 +120,7 @@ export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemov
           value={bloque.nombre || ''}
           onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
           placeholder="ej: Progresivo"
-          style={{ ...inputStyle, width: '100%' }}
+          style={campo}
         />
       </div>
 
@@ -124,139 +133,64 @@ export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemov
   )
 }
 
-export function PasoRepeat({ paso, pasoIdx, repeatIdx, disciplina, totalPasos, onUpdatePaso, onRemovePaso }) {
-  const unidades = UNIDADES[disciplina] || UNIDADES.other
-  const objetivos = OBJETIVOS[disciplina] || []
-
+export function PasoRepeat({ paso, pasoIdx, repeatIdx, disciplina, onUpdatePaso, onRemovePaso }) {
+  const cambiar = (c) => onUpdatePaso(repeatIdx, pasoIdx, c)
   return (
-    <div
-      style={{
-        marginBottom: 8,
-        paddingLeft: 12,
-        borderLeft: `2px solid rgba(255,255,255,0.1)`,
-      }}
-    >
-      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: COLORS.textSecondary, minWidth: 14, paddingBottom: 6 }}>
-          {pasoIdx === totalPasos - 1 ? '└' : '├'}
-        </span>
-        <div>
-          <label style={labelSm}>Cant.</label>
-          <input
-            type="number"
-            min="1"
-            value={paso.cantidad || ''}
-            onChange={(e) => onUpdatePaso(repeatIdx, pasoIdx, { cantidad: Number(e.target.value) })}
-            style={{ ...inputStyle, width: 70 }}
-          />
-        </div>
-        <div>
-          <label style={labelSm}>Unidad</label>
-          <select
-            value={paso.unidad || unidades[0]}
-            onChange={(e) => onUpdatePaso(repeatIdx, pasoIdx, { unidad: e.target.value })}
-            style={{ ...inputStyle, width: 70 }}
-          >
-            {unidades.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
-        </div>
-        {objetivos.length > 0 && (
-          <>
-            <div>
-              <label style={labelSm}>Objetivo</label>
-              <select
-                value={paso.objetivo_tipo || ''}
-                onChange={(e) => onUpdatePaso(repeatIdx, pasoIdx, { objetivo_tipo: e.target.value || null, objetivo_valor: null })}
-                style={{ ...inputStyle, width: 100 }}
-              >
-                {objetivos.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            {paso.objetivo_tipo && (
-              paso.objetivo_tipo === 'zona' ? (
-                <ZonasChips
-                  valor={paso.objetivo_valor}
-                  onSelect={(z) => onUpdatePaso(repeatIdx, pasoIdx, { objetivo_valor: z })}
-                />
-              ) : (
-                <div>
-                  <label style={labelSm}>Valor</label>
-                  <input
-                    type="text"
-                    value={paso.objetivo_valor || ''}
-                    onChange={(e) => onUpdatePaso(repeatIdx, pasoIdx, { objetivo_valor: e.target.value })}
-                    placeholder={OBJETIVO_PLACEHOLDER[disciplina]?.[paso.objetivo_tipo] || ''}
-                    style={{ ...inputStyle, width: 70 }}
-                  />
-                </div>
-              )
-            )}
-          </>
-        )}
-        <div>
-          <label style={labelSm}>Etiqueta</label>
-          <input
-            type="text"
-            value={paso.nombre || ''}
-            onChange={(e) => onUpdatePaso(repeatIdx, pasoIdx, { nombre: e.target.value || null })}
-            placeholder="ej: Descanso"
-            style={{ ...inputStyle, width: 80 }}
-          />
-        </div>
-        <button
-          onClick={() => onRemovePaso(repeatIdx, pasoIdx)}
-          style={{ ...miniBtn, marginBottom: 1, display: 'inline-flex', alignItems: 'center', padding: '7px 8px' }}
-          aria-label="Quitar paso"
-        >
+    <div style={{ marginBottom: 10, paddingLeft: 12, borderLeft: '2px solid rgba(139,127,209,0.35)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 11, letterSpacing: '0.04em', color: COLORS.textTertiary, fontWeight: 600 }}>Paso {pasoIdx + 1}</span>
+        <button type="button" onClick={() => onRemovePaso(repeatIdx, pasoIdx)} style={iconBtn} aria-label={`Quitar paso ${pasoIdx + 1}`}>
           <Icon name="trash" size={14} />
         </button>
       </div>
 
-      <div style={{ paddingLeft: 20 }}>
-        <MaterialChips
-          material={paso.material}
-          disciplina={disciplina}
-          onChange={(mat) => onUpdatePaso(repeatIdx, pasoIdx, { material: mat })}
+      <CamposPaso datos={paso} disciplina={disciplina} onCambio={cambiar} />
+
+      <div style={{ marginTop: 8 }}>
+        <label style={labelSm}>Etiqueta (opcional)</label>
+        <input
+          type="text"
+          value={paso.nombre || ''}
+          onChange={(e) => cambiar({ nombre: e.target.value || null })}
+          placeholder="ej: Descanso"
+          style={campo}
         />
       </div>
+
+      <MaterialChips material={paso.material} disciplina={disciplina} onChange={(mat) => cambiar({ material: mat })} />
     </div>
   )
 }
 
 export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove, onUpdatePaso, onRemovePaso, onAddPaso }) {
   return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: `1px solid ${COLORS.cardBorder}`,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.load }}>Serie</span>
-          <input
-            type="text"
-            value={bloque.nombre || ''}
-            onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
-            placeholder="Serie principal"
-            style={{ ...inputStyle, width: 160, fontSize: 12 }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <label style={{ ...labelSm, marginBottom: 0 }}>Reps</label>
+    <div style={tarjeta}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.load, flexShrink: 0 }}>Serie</span>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, fontSize: 13, color: COLORS.textSecondary }}>
             <input
               type="number"
               min="1"
+              inputMode="numeric"
+              aria-label="Repeticiones"
               value={bloque.repeticiones || 4}
               onChange={(e) => onUpdate(idx, { repeticiones: Number(e.target.value) })}
-              style={{ ...inputStyle, width: 60, fontSize: 12 }}
+              style={{ ...inputStyle, width: 56, padding: '7px 8px', fontFamily: FONTS.mono, textAlign: 'center' }}
             />
-          </div>
+            ×
+          </label>
         </div>
         <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
       </div>
+      <input
+        type="text"
+        value={bloque.nombre || ''}
+        onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
+        placeholder="Nombre de la serie (opcional)"
+        aria-label="Nombre de la serie"
+        style={{ ...campo, marginBottom: 12, fontSize: 13 }}
+      />
 
       {(bloque.pasos || []).map((paso, pi) => (
         <PasoRepeat
@@ -265,13 +199,12 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
           pasoIdx={pi}
           repeatIdx={idx}
           disciplina={disciplina}
-          totalPasos={(bloque.pasos || []).length}
           onUpdatePaso={onUpdatePaso}
           onRemovePaso={onRemovePaso}
         />
       ))}
 
-      <button onClick={() => onAddPaso(idx)} style={{ ...addBtnStyle, marginTop: 6 }}>
+      <button type="button" onClick={() => onAddPaso(idx)} style={{ ...addBtnStyle, marginTop: 2 }}>
         + Añadir paso
       </button>
     </div>
