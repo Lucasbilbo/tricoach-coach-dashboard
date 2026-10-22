@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
-import { evaluarDisponibilidad, textoAviso } from '../lib/disponibilidad'
+import { evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
+import { ahoraMadrid, horasPosibles } from '../lib/agenda'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { invalidarDatosAtleta } from '../lib/athleteData'
@@ -25,6 +26,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [errorIntervals, setErrorIntervals] = useState(false)
   const [error, setError] = useState(null)
   const [mostrarInputFecha, setMostrarInputFecha] = useState(false)
+  const [mostrarInputHora, setMostrarInputHora] = useState(false)
+  const [ahora] = useState(() => ahoraMadrid())
   const disponibilidad = useDisponibilidad(athleteId, isOpen)
 
   // Al abrir (o cambiar la sesión a editar) se reinicia el formulario. Se hace
@@ -39,6 +42,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setForm(f)
       setSessionId(sessionExistente?.id || null)
       setExitoGarmin(false)
+      setMostrarInputHora(false)
       setErrorIntervals(false)
       setError(null)
       // Mostrar input si la fecha existente no está en los próximos 14 días
@@ -52,8 +56,18 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
 
   // Aviso informativo de disponibilidad del atleta (nunca bloquea el guardado)
   const avisoDisponibilidad = form.fecha && form.disciplina
-    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques)), form.disciplina)
+    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), form.hora ?? undefined), form.disciplina)
     : null
+
+  // Horas de inicio que encajan en las franjas del atleta para esa disciplina y
+  // día (cada 30 min). La hora es opcional: sin hora la sesión va a la fila
+  // "sin hora" de la agenda y al reloj sin hora concreta.
+  const horasSugeridas = form.fecha && form.disciplina
+    ? horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), ahora)
+    : []
+  const chipsHora = form.hora != null && !horasSugeridas.includes(form.hora)
+    ? [...horasSugeridas, form.hora].sort((a, b) => a - b)
+    : horasSugeridas
 
   // Combinaciones imposibles: si el atleta no puede hacer esa disciplina ese
   // día, el chip/botón no se puede elegir (devuelve el motivo, o null si encaja
@@ -152,6 +166,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const yaEnviada = !!sessionExistente?.intervals_event_id
 
   async function buildRegistro() {
+    const horaAntes = sessionExistente?.hora_inicio_min ?? null
+    const horaNueva = form.hora ?? null
     return {
       coach_id: coachId,
       athlete_id: athleteId,
@@ -167,6 +183,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       // reenvío se confirme: si falla, la lista lo muestra como "no enviado"
       // en vez de mentir con un ✅ sobre una versión vieja.
       ...(sessionId && yaEnviada ? { enviado_a_garmin: false } : {}),
+      // La columna solo se manda si hay hora (o la había): así guardar sin hora
+      // sigue funcionando aunque la migración 013 aún no esté aplicada.
+      ...(horaNueva != null || horaAntes != null ? { hora_inicio_min: horaNueva } : {}),
+      // Si el coach recoloca una sesión que había movido el atleta, la marca
+      // "movida por" deja de ser cierta.
+      ...(sessionExistente?.movida_por && (form.fecha !== sessionExistente.fecha || horaNueva !== horaAntes)
+        ? { movida_por: null, movida_at: null }
+        : {}),
     }
   }
 
@@ -486,6 +510,59 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               )}
             </div>
           </div>
+
+          {form.fecha && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={sectionLabel}>Hora <span style={{ textTransform: 'none', fontWeight: 400, color: COLORS.textTertiary }}>(opcional)</span></label>
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
+                {[null, ...chipsHora].map((h) => {
+                  const sel = (form.hora ?? null) === h
+                  return (
+                    <button
+                      key={h ?? 'sin'}
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, hora: h }))}
+                      style={{
+                        background: sel ? COLORS.accent : 'transparent',
+                        color: sel ? COLORS.background : COLORS.textSecondary,
+                        border: `1px solid ${sel ? COLORS.accent : COLORS.cardBorder}`,
+                        borderRadius: 6, padding: '5px 10px', fontSize: 11,
+                        fontWeight: sel ? 700 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                        fontFamily: h == null ? "'Archivo', sans-serif" : "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {h == null ? 'Sin hora' : formatHora(h)}
+                    </button>
+                  )
+                })}
+              </div>
+              {form.disciplina && horasSugeridas.length === 0 && (
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textTertiary }}>El atleta no tiene franjas para esto ese día.</p>
+              )}
+              <div style={{ marginTop: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setMostrarInputHora((v) => !v)}
+                  style={{ background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'Archivo', sans-serif" }}
+                >
+                  {mostrarInputHora ? '▲ Ocultar' : '▼ Otra hora'}
+                </button>
+                {mostrarInputHora && (
+                  <input
+                    type="time"
+                    step={300}
+                    value={form.hora == null ? '' : `${String(Math.floor(form.hora / 60)).padStart(2, '0')}:${String(form.hora % 60).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [hh, mm] = e.target.value.split(':').map(Number)
+                      const m = Number.isInteger(hh) && Number.isInteger(mm) ? Math.round((hh * 60 + mm) / 5) * 5 : null
+                      setForm((prev) => ({ ...prev, hora: m != null && m < 1440 ? m : null }))
+                    }}
+                    style={{ ...inputStyle, width: '100%', marginTop: 6 }}
+                  />
+                )}
+              </div>
+            </div>
+          )}
 
           {avisoDisponibilidad && (
             <p role="status" style={{ margin: '0 0 14px', padding: '8px 10px', borderRadius: 8, fontSize: 12, lineHeight: 1.45, color: '#E8B84A', border: '1px solid rgba(232,184,74,0.45)', background: 'rgba(232,184,74,0.08)' }}>
