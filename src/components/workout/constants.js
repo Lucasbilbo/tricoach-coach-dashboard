@@ -87,7 +87,7 @@ export function initForm(sesion) {
   if (!sesion?.id && !sesion?.disciplina) {
     // Nueva (puede venir con fecha/hora desde la agenda). Sin default de disciplina: se fuerza elegirla antes de mostrar campos
     // específicos (piscina/material/objetivos/unidades).
-    return { fecha: sesion?.fecha || '', hora: horaDe(sesion), disciplina: null, piscina: '25', nombre: '', bloques: [], notas: '' }
+    return { fecha: sesion?.fecha || '', hora: horaDe(sesion), disciplina: null, piscina: '25', nombre: '', bloques: [], notas: '', adjunto: null, duracionManual: null }
   }
   const ws = sesion.workout_steps
   const bloques = Array.isArray(ws) ? ws : (ws?.bloques || [])
@@ -100,6 +100,9 @@ export function initForm(sesion) {
     nombre: sesion.descripcion || '',
     bloques,
     notas,
+    // Entreno tal cual (captura / texto) y su duración si no hay bloques
+    adjunto: ws?.adjunto || null,
+    duracionManual: bloques.length === 0 && Number.isFinite(sesion.duracion_min) ? sesion.duracion_min : null,
   }
 }
 

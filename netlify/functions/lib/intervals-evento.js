@@ -34,6 +34,12 @@ function construirEvento(session) {
     description: buildIntervalsText(session, { incluirNotas: false }),
     indoor: isSwim && !isOpen,
   }
+  // Sin pasos estructurados (p. ej. Hyrox adjunto como captura): el reloj solo
+  // recibe nombre y duración planificada.
+  const conPasos = (session.workout_steps?.bloques?.length || 0) > 0
+  if (!conPasos && Number.isFinite(session.duracion_min) && session.duracion_min > 0) {
+    evento.moving_time = Math.round(session.duracion_min * 60)
+  }
   if (isSwim && !isOpen) {
     evento.pool_length = piscina === '50' ? 50 : 25
     evento.pool_length_unit = 'Meters'

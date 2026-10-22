@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { tieneEntreno } from '../lib/adjuntos'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
@@ -385,7 +386,7 @@ export default function AthleteHome() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {proximas.map((sesion) => {
-                    const tieneDetalle = sesion.workout_steps?.bloques?.length > 0
+                    const tieneDetalle = tieneEntreno(sesion.workout_steps)
                     const abierta = !!expandidas[sesion.id]
                     const relativo = diaRelativo(sesion.fecha)
                     const enviada = !!sesion.enviado_a_garmin
@@ -453,7 +454,7 @@ export default function AthleteHome() {
               ) : (
                 <div style={{ ...cardStyle, padding: '2px 0' }}>
                   {pasadas.map((sesion, i) => {
-                    const tieneDetalle = sesion.workout_steps?.bloques?.length > 0
+                    const tieneDetalle = tieneEntreno(sesion.workout_steps)
                     const abierta = !!expandidas[sesion.id]
                     return (
                       <div key={sesion.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}` }}>
