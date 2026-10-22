@@ -16,6 +16,7 @@ import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
+import Cumplimiento from './Cumplimiento'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -343,6 +344,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             {completada && <Icon name="check" size={15} strokeWidth={2.2} />}
             {estado.texto.replace('✓ ', '')}
           </span>
+          {completada && <Cumplimiento sesion={sesion} actividad={estado.actividadStrava} />}
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
             <Icon name="watch" size={15} />
             {enviada ? 'En el reloj' : 'Sin enviar al reloj'}

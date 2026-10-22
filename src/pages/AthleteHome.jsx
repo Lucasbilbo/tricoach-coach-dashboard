@@ -20,6 +20,7 @@ import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { resumenFeedback } from '../lib/feedback'
 import { FeedbackEditor } from '../components/FeedbackSesion'
+import Cumplimiento from '../components/Cumplimiento'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -500,8 +501,9 @@ export default function AthleteHome() {
                               ) : null}
                             </span>
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                             <EstadoPasada estado={estado} />
+                            {estado === ESTADO.completada && <Cumplimiento sesion={sesion} actividad={asignacion.get(sesion.id)} />}
                           </span>
                         </button>
                         {abierta && (
