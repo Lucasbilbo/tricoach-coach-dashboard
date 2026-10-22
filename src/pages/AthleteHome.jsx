@@ -138,10 +138,13 @@ export default function AthleteHome() {
   const [recargaSesiones, setRecargaSesiones] = useState(0)
 
   // ── Paso 1: cargar userId + perfil ────────────────────────────────────
+  // ── Paso 1+2 fusionados: sesión + perfil + sesiones en paralelo ──────
+  // Antes había dos useEffects en cadena (getSession → setUserId → sesiones),
+  // lo que añadía un render extra de latencia. Ahora se lanza todo a la vez.
   useEffect(() => {
     let activo = true
 
-    async function cargarPerfil() {
+    async function cargarPerfilYSesiones() {
       const { data: sessionData } = await supabase.auth.getSession()
       const uid = sessionData?.session?.user?.id
       if (!uid) {
@@ -151,35 +154,17 @@ export default function AthleteHome() {
       if (!activo) return
       setUserId(uid)
 
-      // Solo el nombre desde el cliente; las conexiones llegan como booleanos
-      // del backend (los tokens de Strava/Intervals no salen del servidor).
-      const [perfilRes, conexiones] = await Promise.all([
+      const hoy = hoyMadrid()
+      setCargandoSesiones(true)
+
+      // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
+      const [perfilRes, conexiones, proximasRes, pasadasRes] = await Promise.all([
         supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
         misConexiones(),
-      ])
-
-      if (!activo) return
-      setPerfil({ ...(perfilRes.data || {}), conexiones })
-    }
-
-    cargarPerfil()
-    return () => { activo = false }
-  }, [navigate])
-
-  // ── Paso 2: cargar sesiones prescritas ───────────────────────────────
-  useEffect(() => {
-    if (!userId) return
-    let activo = true
-
-    async function cargarSesiones() {
-      setCargandoSesiones(true)
-      const hoy = hoyMadrid()
-
-      const [proximasRes, pasadasRes] = await Promise.all([
         supabase
           .from('coach_sessions')
           .select('*')
-          .eq('athlete_id', userId)
+          .eq('athlete_id', uid)
           .gte('fecha', hoy)
           .order('fecha', { ascending: true })
           .order('hora_inicio_min', { ascending: true, nullsFirst: true })
@@ -187,13 +172,15 @@ export default function AthleteHome() {
         supabase
           .from('coach_sessions')
           .select('*')
-          .eq('athlete_id', userId)
+          .eq('athlete_id', uid)
           .lt('fecha', hoy)
           .order('fecha', { ascending: false })
           .range(0, PAGINA_PASADAS),
       ])
 
       if (!activo) return
+      setPerfil({ ...(perfilRes.data || {}), conexiones })
+
       // Distinguir un error de carga de un "no hay entrenamientos" legítimo (F4b)
       if (proximasRes.error || pasadasRes.error) {
         setErrorSesiones(true)
@@ -210,14 +197,16 @@ export default function AthleteHome() {
       }
       setCargandoSesiones(false)
       if (!proximasRes.error && !pasadasRes.error) {
-        const r = await pedirActividadesEstado(userId, (pasadasRes.data || []).slice(0, PAGINA_PASADAS), null)
+        const r = await pedirActividadesEstado(uid, (pasadasRes.data || []).slice(0, PAGINA_PASADAS), null)
         if (activo && r) setEstadoActs(r)
       }
     }
 
-    cargarSesiones()
+    cargarPerfilYSesiones()
     return () => { activo = false }
-  }, [userId, recargaSesiones])
+  // recargaSesiones también dispara este effect para refrescar las sesiones
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, recargaSesiones])
 
   // ── Paso 3: cargar datos Strava ───────────────────────────────────────
   useEffect(() => {
