@@ -102,7 +102,9 @@ function lineaPaso(paso, disciplina, cueNombre, objetivo) {
   let cue = cueStr(cueNombre, paso.material, disciplina)
   if (disciplina === 'swim' && !esDescanso(paso) && esTecnica(paso)) {
     objetivo = `${objetivo || ''} press lap`
-    cue = `${cue ? `${cue.trim()} · ` : ''}pulsa vuelta al acabar `
+    // La instrucción va DELANTE: si el reloj recorta un texto largo, lo que se
+    // pierde es el final (nombre/material), no el "pulsa vuelta".
+    cue = `Pulsa vuelta al acabar${cue ? ` · ${cue.trim()}` : ''} `
   }
   return '- ' + cue + paso.cantidad + unidadIntervals(paso.unidad) + objetivo
 }
@@ -292,7 +294,11 @@ function buildIntervalsText(session, options = {}) {
       const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
       partes.push(lineaPaso(bloque, disciplina, bloque.nombre, obj))
     } else if (bloque.tipo === 'repeat') {
-      const lines = [(bloque.nombre || 'Serie') + ' ' + bloque.repeticiones + 'x']
+      // La cabecera de la serie es texto del reloj ("Principal 1/8") y Intervals
+      // lee el 'Nx' final como nº de repeticiones: el nombre del coach pasa por
+      // cueSeguro para que un '8x100' o un 'Z3' dentro no compita con él.
+      const nombreSerie = (bloque.nombre && cueSeguro(bloque.nombre, disciplina)) || 'Serie'
+      const lines = [nombreSerie + ' ' + bloque.repeticiones + 'x']
       for (const paso of (bloque.pasos || [])) {
         if (paso.tipo === 'pausa') {
           lines.push(lineaPausa(paso, disciplina))
