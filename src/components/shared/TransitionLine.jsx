@@ -8,8 +8,8 @@ import { COLORS, FONTS, DISCIPLINE_COLORS } from '../../lib/theme'
 //   - descanso:   borde punteado gris (#2A3040), altura mínima, sin relleno
 // Anima height/opacity con transition 180ms al cambiar de props (corto a propósito).
 //
-// Es de presentación pura: recibe `columns` ya normalizadas. Construye las
-// columnas con los helpers de lib/transitionColumns.js.
+// Es de presentación pura: recibe `columns` ya normalizadas (las construye
+// buildTransitionColumns en lib/athleteStats.js).
 
 const LEYENDA = [
   { label: 'Natación', color: DISCIPLINE_COLORS.swim },

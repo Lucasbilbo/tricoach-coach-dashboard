@@ -37,7 +37,6 @@ export function invalidarDatosAtleta(athleteId) {
   invalidarDashboard()
   invalidarPlanCarga(athleteId)
 }
-export const limpiarDatosAtleta = cache.clear
 
 // Botón "Actualizar": olvida lo cacheado y pide al backend datos recién traídos de Strava
 export function forzarDatosAtleta(athleteId) {

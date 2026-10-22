@@ -95,6 +95,20 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Rate limit best-effort vía RPC `check_rate_limit` (`lib/rate-limit.js`), aplicado
   en `accept-invitation` y `verify-intervals-key`. Fail-open.
 - En el frontend, usar `authHeaders()` (`src/lib/authHeaders.js`) en todos los fetch.
+- **`profiles` es compartida con TriCoach v2** (mismo Supabase). Migración 016:
+  trigger `profiles_proteger_campos` — si escribe un usuario (authenticated/anon)
+  NO puede cambiar `plan`, `stripe_customer_id`, `messages_today`,
+  `last_message_date`, `ajustes_hoy`, `ultima_fecha_ajuste`, `deleted_at`,
+  `created_at` (en UPDATE se mantienen; en INSERT van a su valor de alta, plan
+  'free'). Antes cualquiera se ponía `plan='pro'` con la anon key. El backend
+  (service_role) y las SECURITY DEFINER sí pueden. Si TriCoach necesita escribir
+  uno de esos campos desde el navegador, que lo haga por una función de backend.
+  RLS de profiles: 3 políticas (ver/crear/editar la propia), sin DELETE.
+- Cabeceras (`netlify.toml`): X-Frame-Options DENY, nosniff, Referrer-Policy,
+  Permissions-Policy y CSP con los únicos orígenes que usa la app (Supabase y
+  Google Fonts). `/assets/*` inmutable 1 año (llevan hash). Si se añade un
+  origen nuevo (imágenes, otra API) hay que añadirlo a la CSP.
+- Contraseña de alta: mínimo 8 caracteres (JoinPage + accept-invitation).
 - `VITE_COACH_SECRET`/`COACH_FUNCTION_SECRET` están OBSOLETOS; el código no los usa.
   NUNCA reintroducir un secreto compartido con prefijo `VITE_` como autenticación.
 
@@ -233,12 +247,12 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   (StravaAnalysis, TransitionLine).
 - `src/pages/` — AthleteHome (atleta), IntervalsSetup, JoinPage (invitaciones).
 - `src/lib/` — supabase, theme, authHeaders, chartUtils, metrics(front), carga,
-  athleteStats, activityFormat, transitionColumns, intervalsText.
+  athleteStats, activityFormat, intervalsText.
 - `netlify/functions/` — coach-dashboard-data, coach-athlete-data,
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–015 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–016 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 

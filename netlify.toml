@@ -6,3 +6,27 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Cabeceras de seguridad (auditoría 2026-10-22).
+# - frame-ancestors / X-Frame-Options: nadie puede meter el panel en un iframe
+#   (clickjacking sobre "Eliminar", "Enviar al reloj"…).
+# - CSP: solo scripts propios; datos de Supabase (API + storage firmado);
+#   fuentes de Google. Los estilos inline son la norma del proyecto (style={…}).
+#   Salir a Strava/Intervals/Google son navegaciones, la CSP no las limita.
+#   Va como Report-Only hasta verificar en producción que no hay violaciones;
+#   luego se pasa a Content-Security-Policy.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://luqpjgzpydquqturgjmt.supabase.co; connect-src 'self' https://luqpjgzpydquqturgjmt.supabase.co wss://luqpjgzpydquqturgjmt.supabase.co; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+
+# Los ficheros de /assets llevan hash en el nombre: nunca cambian. Sin esto el
+# navegador los revalidaba en cada visita (100–200 ms cada uno, en cadena).
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
