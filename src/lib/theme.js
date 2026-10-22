@@ -69,7 +69,22 @@ export const inputStyle = {
   outline: 'none',
 }
 
+// CTA principal: outline fino en vez de relleno sólido. El teal sólido es el
+// patrón más genérico de "app de IA"; outline da la misma jerarquía con más carácter.
 export const buttonStyle = {
+  background: 'transparent',
+  color: COLORS.accent,
+  border: `1.5px solid ${COLORS.accent}`,
+  borderRadius: 8,
+  padding: '10px 16px',
+  fontSize: 14,
+  fontWeight: 600,
+  fontFamily: FONTS.sans,
+  cursor: 'pointer',
+}
+
+// Variante sólida para acciones destructivas o de confirmación final.
+export const buttonSolidStyle = {
   background: COLORS.accent,
   color: COLORS.background,
   border: 'none',
@@ -92,11 +107,15 @@ export function railStyle(disciplina, grosor = 3) {
 }
 
 export const ghostButtonStyle = {
-  ...buttonStyle,
   background: 'transparent',
   color: COLORS.textPrimary,
   border: `1px solid ${COLORS.cardBorder}`,
+  borderRadius: 8,
+  padding: '10px 16px',
+  fontSize: 14,
   fontWeight: 500,
+  fontFamily: FONTS.sans,
+  cursor: 'pointer',
 }
 
 export const iconButtonStyle = {
@@ -116,8 +135,17 @@ export const iconButtonStyle = {
 // Título de sección: frase normal, sin mayúsculas forzadas.
 export const sectionTitleStyle = {
   margin: '0 0 12px',
-  fontSize: 15,
+  fontSize: 13,
+  fontWeight: 500,
+  color: COLORS.textSecondary,
+  letterSpacing: '0.02em',
+  textTransform: 'uppercase',
+}
+
+// Número grande de métrica: mono, tracking negativo, carácter de instrumento.
+export const metricNumberStyle = {
+  fontFamily: "'JetBrains Mono', monospace",
+  letterSpacing: '-0.03em',
+  lineHeight: 1.05,
   fontWeight: 600,
-  color: COLORS.textPrimary,
-  letterSpacing: 0,
 }

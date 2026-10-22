@@ -50,8 +50,8 @@ export const separadorSection = {
   marginTop: 4,
 }
 
-// Chip de selección (disciplina, piscina, fecha, hora). Seleccionado = blanco
-// translúcido, como Segmented: el teal se reserva para la acción principal.
+// Chip de selección (piscina, fecha, hora, zona). Seleccionado = blanco translúcido.
+// Para disciplinas usar chipDisciplinaStyle que usa el color semántico de la disciplina.
 export function chipStyle(sel, { bloqueado = false, mono = false } = {}) {
   return {
     display: 'inline-flex',
@@ -69,6 +69,30 @@ export function chipStyle(sel, { bloqueado = false, mono = false } = {}) {
     cursor: bloqueado ? 'not-allowed' : 'pointer',
     opacity: bloqueado ? 0.35 : 1,
     fontFamily: mono ? "'JetBrains Mono', monospace" : "'Archivo', sans-serif",
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  }
+}
+
+// Chip de disciplina: seleccionado usa el color semántico de esa disciplina
+// (fondo tenue + borde del color), no el blanco genérico.
+export function chipDisciplinaStyle(sel, color, { bloqueado = false } = {}) {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: sel ? `${color}1A` : 'transparent', // 10% opacidad del color
+    color: sel ? COLORS.textPrimary : COLORS.textSecondary,
+    border: `1px solid ${sel ? color : '#262C3A'}`,
+    borderRadius: 7,
+    padding: '6px 11px',
+    minHeight: 32,
+    boxSizing: 'border-box',
+    fontSize: 12.5,
+    fontWeight: sel ? 600 : 500,
+    cursor: bloqueado ? 'not-allowed' : 'pointer',
+    opacity: bloqueado ? 0.35 : 1,
+    fontFamily: "'Archivo', sans-serif",
     whiteSpace: 'nowrap',
     flexShrink: 0,
   }

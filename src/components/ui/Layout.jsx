@@ -1,19 +1,22 @@
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, sectionTitleStyle } from '../../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, sectionTitleStyle, metricNumberStyle } from '../../lib/theme'
 import Icon from './Icon'
 
 // Piezas de maquetación compartidas por todas las pantallas.
 
-// Marca: tres trazos (natación, bici, carrera) + nombre. Una sola en toda la app.
+// Marca: nombre con tracking negativo + tira tricolor (swim/bike/run) como subrayado.
 export function Brand({ size = 13, sub }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-      <span aria-hidden="true" style={{ display: 'flex', gap: 2 }}>
-        {['swim', 'bike', 'run'].map((d) => (
-          <span key={d} style={{ width: 4, height: size, borderRadius: 2, background: DISCIPLINE_COLORS[d] }} />
-        ))}
-      </span>
-      <span style={{ fontSize: size, fontWeight: 600, color: COLORS.textPrimary, letterSpacing: '0.01em' }}>
-        GetRiCoach
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+      {/* Nombre + tira de color debajo */}
+      <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}>
+        <span style={{ fontSize: size, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: '-0.03em', lineHeight: 1, fontFamily: FONTS.sans }}>
+          GetRiCoach
+        </span>
+        <span aria-hidden="true" style={{ display: 'flex', gap: 2 }}>
+          {['swim', 'bike', 'run'].map((d) => (
+            <span key={d} style={{ flex: 1, height: 2, borderRadius: 1, background: DISCIPLINE_COLORS[d] }} />
+          ))}
+        </span>
       </span>
       {sub && (
         <span style={{ fontSize: size, color: COLORS.textTertiary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -126,7 +129,7 @@ export function DisciplineTag({ disciplina, label }) {
 export function Metric({ value, unit, label, color }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontFamily: FONTS.mono, fontSize: 22, fontWeight: 600, color: color || COLORS.textPrimary, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+      <div style={{ ...metricNumberStyle, fontSize: 22, color: color || COLORS.textPrimary, whiteSpace: 'nowrap' }}>
         {value ?? '—'}
         {unit && value != null && <span style={{ fontSize: 12, fontWeight: 400, color: COLORS.textSecondary, marginLeft: 3 }}>{unit}</span>}
       </div>
