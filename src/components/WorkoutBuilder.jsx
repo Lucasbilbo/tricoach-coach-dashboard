@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import { evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
-import { ahoraMadrid, horasPosibles } from '../lib/agenda'
+import { ahoraMadrid, disciplinasALaHora, horasPosibles } from '../lib/agenda'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { invalidarDatosAtleta } from '../lib/athleteData'
-import { COLORS, inputStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, FONTS, inputStyle } from '../lib/theme'
 import { buildIntervalsText } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
-import { sectionLabel, separadorSection, addBtnStyle } from './workout/styles'
+import { sectionLabel, separadorSection, addBtnStyle, chipStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import AtajosBuilder from './workout/AtajosBuilder'
 import Icon from './ui/Icon'
@@ -16,6 +16,12 @@ import Icon from './ui/Icon'
 // ── Componente principal ──────────────────────────────────────────────────────
 
 const DIAS_CHIPS = proximosDias(14)
+const DIAS_SEMANA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+function fechaCorta(f) {
+  const d = new Date(f + 'T00:00:00Z')
+  return Number.isNaN(d.getTime()) ? f : `${DIAS_SEMANA[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`
+}
 
 export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, coachId, sessionExistente, atletaNombre }) {
   const [form, setForm] = useState(initForm(sessionExistente))
@@ -27,6 +33,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [error, setError] = useState(null)
   const [mostrarInputFecha, setMostrarInputFecha] = useState(false)
   const [mostrarInputHora, setMostrarInputHora] = useState(false)
+  // Con hora puesta solo se ofrecen las disciplinas que caben a esa hora;
+  // "Otra disciplina" las enseña todas (el coach puede forzar).
+  const [todasDisciplinas, setTodasDisciplinas] = useState(false)
   const [ahora] = useState(() => ahoraMadrid())
   const disponibilidad = useDisponibilidad(athleteId, isOpen)
 
@@ -43,6 +52,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setSessionId(sessionExistente?.id || null)
       setExitoGarmin(false)
       setMostrarInputHora(false)
+      setTodasDisciplinas(false)
       setErrorIntervals(false)
       setError(null)
       // Mostrar input si la fecha existente no está en los próximos 14 días
@@ -78,6 +88,17 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     fecha && disciplina
       ? textoAviso(evaluarDisponibilidad(disponibilidad, fecha, disciplina), disciplina)
       : null
+
+  // Disciplinas posibles a la hora elegida (null = sin hora o sin datos).
+  const alaHora = form.fecha && Number.isInteger(form.hora)
+    ? disciplinasALaHora(disponibilidad, form.fecha, form.hora)
+    : null
+  const filtrarPorHora = !!alaHora && alaHora.length > 0 && !todasDisciplinas
+  const disciplinasVisibles = DISCIPLINAS.filter((d) => !filtrarPorHora || alaHora.includes(d.value) || form.disciplina === d.value)
+  // Si a esa hora solo cabe una, se elige sola (ajuste de estado en render).
+  if (!form.disciplina && filtrarPorHora && alaHora.length === 1 && !sessionExistente?.id) {
+    setForm((prev) => ({ ...prev, disciplina: alaHora[0] }))
+  }
 
   // ── Manipulación de bloques ─────────────────────────────────────────────
 
@@ -340,11 +361,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
         >
           <div>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>
-              Prescribir entrenamiento
+              {sessionId ? 'Editar entrenamiento' : 'Prescribir entrenamiento'}
             </h2>
-            {atletaNombre && (
+            {(atletaNombre || form.fecha) && (
               <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
-                {atletaNombre}
+                {[atletaNombre, form.fecha ? fechaCorta(form.fecha) + (form.hora != null ? ` · ${formatHora(form.hora)}` : '') : null].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>
@@ -373,33 +394,39 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           <div style={{ marginBottom: 16 }}>
             <label style={sectionLabel}>Disciplina</label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {DISCIPLINAS.map((d) => {
+              {disciplinasVisibles.map((d) => {
                 const sel = form.disciplina === d.value
-                const bloqueo = sel ? null : noEncaja(form.fecha, d.value)
+                const bloqueo = sel || filtrarPorHora ? null : noEncaja(form.fecha, d.value)
                 return (
                   <button
                     key={d.value}
+                    type="button"
                     disabled={!!bloqueo}
                     title={bloqueo || undefined}
-                    onClick={() => setForm((prev) => ({ ...prev, disciplina: d.value, bloques: [] }))}
-                    style={{
-                      background: sel ? COLORS.accent : 'transparent',
-                      color: sel ? '#0B0D12' : COLORS.textSecondary,
-                      border: `1px solid ${sel ? COLORS.accent : COLORS.cardBorder}`,
-                      borderRadius: 6,
-                      padding: '6px 14px',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: bloqueo ? 'not-allowed' : 'pointer',
-                      opacity: bloqueo ? 0.35 : 1,
-                      fontFamily: "'Archivo', sans-serif",
-                    }}
+                    aria-pressed={sel}
+                    onClick={() => setForm((prev) => (prev.disciplina === d.value ? prev : { ...prev, disciplina: d.value, bloques: [] }))}
+                    style={chipStyle(sel, { bloqueado: !!bloqueo })}
                   >
+                    <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: DISCIPLINE_COLORS[d.value] }} />
                     {d.label}
                   </button>
                 )
               })}
             </div>
+            {alaHora && alaHora.length === 0 && (
+              <p style={{ margin: '6px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
+                A las {formatHora(form.hora)} el atleta no tiene franjas marcadas.
+              </p>
+            )}
+            {filtrarPorHora && DISCIPLINAS.length > disciplinasVisibles.length && (
+              <button
+                type="button"
+                onClick={() => setTodasDisciplinas(true)}
+                style={{ marginTop: 6, background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans }}
+              >
+                Solo lo que puede hacer a las {formatHora(form.hora)} · Otra disciplina
+              </button>
+            )}
           </div>
 
           {/* Sin disciplina elegida: no se muestra ningún campo específico */}
@@ -419,18 +446,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 {[{ value: '25', label: '25m' }, { value: '50', label: '50m' }, { value: 'open', label: 'Aguas abiertas' }].map((p) => (
                   <button
                     key={p.value}
+                    type="button"
+                    aria-pressed={form.piscina === p.value}
                     onClick={() => setForm((prev) => ({ ...prev, piscina: p.value }))}
-                    style={{
-                      background: form.piscina === p.value ? COLORS.accent : 'transparent',
-                      color: form.piscina === p.value ? '#0B0D12' : COLORS.textSecondary,
-                      border: `1px solid ${form.piscina === p.value ? COLORS.accent : COLORS.cardBorder}`,
-                      borderRadius: 6,
-                      padding: '5px 14px',
-                      fontSize: 13,
-                      fontWeight: form.piscina === p.value ? 700 : 400,
-                      cursor: 'pointer',
-                      fontFamily: "'Archivo', sans-serif",
-                    }}
+                    style={chipStyle(form.piscina === p.value)}
                   >
                     {p.label}
                   </button>
@@ -459,21 +478,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     key={dia.value}
                     disabled={!!bloqueo}
                     title={bloqueo || undefined}
+                    type="button"
+                    aria-pressed={sel}
                     onClick={() => setForm((prev) => ({ ...prev, fecha: dia.value }))}
-                    style={{
-                      background: sel ? COLORS.accent : 'transparent',
-                      color: sel ? COLORS.background : COLORS.textSecondary,
-                      border: `1px solid ${sel ? COLORS.accent : COLORS.cardBorder}`,
-                      borderRadius: 6,
-                      padding: '5px 10px',
-                      fontSize: 11,
-                      fontWeight: sel ? 700 : 400,
-                      cursor: bloqueo ? 'not-allowed' : 'pointer',
-                      opacity: bloqueo ? 0.35 : 1,
-                      fontFamily: "'Archivo', sans-serif",
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}
+                    style={chipStyle(sel, { bloqueado: !!bloqueo })}
                   >
                     {dia.label}
                   </button>
@@ -504,7 +512,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 />
               )}
               {form.fecha && !DIAS_CHIPS.some((d) => d.value === form.fecha) && !mostrarInputFecha && (
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: COLORS.accent }}>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
                   Fecha seleccionada: {form.fecha}
                 </p>
               )}
@@ -521,15 +529,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     <button
                       key={h ?? 'sin'}
                       type="button"
+                      aria-pressed={sel}
                       onClick={() => setForm((prev) => ({ ...prev, hora: h }))}
-                      style={{
-                        background: sel ? COLORS.accent : 'transparent',
-                        color: sel ? COLORS.background : COLORS.textSecondary,
-                        border: `1px solid ${sel ? COLORS.accent : COLORS.cardBorder}`,
-                        borderRadius: 6, padding: '5px 10px', fontSize: 11,
-                        fontWeight: sel ? 700 : 400, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                        fontFamily: h == null ? "'Archivo', sans-serif" : "'JetBrains Mono', monospace",
-                      }}
+                      style={chipStyle(sel, { mono: h != null })}
                     >
                       {h == null ? 'Sin hora' : formatHora(h)}
                     </button>
@@ -537,7 +539,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 })}
               </div>
               {form.disciplina && horasSugeridas.length === 0 && (
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textTertiary }}>El atleta no tiene franjas para esto ese día.</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
+                  {form.fecha === ahora.fecha && horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), null).length > 0
+                    ? 'Las franjas de hoy para esto ya han pasado.'
+                    : 'El atleta no tiene franjas para esto ese día.'}
+                </p>
               )}
               <div style={{ marginTop: 6 }}>
                 <button
@@ -628,14 +634,14 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           )}
 
           {/* Botones de añadir bloque */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, marginBottom: 16 }}>
             {[
               { tipo: 'warmup', label: '+ Calentamiento' },
               { tipo: 'repeat', label: '+ Serie' },
               { tipo: 'step', label: '+ Paso libre' },
               { tipo: 'cooldown', label: '+ Vuelta calma' },
             ].map(({ tipo, label }) => (
-              <button key={tipo} onClick={() => addBloque(tipo)} style={addBtnStyle}>
+              <button key={tipo} type="button" onClick={() => addBloque(tipo)} style={{ ...addBtnStyle, minHeight: 34 }}>
                 {label}
               </button>
             ))}
@@ -670,7 +676,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               color: COLORS.textSecondary,
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              fontFamily: 'monospace',
+              fontFamily: FONTS.mono,
               minHeight: 80,
               marginBottom: 16,
             }}

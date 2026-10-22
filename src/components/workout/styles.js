@@ -49,3 +49,27 @@ export const separadorSection = {
   marginBottom: 12,
   marginTop: 4,
 }
+
+// Chip de selección (disciplina, piscina, fecha, hora). Seleccionado = blanco
+// translúcido, como Segmented: el teal se reserva para la acción principal.
+export function chipStyle(sel, { bloqueado = false, mono = false } = {}) {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: sel ? 'rgba(237,238,242,0.1)' : 'transparent',
+    color: sel ? COLORS.textPrimary : COLORS.textSecondary,
+    border: `1px solid ${sel ? 'rgba(237,238,242,0.34)' : '#262C3A'}`,
+    borderRadius: 7,
+    padding: '6px 11px',
+    minHeight: 32,
+    boxSizing: 'border-box',
+    fontSize: 12.5,
+    fontWeight: sel ? 600 : 500,
+    cursor: bloqueado ? 'not-allowed' : 'pointer',
+    opacity: bloqueado ? 0.35 : 1,
+    fontFamily: mono ? "'JetBrains Mono', monospace" : "'Archivo', sans-serif",
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  }
+}
