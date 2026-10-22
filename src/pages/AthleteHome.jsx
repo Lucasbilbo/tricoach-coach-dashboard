@@ -137,7 +137,6 @@ export default function AthleteHome() {
   // Sube al mover un entreno desde la agenda: recarga la lista de próximos
   const [recargaSesiones, setRecargaSesiones] = useState(0)
 
-  // ── Paso 1: cargar userId + perfil ────────────────────────────────────
   // ── Paso 1+2 fusionados: sesión + perfil + sesiones en paralelo ──────
   // Antes había dos useEffects en cadena (getSession → setUserId → sesiones),
   // lo que añadía un render extra de latencia. Ahora se lanza todo a la vez.
@@ -205,7 +204,6 @@ export default function AthleteHome() {
     cargarPerfilYSesiones()
     return () => { activo = false }
   // recargaSesiones también dispara este effect para refrescar las sesiones
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, recargaSesiones])
 
   // ── Paso 3: cargar datos Strava ───────────────────────────────────────
