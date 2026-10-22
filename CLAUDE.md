@@ -199,7 +199,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–012 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–013 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 
@@ -256,11 +256,34 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   - Intento previo descartado (2026-10): las mismas franjas como barras
     horizontales dentro de la celda del día. A 160 px de ancho el tiempo no se
     puede leer — si el eje de tiempo va en horizontal en 7 columnas, se pierde.
-- Pendiente de `SemanaCalendario`: en móvil 7 columnas se quedan estrechas y el
-  proyecto es móvil primero sin scroll horizontal (probablemente un día por
-  fila). Y las sesiones se dibujan al pie, no a su hora, porque `coach_sessions`
-  solo tiene `fecha`: con una columna `hora` el entreno sería un bloque dentro
-  de la banda y el choque se vería solo.
+- **Agenda con horas (2026-10-22, migración 013)**: `coach_sessions` tiene
+  `hora_inicio_min` (opcional, min desde 0:00, múltiplo de 5), `movida_por`
+  ('atleta'|'coach') y `movida_at`. `SemanaCalendario` coloca cada sesión A SU
+  HORA dentro de las franjas (fondo claro = horas libres + carriles fijos de
+  3 px); sin hora → fila "sin hora". Solapes en cascada (no a partes iguales:
+  en 150 px no se lee). Aviso ámbar si no encaja (`evaluarDisponibilidad` acepta
+  la hora: motivo `fuera_de_horas`). Lógica pura en `src/lib/agenda.js`
+  (`ventanaAgenda`, `colocarDia`, `horasPosibles`); tests `test/agenda.test.js`.
+  - **Mover**: escritorio arrastrando (ajuste a 30 min, se iluminan las franjas
+    de esa disciplina, totales en vivo; la tarjeta original NO se desmonta
+    durante el arrastre o el navegador corta el drag — la vista previa es otro
+    elemento). Móvil: un día cada vez + `HojaMover` al tocar una sesión.
+  - **Reglas** (`netlify/functions/lib/mover-reglas.cjs`, fuente única
+    cliente/servidor): lo pasado se pierde (ni desde ni hacia un día pasado);
+    hoy solo a una hora que no ha llegado. Mover es libre (sin aprobación).
+  - **`move-session`** (Netlify): atleta o coach con relación; solo toca fecha,
+    hora y `movida_*` (el atleta sigue SIN permiso de escritura en
+    `coach_sessions` por RLS). Si la sesión está en el reloj: crea el evento con
+    la fecha nueva → confirma en BD → borra el viejo (mismo orden que
+    send-to-intervals). Tests `test/mover-sesion.test.js`.
+  - El evento de Intervals lleva la hora (`lib/intervals-evento.js`,
+    `start_date_local`), compartido con send-to-intervals.
+  - Atleta: "Mi semana" (`AgendaAtleta`) en la pestaña Entrenos de `/home`.
+  - Builder: hora opcional (chips con las horas que encajan); la columna solo se
+    envía si hay hora. Si el coach recoloca una sesión movida por el atleta, se
+    quita la marca.
+  - Ojo dev: Vite en modo dev no expone los named de un `.cjs` fuera de
+    node_modules (el build sí). Para ver la agenda en local, build + preview.
 - **No se ofrecen combinaciones imposibles** (2026-10): en el calendario, un día
   sin NINGUNA disciplina posible (`no_disponible` o con datos pero sin tramos) no
   es botón; en `WorkoutBuilder`, los chips de fecha y los botones de disciplina que
