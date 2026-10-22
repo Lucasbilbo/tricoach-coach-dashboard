@@ -38,17 +38,23 @@ export default function AthleteView() {
       setCargando(true)
       setError('')
       try {
-        const { data: sessionData } = await supabase.auth.getSession()
+        // Lanzar sesión y datos en paralelo: getSession lee de localStorage
+        // (sin red en supabase-js v2), así que no hay coste, pero sí había
+        // un await serial que retrasaba la petición al backend.
+        // Si el selector está en menos de 26 semanas, pre-calentar la serie
+        // larga en paralelo: cuando StravaAnalysis la pida, estará en caché.
+        const peticiones = [
+          supabase.auth.getSession(),
+          pedirDatosAtleta(id, weeks),
+        ]
+        if (weeks < 26) peticiones.push(pedirDatosAtleta(id, 26, { records: false }))
+        const [{ data: sessionData }, res] = await Promise.all(peticiones)
         const usuarioId = sessionData?.session?.user?.id
         if (!usuarioId) {
           navigate('/')
           return
         }
         setCoachId(usuarioId)
-
-        // El coach se deriva del JWT en el backend; athleteId se verifica
-        // allí contra coach_athletes
-        const res = await pedirDatosAtleta(id, weeks)
         const json = res.json
         if (!activo) return
 
