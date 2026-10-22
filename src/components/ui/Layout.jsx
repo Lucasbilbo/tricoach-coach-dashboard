@@ -1,4 +1,4 @@
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, sectionTitleStyle } from '../../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, sectionTitleStyle, metricNumberStyle } from '../../lib/theme'
 import Icon from './Icon'
 
 // Piezas de maquetación compartidas por todas las pantallas.
@@ -126,7 +126,7 @@ export function DisciplineTag({ disciplina, label }) {
 export function Metric({ value, unit, label, color }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontFamily: FONTS.mono, fontSize: 22, fontWeight: 600, color: color || COLORS.textPrimary, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+      <div style={{ ...metricNumberStyle, fontSize: 22, color: color || COLORS.textPrimary, whiteSpace: 'nowrap' }}>
         {value ?? '—'}
         {unit && value != null && <span style={{ fontSize: 12, fontWeight: 400, color: COLORS.textSecondary, marginLeft: 3 }}>{unit}</span>}
       </div>

@@ -8,7 +8,7 @@ import { invalidarDatosAtleta } from '../lib/athleteData'
 import { COLORS, DISCIPLINE_COLORS, FONTS, inputStyle } from '../lib/theme'
 import { buildIntervalsText } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
-import { sectionLabel, separadorSection, addBtnStyle, chipStyle } from './workout/styles'
+import { sectionLabel, separadorSection, addBtnStyle, chipStyle, chipDisciplinaStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
@@ -420,9 +420,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     title={bloqueo || undefined}
                     aria-pressed={sel}
                     onClick={() => setForm((prev) => (prev.disciplina === d.value ? prev : { ...prev, disciplina: d.value, bloques: [] }))}
-                    style={chipStyle(sel, { bloqueado: !!bloqueo })}
+                    style={chipDisciplinaStyle(sel, DISCIPLINE_COLORS[d.value], { bloqueado: !!bloqueo })}
                   >
-                    <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: DISCIPLINE_COLORS[d.value] }} />
                     {d.label}
                   </button>
                 )
