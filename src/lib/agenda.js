@@ -3,6 +3,7 @@
 // se puede mover una sesión. Las reglas de mover viven en el módulo compartido
 // con la función move-session (mismo criterio en cliente y servidor).
 import { disponibilidadDelDia, DISCIPLINAS_DISPONIBILIDAD } from './disponibilidad'
+import { DISCIPLINE_LABELS } from './theme'
 
 export { ahoraMadrid, validarMovimiento, esMovible, ajustar, horaValida } from '../../netlify/functions/lib/mover-reglas.cjs'
 
@@ -97,4 +98,11 @@ export function horasPosibles(datos, fecha, disciplina, duracionMin, ahora, paso
   return [...res]
     .filter((m) => !(ahora && fecha === ahora.fecha && m < ahora.min))
     .sort((a, b) => a - b)
+}
+
+// Título corto de una sesión para la agenda (nombre del entreno o descripción).
+export function tituloSesion(s) {
+  const n = s?.workout_steps?.nombre
+  if (n && n.trim()) return n.trim()
+  return s?.descripcion || DISCIPLINE_LABELS[s?.disciplina] || 'Sesión'
 }

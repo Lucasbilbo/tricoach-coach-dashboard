@@ -12,6 +12,7 @@ import ActivityDetail from './ActivityDetail'
 import SemanaCalendario from './SemanaCalendario'
 import { semanasFuturas } from '../lib/planificacion'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
+import { formatHora } from '../lib/disponibilidad'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -290,9 +291,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0, paddingTop: 2 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
-              <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{formatFechaSesion(sesion.fecha)}</span>
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>
+                {formatFechaSesion(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
+              </span>
               <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
               {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+              {sesion.movida_por === 'atleta' && (
+                <span title={sesion.movida_at ? `Movida el ${new Date(sesion.movida_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : undefined}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: COLORS.accent, fontSize: 12, fontWeight: 600 }}>
+                  <Icon name="move" size={12} strokeWidth={2.4} />
+                  Movida por {atletaNombre || 'el atleta'}
+                </span>
+              )}
             </div>
             <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
           </div>
@@ -368,7 +378,34 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   // Cabecera de semana + sus sesiones. La semana actual (esActual) muestra un
   // mensaje si no tiene sesiones, en vez de omitirse.
   // Pulsar un día de la tira: creador de entrenos con esa fecha ya puesta
-  const planificarDia = (fecha) => setSesionEditando({ fecha })
+  const planificarDia = (fecha, hora = null) => setSesionEditando({ fecha, hora_inicio_min: hora })
+
+  // Mover desde la agenda (arrastrar / hoja "Mover"): pasa por move-session,
+  // que también mueve el entreno en el reloj si ya estaba enviado.
+  async function moverSesion(sesion, fecha, hora) {
+    try {
+      const res = await fetch('/.netlify/functions/move-session', {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ sessionId: sesion.id, fecha, hora_inicio_min: hora }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const msg = json.error || 'No se pudo mover la sesión'
+        setError(msg)
+        return { error: msg }
+      }
+      setError('')
+      setSesiones((prev) => prev
+        .map((s) => (s.id === sesion.id ? { ...s, ...json.sesion } : s))
+        .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.hora_inicio_min ?? -1) - (b.hora_inicio_min ?? -1))))
+      invalidarEstado()
+      return { ok: true }
+    } catch {
+      setError('Error de conexión moviendo la sesión')
+      return { error: 'Error de conexión moviendo la sesión' }
+    }
+  }
 
   const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false) => (
     <div key={lunes}>
@@ -380,8 +417,11 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           lunes={lunes}
           datos={disponibilidad}
           sesiones={sesionesGrupo}
-          hoy={hoyMadrid()}
           onDia={planificable ? planificarDia : undefined}
+          onAbrir={(s) => setSesionEditando(s)}
+          onMover={moverSesion}
+          quien="coach"
+          nombreAtleta={atletaNombre}
         />
       )}
       {sesionesGrupo.length === 0 && (esActual || planificable) ? (
