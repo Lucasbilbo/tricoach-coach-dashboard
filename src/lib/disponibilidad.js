@@ -82,11 +82,14 @@ export function disponibilidadDelDia(datos, fecha) {
 
 // ¿Encaja una sesión (fecha + disciplina + duración opcional)?
 //   { nivel: 'ok' | 'aviso' | 'sin_datos',
-//     motivo: null | 'dia_libre' | 'disciplina_no_disponible' | 'excede_minutos',
+//     motivo: null | 'dia_libre' | 'disciplina_no_disponible' | 'excede_minutos'
+//             | 'fuera_de_horas',
 //     limite: number | null, nota? }
 // `limite` = minutos del tramo más largo de esa disciplina ese día. Duración
 // null/undefined (sesiones por distancia) → solo se comprueba la disciplina.
-export function evaluarDisponibilidad(datos, fecha, disciplina, duracionMin) {
+// `horaInicio` (min desde 0:00, opcional): si viene, la sesión además tiene que
+// caer DENTRO de un tramo de esa disciplina (y acabar dentro si hay duración).
+export function evaluarDisponibilidad(datos, fecha, disciplina, duracionMin, horaInicio) {
   const dia = disponibilidadDelDia(datos, fecha)
   const nota = dia.nota ? { nota: dia.nota } : {}
 
@@ -99,8 +102,14 @@ export function evaluarDisponibilidad(datos, fecha, disciplina, duracionMin) {
   if (!tramos) return { nivel: 'aviso', motivo: 'disciplina_no_disponible', limite: null, ...nota }
 
   const limite = Math.max(...tramos.map((t) => t.fin_min - t.inicio_min))
-  if (typeof duracionMin === 'number' && Number.isFinite(duracionMin) && duracionMin > limite) {
+  const conDuracion = typeof duracionMin === 'number' && Number.isFinite(duracionMin) && duracionMin > 0
+  if (conDuracion && duracionMin > limite) {
     return { nivel: 'aviso', motivo: 'excede_minutos', limite, ...nota }
+  }
+  if (Number.isInteger(horaInicio)) {
+    const fin = conDuracion ? horaInicio + duracionMin : horaInicio + 1
+    const dentro = tramos.some((t) => horaInicio >= t.inicio_min && fin <= t.fin_min)
+    if (!dentro) return { nivel: 'aviso', motivo: 'fuera_de_horas', limite, ...nota }
   }
   return { nivel: 'ok', motivo: null, limite, ...nota }
 }
@@ -213,6 +222,7 @@ export function textoAviso(evaluacion, disciplina) {
   const nombre = NOMBRES[disciplina] || 'esta disciplina'
   if (evaluacion.motivo === 'dia_libre') return `El atleta marcó este día como no disponible${nota}.`
   if (evaluacion.motivo === 'disciplina_no_disponible') return `El atleta no indicó horas para ${nombre} este día${nota}.`
+  if (evaluacion.motivo === 'fuera_de_horas') return `A esa hora el atleta no tiene marcado ${nombre}${nota}.`
   if (evaluacion.motivo === 'excede_minutos') return `Supera el tramo más largo que el atleta tiene libre para ${nombre} este día (${evaluacion.limite} min)${nota}.`
   return null
 }
