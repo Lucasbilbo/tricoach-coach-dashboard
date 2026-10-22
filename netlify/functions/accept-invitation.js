@@ -102,8 +102,8 @@ exports.handler = async (event) => {
   if (!EMAIL_REGEX.test(email)) {
     return json(400, { error: 'Email no válido', code: 'INVALID_EMAIL' })
   }
-  if (typeof password !== 'string' || password.length < 6) {
-    return json(400, { error: 'La contraseña debe tener al menos 6 caracteres', code: 'WEAK_PASSWORD' })
+  if (typeof password !== 'string' || password.length < 8) {
+    return json(400, { error: 'La contraseña debe tener al menos 8 caracteres', code: 'WEAK_PASSWORD' })
   }
 
   // Pre-validación (feedback temprano sin crear el usuario). La RPC revalida de

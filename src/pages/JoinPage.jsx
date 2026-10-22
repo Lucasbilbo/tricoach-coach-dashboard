@@ -98,7 +98,7 @@ export default function JoinPage() {
 
     if (!nombre.trim()) { setError('El nombre es obligatorio'); return }
     if (!email.trim()) { setError('El email es obligatorio'); return }
-    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return }
 
     setRegistrando(true)
     try {
@@ -214,7 +214,7 @@ export default function JoinPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
             style={inputStyle}
             autoComplete="new-password"
           />
