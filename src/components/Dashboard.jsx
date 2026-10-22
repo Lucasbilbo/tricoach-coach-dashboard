@@ -90,13 +90,25 @@ export default function Dashboard() {
           return
         }
 
+        // Los datos de los atletas (la petición lenta: Strava/BD por atleta) salen
+        // YA, en paralelo con la comprobación de coach: el backend verifica el JWT
+        // y la whitelist por su cuenta, así que lanzarla antes no abre nada. Si
+        // al final no es coach se descarta (la caché nunca guarda fallos).
+        const atletasP = datosDashboard().then((v) => ({ ok: v }), (err) => ({ err }))
+        const invitacionesP = supabase
+          .from('athlete_invitations')
+          .select('*')
+          .eq('coach_id', userId)
+          .order('created_at', { ascending: false })
+
         // El login con Google llega aquí sin pasar por la verificación de Login.jsx.
         // Comprobamos coach y perfil a la vez para enrutar correctamente (F2):
         // solo coaches usan el panel; un atleta va a su /home en vez de ser
-        // deslogueado en silencio.
-        const [{ data: coach, error: coachError }, { data: profile }] = await Promise.all([
+        // deslogueado en silencio. "¿También es atleta?" va en el mismo lote.
+        const [{ data: coach, error: coachError }, { data: profile }, { data: comoAtleta }] = await Promise.all([
           supabase.from('coaches').select('id').eq('id', userId).maybeSingle(),
           supabase.from('profiles').select('id').eq('id', userId).maybeSingle(),
+          supabase.from('coach_athletes').select('coach_id').eq('athlete_id', userId).maybeSingle(),
         ])
 
         if (!activo) return
@@ -124,32 +136,16 @@ export default function Dashboard() {
         }
 
         setCoachId(userId)
+        setEsTambienAtleta(!!comoAtleta)
 
-        // Verificar si este coach también aparece como atleta en coach_athletes
-        const { data: comoAtleta } = await supabase
-          .from('coach_athletes')
-          .select('coach_id')
-          .eq('athlete_id', userId)
-          .maybeSingle()
-        if (activo) setEsTambienAtleta(!!comoAtleta)
-
-        let lista
-        try {
-          lista = await datosDashboard()
-        } catch (err) {
-          if (activo) setError(err.message)
+        const [resAtletas, { data: invs }] = await Promise.all([atletasP, invitacionesP])
+        if (!activo) return
+        setInvitaciones(invs || [])
+        if (resAtletas.err) {
+          setError(resAtletas.err.message)
           return
         }
-        if (!activo) return
-        setAtletas(lista)
-
-        // Cargar invitaciones
-        const { data: invs } = await supabase
-          .from('athlete_invitations')
-          .select('*')
-          .eq('coach_id', userId)
-          .order('created_at', { ascending: false })
-        if (activo) setInvitaciones(invs || [])
+        setAtletas(resAtletas.ok)
       } catch {
         if (activo) setError('Error de conexión cargando atletas')
       } finally {
