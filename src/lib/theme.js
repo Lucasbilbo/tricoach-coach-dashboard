@@ -83,19 +83,6 @@ export const buttonStyle = {
   cursor: 'pointer',
 }
 
-// Variante sólida para acciones destructivas o de confirmación final.
-export const buttonSolidStyle = {
-  background: COLORS.accent,
-  color: COLORS.background,
-  border: 'none',
-  borderRadius: 8,
-  padding: '10px 16px',
-  fontSize: 14,
-  fontWeight: 600,
-  fontFamily: FONTS.sans,
-  cursor: 'pointer',
-}
-
 // ── Sistema de UI (2026-10) ───────────────────────────────────────────────
 // Radios por jerarquía: controles pequeños, tarjetas, contenedores grandes.
 export const RADIUS = { sm: 6, md: 10, lg: 14 }

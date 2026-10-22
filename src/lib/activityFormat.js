@@ -1,7 +1,6 @@
 // activityFormat.js — formatters, estilos y constantes compartidos por las dos
 // vistas de análisis Strava (AthleteView del coach y AthleteHome del atleta).
 // Antes estaban duplicados en ambos archivos (C3).
-import { decimalToRitmo } from './chartUtils'
 import { COLORS } from './theme'
 
 export const FILTROS_DISCIPLINA = [
@@ -23,29 +22,6 @@ export function campoCsv(valor) {
   if (valor == null) return ''
   const s = String(valor)
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-}
-
-// Ritmo/velocidad según disciplina: run en min/km, bike en km/h, swim en min/100m
-export function formatRitmoActividad(act) {
-  if (act.disciplina === 'run') {
-    return act.ritmo_min_km != null ? `${decimalToRitmo(act.ritmo_min_km)} /km` : '—'
-  }
-  if (act.disciplina === 'bike') {
-    if (!act.distancia_km || !act.duracion_min) return '—'
-    return `${(act.distancia_km / (act.duracion_min / 60)).toFixed(1)} km/h`
-  }
-  if (act.disciplina === 'swim') {
-    if (!act.distancia_km || !act.duracion_min) return '—'
-    return `${decimalToRitmo(act.duracion_min / act.distancia_km / 10)} /100m`
-  }
-  return '—'
-}
-
-export function formatDuracion(duracionMin) {
-  if (duracionMin == null) return '—'
-  const h = Math.floor(duracionMin / 60)
-  const m = Math.round(duracionMin % 60)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
 export const thStyle = {

@@ -233,7 +233,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   (StravaAnalysis, TransitionLine).
 - `src/pages/` — AthleteHome (atleta), IntervalsSetup, JoinPage (invitaciones).
 - `src/lib/` — supabase, theme, authHeaders, chartUtils, metrics(front), carga,
-  athleteStats, activityFormat, transitionColumns, intervalsText.
+  athleteStats, activityFormat, intervalsText.
 - `netlify/functions/` — coach-dashboard-data, coach-athlete-data,
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
