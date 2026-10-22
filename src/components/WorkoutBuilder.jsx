@@ -11,6 +11,8 @@ import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, r
 import { sectionLabel, separadorSection, addBtnStyle, chipStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import AtajosBuilder from './workout/AtajosBuilder'
+import { AdjuntoEditor } from './AdjuntoEntreno'
+import { adjuntoDe } from '../lib/adjuntos'
 import Icon from './ui/Icon'
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -188,6 +190,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // atleta entrenaría la versión vieja.
   const yaEnviada = !!sessionExistente?.intervals_event_id
 
+  // Solo fuerza admite el entreno "tal cual" (captura / texto, p. ej. Hyrox)
+  const conAdjunto = form.disciplina === 'strength'
+  const adjunto = conAdjunto ? adjuntoDe({ adjunto: form.adjunto }) : null
+  const duracionBloques = duracionTotalMin(form.bloques)
+  const duracionFinal = duracionBloques ?? (form.bloques.length === 0 && Number(form.duracionManual) > 0 ? Math.round(Number(form.duracionManual)) : null)
+
   async function buildRegistro() {
     const horaAntes = sessionExistente?.hora_inicio_min ?? null
     const horaNueva = form.hora ?? null
@@ -198,9 +206,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       disciplina: form.disciplina,
       descripcion: form.nombre,
       notas: form.notas || null,
-      duracion_min: duracionTotalMin(form.bloques),
-      workout_steps: form.bloques.length > 0
-        ? { bloques: form.bloques, notas: form.notas || '', ...(form.disciplina === 'swim' ? { piscina: form.piscina } : {}) }
+      duracion_min: duracionFinal,
+      workout_steps: form.bloques.length > 0 || adjunto
+        ? { bloques: form.bloques, notas: form.notas || '', ...(form.disciplina === 'swim' ? { piscina: form.piscina } : {}), ...(adjunto ? { adjunto } : {}) }
         : null,
       // Al editar una sesión ya enviada se marca como pendiente hasta que el
       // reenvío se confirme: si falla, la lista lo muestra como "no enviado"
@@ -595,6 +603,33 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             />
           </div>
 
+          {/* Fuerza / Hyrox: el entreno tal cual (texto pegado o capturas) */}
+          {conAdjunto && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={sectionLabel}>Entreno tal cual <span style={{ fontWeight: 400, color: COLORS.textTertiary }}>(captura o texto, p. ej. Hyrox)</span></label>
+              <AdjuntoEditor athleteId={athleteId} valor={form.adjunto} onChange={(a) => setForm((prev) => ({ ...prev, adjunto: a }))} />
+              {form.bloques.length === 0 && (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <label htmlFor="duracion-manual" style={{ fontSize: 13, color: COLORS.textSecondary }}>Duración</label>
+                  <input
+                    id="duracion-manual"
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    value={form.duracionManual ?? ''}
+                    onChange={(e) => setForm((prev) => ({ ...prev, duracionManual: e.target.value === '' ? null : Number(e.target.value) }))}
+                    placeholder="60"
+                    style={{ ...inputStyle, width: 90, fontFamily: FONTS.mono }}
+                  />
+                  <span style={{ fontSize: 13, color: COLORS.textSecondary }}>min</span>
+                </div>
+              )}
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.45 }}>
+                Al reloj llegan el nombre y la duración; el atleta ve el entreno completo en la app. Si prefieres, puedes construirlo también por bloques abajo.
+              </p>
+            </div>
+          )}
+
           {/* Atajos: escritura rápida y plantillas */}
           <AtajosBuilder
             key={form.disciplina}
@@ -667,9 +702,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           {/* Preview Intervals */}
           <div style={separadorSection}>
             Así llega al reloj
-            {duracionTotalMin(form.bloques) != null && (
+            {duracionFinal != null && (
               <span style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textPrimary }}>
-                · {duracionTotalMin(form.bloques)} min
+                · {duracionFinal} min
               </span>
             )}
           </div>
@@ -688,7 +723,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               marginBottom: 16,
             }}
           >
-            {preview || '(sin bloques aún)'}
+            {preview || (adjunto ? `Fuerza · ${form.nombre?.trim() || 'Entrenamiento'}${duracionFinal ? ` · ${duracionFinal} min` : ''}
+(el detalle lo ve en la app)` : '(sin bloques aún)')}
           </pre>
           {usaZonaNatacion(form.bloques, form.disciplina) && (
             <p style={{ margin: '-8px 0 16px', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.45 }}>

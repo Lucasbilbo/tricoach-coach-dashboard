@@ -1,5 +1,7 @@
 import { COLORS, FONTS } from '../lib/theme'
 import { conPausas, textoPausa } from '../lib/intervalsText'
+import { adjuntoDe } from '../lib/adjuntos'
+import { AdjuntoVista } from './AdjuntoEntreno'
 
 // Detalle de un entreno prescrito: perfil de intensidad (como lo dibuja el
 // reloj) + lista de pasos. Lo ven el coach (lista de sesiones) y el atleta.
@@ -130,15 +132,17 @@ function Paso({ paso, etiqueta, disciplina }) {
 
 export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
   const ws = sesion?.workout_steps
-  if (!ws?.bloques?.length) return null
+  const adjunto = adjuntoDe(ws)
+  if (!ws?.bloques?.length && !adjunto) return null
 
   const disciplina = sesion.disciplina
   const notas = ws.notas || sesion.notas
-  const bloques = conPausas(ws.bloques, disciplina)
+  const bloques = ws.bloques?.length ? conPausas(ws.bloques, disciplina) : []
 
   return (
     <div style={{ marginTop: 8, padding: '12px 12px 8px', background: 'rgba(255,255,255,0.025)', borderRadius: 10 }}>
-      <Perfil bloques={ws.bloques} disciplina={disciplina} />
+      {adjunto && <AdjuntoVista adjunto={adjunto} />}
+      {bloques.length > 0 && <Perfil bloques={ws.bloques} disciplina={disciplina} />}
       {disciplina === 'swim' && ws.piscina && (
         <p style={{ margin: '0 0 6px', fontSize: 12, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
       )}

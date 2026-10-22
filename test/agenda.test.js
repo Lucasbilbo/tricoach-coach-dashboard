@@ -104,3 +104,14 @@ test('disciplinasALaHora: solo lo que cabe a esa hora', () => {
   assert.deepEqual(disciplinasALaHora(datos, '2026-10-23', 600), [])
   assert.equal(disciplinasALaHora({}, '2026-10-22', 600), null)
 })
+
+test('adjuntos: normalizar y detectar entreno', async () => {
+  const { adjuntoDe, tieneEntreno, rutaAdjunto } = await import('../src/lib/adjuntos.js')
+  assert.equal(adjuntoDe(null), null)
+  assert.equal(adjuntoDe({ adjunto: { texto: '  ', imagenes: [] } }), null)
+  assert.deepEqual(adjuntoDe({ adjunto: { texto: ' 1000 m SkiErg ', imagenes: ['a/b.jpg', '', 3] } }), { texto: '1000 m SkiErg', imagenes: ['a/b.jpg'] })
+  assert.equal(tieneEntreno({ bloques: [] }), false)
+  assert.equal(tieneEntreno({ bloques: [], adjunto: { imagenes: ['x/y.jpg'] } }), true)
+  assert.equal(tieneEntreno({ bloques: [{}] }), true)
+  assert.equal(rutaAdjunto('ath', 'u1'), 'ath/u1.jpg')
+})

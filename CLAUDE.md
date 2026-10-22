@@ -180,6 +180,16 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   metros (`400 cal`). Bloques separados por `+`, `;` o `, `. Nunca interpretar
   en silencio: si queda un `Nx` en el nombre del paso, da error. Con 3+ bloques el primero
   y el último sueltos pasan a calentamiento / vuelta a la calma. Tests: `test/parser.test.js`.
+- **Fuerza / Hyrox "tal cual"** (2026-10-22, migración 014): en fuerza el coach
+  puede pegar el entreno como texto y/o subir capturas (también Ctrl+V). Va en
+  `workout_steps.adjunto = { texto, imagenes }`; las capturas, reducidas a JPEG
+  de 1800 px, en el bucket PRIVADO `entrenos-adjuntos/<athlete_id>/<uuid>.jpg`
+  (sube/borra solo un coach vinculado; leen atleta o coach; URL firmada 1 h).
+  Al reloj solo llegan nombre y duración (`moving_time` en el evento si no hay
+  pasos; el texto NUNCA va a la descripción). Duración manual si no hay
+  bloques. Helpers en `src/lib/adjuntos.js` (`adjuntoDe`, `tieneEntreno`), UI en
+  `AdjuntoEntreno.jsx` (editor + vista). Quitar una captura no la borra del
+  bucket (la sesión guardada podría seguir usándola).
 - **Duplicar** sesión (SessionsList): copia sin id ni envío, solo falta el día.
 - **Plantillas**: tabla `coach_plantillas` (migración 008, RLS `coach_id = auth.uid()`).
   Si la tabla no existe, la sección no se muestra.
@@ -199,7 +209,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
   accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
   rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–013 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+- `supabase/migrations/` — 001–014 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 

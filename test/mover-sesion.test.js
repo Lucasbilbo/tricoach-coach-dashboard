@@ -107,3 +107,12 @@ test('enviada pero sin Intervals conectado: no se mueve', async () => {
   assert.equal(r.body.code, 'NO_INTERVALS')
   assert.equal(d.log.length, 0)
 })
+
+test('fuerza sin pasos (captura Hyrox): el evento lleva la duración y no el texto', () => {
+  const ev = construirEvento({ ...base, disciplina: 'strength', duracion_min: 60, workout_steps: { bloques: [], adjunto: { texto: '1000 m SkiErg', imagenes: ['a/b.jpg'] } } })
+  assert.equal(ev.type, 'WeightTraining')
+  assert.equal(ev.moving_time, 3600)
+  assert.ok(!String(ev.description || '').includes('SkiErg'))
+  const conPasos = construirEvento({ ...base, duracion_min: 60, workout_steps: { bloques: [{ tipo: 'step', cantidad: 60, unidad: 'min' }] } })
+  assert.equal(conPasos.moving_time, undefined)
+})

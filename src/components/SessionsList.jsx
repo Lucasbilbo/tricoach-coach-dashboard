@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { tieneEntreno } from '../lib/adjuntos'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
@@ -281,7 +282,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const renderSesion = (sesion) => {
     const estado = estadoSesion(sesion, asignacion.get(sesion.id), coberturaDesde)
     const completada = !!estado.actividadStrava
-    const tieneWorkout = sesion.workout_steps?.bloques?.length > 0
+    const tieneWorkout = tieneEntreno(sesion.workout_steps)
     const expandida = expandidaId === sesion.id
     const enviada = !!sesion.enviado_a_garmin
 
