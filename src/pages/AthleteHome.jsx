@@ -14,6 +14,8 @@ import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
 import SeasonPanel from '../components/season/SeasonPanel'
 import DisponibilidadEditor from '../components/DisponibilidadEditor'
+import AgendaAtleta from '../components/AgendaAtleta'
+import { formatHora } from '../lib/disponibilidad'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -131,6 +133,8 @@ export default function AthleteHome() {
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
+  // Sube al mover un entreno desde la agenda: recarga la lista de próximos
+  const [recargaSesiones, setRecargaSesiones] = useState(0)
 
   // ── Paso 1: cargar userId + perfil ────────────────────────────────────
   useEffect(() => {
@@ -211,7 +215,7 @@ export default function AthleteHome() {
 
     cargarSesiones()
     return () => { activo = false }
-  }, [userId])
+  }, [userId, recargaSesiones])
 
   // ── Paso 3: cargar datos Strava ───────────────────────────────────────
   useEffect(() => {
@@ -357,6 +361,8 @@ export default function AthleteHome() {
         {/* ══ TAB: ENTRENOS ══════════════════════════════════════════════ */}
         {activeTab === 'sesiones' && (
           <>
+            <AgendaAtleta userId={userId} onCambio={() => setRecargaSesiones((n) => n + 1)} />
+
             <section style={{ marginBottom: 32 }}>
               <SectionTitle>Próximos</SectionTitle>
 
@@ -386,7 +392,9 @@ export default function AthleteHome() {
                       <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 10px 18px', ...railStyle(sesion.disciplina) }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
                           {relativo && <span style={{ color: relativo === 'Hoy' ? COLORS.accent : COLORS.textPrimary, fontWeight: 600 }}>{relativo}</span>}
-                          <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span>
+                          <span style={{ fontFamily: FONTS.mono }}>
+                            {formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
+                          </span>
                           <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
                           {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
                         </div>
