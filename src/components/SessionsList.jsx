@@ -17,6 +17,7 @@ import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 import Cumplimiento from './Cumplimiento'
+import { calibrar, cargaSemana } from '../lib/proyeccion'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -89,6 +90,25 @@ const accionIconoStyle = {
 
 // Ámbar: sesión que aún no está en el reloj.
 const COLOR_PENDIENTE = DISCIPLINE_COLORS.bike
+
+// "TSS 210 de ~320": real (violeta de carga) frente a lo previsto (estimación,
+// con "~"). Semanas futuras: solo lo previsto.
+function CargaSemana({ prevista, real }) {
+  if (prevista == null && real == null) return null
+  const mono = { fontFamily: FONTS.mono }
+  return (
+    <span
+      title="TSS de la semana: hecho frente a lo previsto con lo prescrito (estimado con las sesiones que ya ha hecho el atleta)"
+      style={{ fontSize: 12, fontWeight: 500, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}
+    >
+      TSS{' '}
+      {real != null && <span style={{ ...mono, color: COLORS.load, fontWeight: 600 }}>{real}</span>}
+      {real != null && prevista != null && ' de '}
+      {prevista != null && <span style={{ ...mono, color: COLORS.textPrimary }}>~{prevista}</span>}
+      {real == null && prevista != null && ' previsto'}
+    </span>
+  )
+}
 
 const cabeceraSemanaStyle = {
   margin: '0 0 10px',
@@ -287,6 +307,10 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const actsParaEstado = actividadesEstado || actividades
   // Una actividad completa como mucho una sesión (F6).
   const asignacion = asignarActividades(sesiones, actsParaEstado)
+  // TSS previsto calibrado con lo que este atleta ya hizo (lib/proyeccion)
+  const hoy = hoyMadrid()
+  const calibracion = calibrar(sesiones, actsParaEstado, hoy)
+  const coberturaCarga = actividadesEstado ? coberturaDesde : fechaMadridHace(weeks)
 
   const renderSesion = (sesion) => {
     const estado = estadoSesion(sesion, asignacion.get(sesion.id), coberturaDesde)
@@ -423,8 +447,11 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
 
   const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false) => (
     <div key={lunes}>
-      <div style={cabeceraSemanaStyle}>
-        {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
+      <div style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <span>{lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}</span>
+        {lunes !== 'sin-fecha' && (
+          <CargaSemana {...cargaSemana({ lunes, sesiones: sesionesGrupo, actividades: actsParaEstado, calibracion, coberturaDesde: coberturaCarga, hoy })} />
+        )}
       </div>
       {lunes !== 'sin-fecha' && (
         <SemanaCalendario

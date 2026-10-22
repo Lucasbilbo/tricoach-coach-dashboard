@@ -3,6 +3,7 @@ import { COLORS, FONTS, buttonStyle, inputStyle } from '../../lib/theme'
 import { DEPORTES, ESTADOS, ORDEN_ESTADOS, eventoAFormulario, eventoVacio } from '../../lib/season'
 import { guardarEvento, borrarEvento } from '../../lib/seasonApi'
 import { invalidarTemporadas } from '../../lib/panelData'
+import { invalidarPlanCarga } from '../../lib/planCarga'
 import { Chip, SportDot } from './SeasonBits'
 
 const sectionLabel = {
@@ -54,6 +55,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
     try {
       await guardarEvento(athleteId, form, evento?.id)
       invalidarTemporadas()
+      invalidarPlanCarga(athleteId) // la prueba objetivo sale de aquí
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -67,6 +69,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
     try {
       await borrarEvento(athleteId, evento.id)
       invalidarTemporadas()
+      invalidarPlanCarga(athleteId) // la prueba objetivo sale de aquí
       onSaved()
     } catch (err) {
       setError(err.message)
