@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ventanaAgenda, colocarDia, sinHora, horasPosibles, validarMovimiento, ahoraMadrid, esMovible, ajustar, horaValida } from '../src/lib/agenda.js'
+import { disciplinasALaHora, ventanaAgenda, colocarDia, sinHora, horasPosibles, validarMovimiento, ahoraMadrid, esMovible, ajustar, horaValida } from '../src/lib/agenda.js'
 import { evaluarDisponibilidad, textoAviso } from '../src/lib/disponibilidad.js'
 
 const AHORA = { fecha: '2026-10-22', min: 18 * 60 } // jueves 18:00
@@ -87,4 +87,20 @@ test('evaluarDisponibilidad con hora: fuera del tramo avisa', () => {
   assert.match(textoAviso(e, 'run'), /no tiene marcado carrera/)
   assert.equal(evaluarDisponibilidad(datos, '2026-10-22', 'run', null, 1280).nivel, 'ok')
   assert.equal(evaluarDisponibilidad(datos, '2026-10-22', 'run', 75).nivel, 'ok')
+})
+
+test('disciplinasALaHora: solo lo que cabe a esa hora', () => {
+  const datos = { plantilla: [
+    { dia_semana: 4, disciplina: 'run', inicio_min: 420, fin_min: 570 },
+    { dia_semana: 4, disciplina: 'strength', inicio_min: 780, fin_min: 930 },
+    { dia_semana: 4, disciplina: 'bike', inicio_min: 1080, fin_min: 1290 },
+    { dia_semana: 4, disciplina: 'run', inicio_min: 1080, fin_min: 1290 },
+  ], excepciones: [{ fecha: '2026-10-23', tipo: 'no_disponible' }] }
+  assert.deepEqual(disciplinasALaHora(datos, '2026-10-22', 780), ['strength'])
+  assert.deepEqual(disciplinasALaHora(datos, '2026-10-22', 1080), ['bike', 'run'])
+  assert.deepEqual(disciplinasALaHora(datos, '2026-10-22', 600), [])
+  assert.deepEqual(disciplinasALaHora(datos, '2026-10-22', 930), [])
+  assert.deepEqual(disciplinasALaHora(datos, '2026-10-22', null), ['bike', 'run', 'strength'])
+  assert.deepEqual(disciplinasALaHora(datos, '2026-10-23', 600), [])
+  assert.equal(disciplinasALaHora({}, '2026-10-22', 600), null)
 })
