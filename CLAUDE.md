@@ -191,6 +191,10 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `AdjuntoEntreno.jsx` (editor + vista). Quitar una captura no la borra del
   bucket (la sesión guardada podría seguir usándola).
 - **Duplicar** sesión (SessionsList): copia sin id ni envío, solo falta el día.
+- **Plantillas**: tabla `coach_plantillas` (migración 008, RLS `coach_id = auth.uid()`).
+  Si la tabla no existe, la sección no se muestra.
+- Estado Hecha/Pendiente: `src/lib/estadoSesion.js` (fuente única coach + atleta;
+  una actividad completa como mucho una sesión). Tests: `test/estado-sesion.test.js`.
 
 ### Plan → hecho → cómo fue (2026-10-22)
 - **Feedback del atleta** (migración 015, aplicada): tabla `sesion_feedback`, una
@@ -220,10 +224,6 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   "TSS 210 de ~320". Datos en `lib/planCarga.js` (caché 5 min; se invalida con
   `invalidarDatosAtleta` y al editar la temporada). Tests: `test/feedback`,
   `cumplimiento`, `tss-previsto`, `proyeccion`.
-- **Plantillas**: tabla `coach_plantillas` (migración 008, RLS `coach_id = auth.uid()`).
-  Si la tabla no existe, la sección no se muestra.
-- Estado Hecha/Pendiente: `src/lib/estadoSesion.js` (fuente única coach + atleta;
-  una actividad completa como mucho una sesión). Tests: `test/estado-sesion.test.js`.
 
 ## Estructura
 
