@@ -20,6 +20,7 @@ const PATHS = {
   refresh: 'M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5',
   close: 'M6 6l12 12 M18 6L6 18',
   lock: 'M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3',
+  move: 'M7 7h12l-3-3 M17 17H5l3 3',
 }
 
 export default function Icon({ name, size = 16, color = 'currentColor', strokeWidth = 1.8, style }) {

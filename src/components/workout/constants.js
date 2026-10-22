@@ -80,17 +80,21 @@ export function defaultUnidad(disciplina) {
   return disciplina === 'bike' ? 'km' : 'mtr'
 }
 
+// Hora de inicio en minutos (coach_sessions.hora_inicio_min) o null = sin hora
+const horaDe = (sesion) => (Number.isInteger(sesion?.hora_inicio_min) ? sesion.hora_inicio_min : null)
+
 export function initForm(sesion) {
-  if (!sesion) {
-    // Sin default de disciplina: se fuerza elegirla antes de mostrar campos
+  if (!sesion?.id && !sesion?.disciplina) {
+    // Nueva (puede venir con fecha/hora desde la agenda). Sin default de disciplina: se fuerza elegirla antes de mostrar campos
     // específicos (piscina/material/objetivos/unidades).
-    return { fecha: '', disciplina: null, piscina: '25', nombre: '', bloques: [], notas: '' }
+    return { fecha: sesion?.fecha || '', hora: horaDe(sesion), disciplina: null, piscina: '25', nombre: '', bloques: [], notas: '' }
   }
   const ws = sesion.workout_steps
   const bloques = Array.isArray(ws) ? ws : (ws?.bloques || [])
   const notas = ws?.notas ?? sesion.notas ?? ''
   return {
     fecha: sesion.fecha || '',
+    hora: horaDe(sesion),
     disciplina: sesion.disciplina || null,
     piscina: ws?.piscina || '25',
     nombre: sesion.descripcion || '',
