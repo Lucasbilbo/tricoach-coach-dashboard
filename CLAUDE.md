@@ -282,6 +282,13 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   - Builder: hora opcional (chips con las horas que encajan); la columna solo se
     envía si hay hora. Si el coach recoloca una sesión movida por el atleta, se
     quita la marca.
+  - Builder abierto desde una hora: solo las disciplinas que el atleta tiene a
+    esa hora (`disciplinasALaHora`); si hay una, se elige sola; "Otra
+    disciplina" enseña el resto. Pulsar en la agenda coge la media hora pulsada
+    (hacia abajo). `useDisponibilidad` cachea 5 min por atleta y revalida al
+    montar (`useDisponibilidadConEstado` da `cargada`): sin eso el creador
+    pintaba todas las disciplinas y luego quitaba unas.
+  - Listas (coach y atleta) ordenadas por fecha y hora.
   - Ojo dev: Vite en modo dev no expone los named de un `.cjs` fuera de
     node_modules (el build sí). Para ver la agenda en local, build + preview.
 - **No se ofrecen combinaciones imposibles** (2026-10): en el calendario, un día

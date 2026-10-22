@@ -144,6 +144,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         .eq('coach_id', coachId)
         .eq('athlete_id', athleteId)
         .order('fecha', { ascending: true })
+        .order('hora_inicio_min', { ascending: true, nullsFirst: true })
       if (senal && !senal.activo) return
 
       if (queryError) {

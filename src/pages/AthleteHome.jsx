@@ -181,6 +181,7 @@ export default function AthleteHome() {
           .eq('athlete_id', userId)
           .gte('fecha', hoy)
           .order('fecha', { ascending: true })
+          .order('hora_inicio_min', { ascending: true, nullsFirst: true })
           .limit(10),
         supabase
           .from('coach_sessions')
