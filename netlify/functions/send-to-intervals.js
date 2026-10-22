@@ -7,7 +7,7 @@
 
 const https = require('https')
 const { verifyAuth, canCoachSession } = require('./lib/auth')
-const { buildIntervalsText } = require('./lib/intervals-text.cjs')
+const { construirEvento } = require('./lib/intervals-evento')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)) }
@@ -23,14 +23,6 @@ const CORS = {
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-const DISCIPLINE_TYPE = {
-  swim: 'Swim',
-  bike: 'Ride',
-  run: 'Run',
-  strength: 'WeightTraining',
-  other: 'Workout',
-}
 
 // ── Supabase helpers ─────────────────────────────────────────────────────────
 
@@ -167,25 +159,8 @@ exports.handler = async (event) => {
       }
     }
 
-    const tipoIntervals = DISCIPLINE_TYPE[session.disciplina] || 'Workout'
-    // incluirNotas:false SIEMPRE — las notas del entrenador no llegan al reloj
-    const description = buildIntervalsText(session, { incluirNotas: false })
-    const piscina = session.workout_steps?.piscina || '25'
-    const isSwim = session.disciplina === 'swim'
-    const isOpen = piscina === 'open'
-
-    const eventBody = {
-      category: 'WORKOUT',
-      start_date_local: session.fecha + 'T00:00:00',
-      type: tipoIntervals,
-      name: session.workout_steps?.nombre || session.descripcion?.substring(0, 60) || 'Entrenamiento',
-      description,
-      indoor: isSwim && !isOpen,
-    }
-    if (isSwim && !isOpen) {
-      eventBody.pool_length = piscina === '50' ? 50 : 25
-      eventBody.pool_length_unit = 'Meters'
-    }
+    // Evento (texto del reloj, tipo, piscina y hora de inicio si la tiene)
+    const eventBody = construirEvento(session)
 
     // Reenvío (sesión editada o reenviada): primero se CREA la versión nueva y
     // solo cuando está confirmada se borra la anterior. Al revés, un fallo de
