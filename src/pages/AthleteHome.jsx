@@ -17,6 +17,9 @@ import SeasonPanel from '../components/season/SeasonPanel'
 import DisponibilidadEditor from '../components/DisponibilidadEditor'
 import AgendaAtleta from '../components/AgendaAtleta'
 import { formatHora } from '../lib/disponibilidad'
+import { cargarFeedback } from '../lib/feedbackApi'
+import { resumenFeedback } from '../lib/feedback'
+import { FeedbackEditor } from '../components/FeedbackSesion'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -131,6 +134,9 @@ export default function AthleteHome() {
   const [hayMasPasadas, setHayMasPasadas] = useState(false)
   const [cargandoMas, setCargandoMas] = useState(false)
   const [estadoActs, setEstadoActs] = useState({ actividades: null, desde: null, semanas: 0 })
+  // Cómo le fue cada sesión (sesion_feedback): Map<session_id, feedback>
+  const [feedbacks, setFeedbacks] = useState(() => new Map())
+  const [feedbackAbierto, setFeedbackAbierto] = useState({})
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
@@ -157,7 +163,7 @@ export default function AthleteHome() {
       setCargandoSesiones(true)
 
       // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
-      const [perfilRes, conexiones, proximasRes, pasadasRes] = await Promise.all([
+      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback] = await Promise.all([
         supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
         misConexiones(),
         supabase
@@ -175,10 +181,12 @@ export default function AthleteHome() {
           .lt('fecha', hoy)
           .order('fecha', { ascending: false })
           .range(0, PAGINA_PASADAS),
+        cargarFeedback(uid),
       ])
 
       if (!activo) return
       setPerfil({ ...(perfilRes.data || {}), conexiones })
+      setFeedbacks(mapaFeedback)
 
       // Distinguir un error de carga de un "no hay entrenamientos" legítimo (F4b)
       if (proximasRes.error || pasadasRes.error) {
@@ -262,6 +270,15 @@ export default function AthleteHome() {
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  function actualizarFeedback(id, fb) {
+    setFeedbacks((prev) => {
+      const m = new Map(prev)
+      if (fb) m.set(id, fb)
+      else m.delete(id)
+      return m
+    })
   }
 
   function marcarEnviado(id) {
@@ -405,6 +422,24 @@ export default function AthleteHome() {
                           )}
                         </div>
 
+                        {relativo === 'Hoy' && (
+                          <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
+                            <button
+                              onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+                              style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
+                              aria-expanded={!!feedbackAbierto[sesion.id]}
+                            >
+                              <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
+                              {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
+                            </button>
+                            {feedbackAbierto[sesion.id] && (
+                              <div style={{ padding: '4px 0 8px' }}>
+                                <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {abierta && tieneDetalle && (
                           <div style={{ marginTop: 6, paddingBottom: 4 }}>
                             <WorkoutDetail sesion={sesion} mostrarNotas={false} />
@@ -443,27 +478,40 @@ export default function AthleteHome() {
                   {pasadas.map((sesion, i) => {
                     const tieneDetalle = tieneEntreno(sesion.workout_steps)
                     const abierta = !!expandidas[sesion.id]
+                    const estado = estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)
+                    const fb = feedbacks.get(sesion.id)
                     return (
                       <div key={sesion.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}` }}>
+                        {/* Siempre desplegable: dentro está el feedback (y el entreno si lo hay) */}
                         <button
-                          onClick={() => tieneDetalle && toggleDetalle(sesion.id)}
-                          aria-expanded={tieneDetalle ? abierta : undefined}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: tieneDetalle ? 'pointer' : 'default', color: COLORS.textPrimary }}
+                          onClick={() => toggleDetalle(sesion.id)}
+                          aria-expanded={abierta}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: 'pointer', color: COLORS.textPrimary }}
                         >
                           <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other }} />
                           <span style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ display: 'block', fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
                             <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
                               <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span> · {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
+                              {fb ? (
+                                <span style={{ color: COLORS.textPrimary }}> · {resumenFeedback(fb) || 'Feedback enviado'}</span>
+                              ) : estado === ESTADO.completada ? (
+                                <span style={{ color: COLORS.textPrimary }}> · Cuenta cómo fue</span>
+                              ) : null}
                             </span>
                           </span>
                           <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
-                            <EstadoPasada estado={estadoDeSesion(sesion, asignacion.get(sesion.id), hoyMadrid(), estadoActs.desde)} />
+                            <EstadoPasada estado={estado} />
                           </span>
                         </button>
-                        {abierta && tieneDetalle && (
+                        {abierta && (
                           <div style={{ padding: '0 16px 14px 31px' }}>
-                            <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+                            <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />
+                            {tieneDetalle && (
+                              <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                                <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

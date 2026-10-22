@@ -14,6 +14,8 @@ import SemanaCalendario from './SemanaCalendario'
 import { semanasFuturas } from '../lib/planificacion'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import { formatHora } from '../lib/disponibilidad'
+import { cargarFeedback } from '../lib/feedbackApi'
+import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -130,6 +132,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [coberturaDesde, setCoberturaDesde] = useState(null)
   const estadoCacheRef = useRef({ key: null })
   const disponibilidad = useDisponibilidad(athleteId)
+  // Cómo le fue al atleta cada sesión (lo escribe él; aquí solo se lee)
+  const [feedbacks, setFeedbacks] = useState(() => new Map())
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -139,14 +143,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   // cambiar de atleta: así no pisa la lista del atleta nuevo.
   const cargarSesiones = useCallback(async (senal) => {
     try {
-      const { data, error: queryError } = await supabase
-        .from('coach_sessions')
-        .select('*')
-        .eq('coach_id', coachId)
-        .eq('athlete_id', athleteId)
-        .order('fecha', { ascending: true })
-        .order('hora_inicio_min', { ascending: true, nullsFirst: true })
+      const [{ data, error: queryError }, mapaFeedback] = await Promise.all([
+        supabase
+          .from('coach_sessions')
+          .select('*')
+          .eq('coach_id', coachId)
+          .eq('athlete_id', athleteId)
+          .order('fecha', { ascending: true })
+          .order('hora_inicio_min', { ascending: true, nullsFirst: true }),
+        cargarFeedback(athleteId),
+      ])
       if (senal && !senal.activo) return
+      setFeedbacks(mapaFeedback)
 
       if (queryError) {
         setError('No se pudieron cargar las sesiones')
@@ -339,7 +347,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             <Icon name="watch" size={15} />
             {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
           </span>
+          <FeedbackLinea feedback={feedbacks.get(sesion.id)} nombre={atletaNombre} />
         </div>
+        <FeedbackTexto feedback={feedbacks.get(sesion.id)} />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
