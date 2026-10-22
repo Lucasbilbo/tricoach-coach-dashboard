@@ -229,23 +229,23 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
       >
         {/* rejilla */}
         {!inf.libre && marcas(MIN, MAX).map((m) => (
-          <span key={m} style={{ position: 'absolute', left: 0, right: 0, top: y(m), height: 1, background: 'rgba(255,255,255,0.04)' }} />
+          <span key={m} style={{ position: 'absolute', left: 0, right: 0, top: y(m), height: 1, background: 'rgba(255,255,255,0.07)' }} />
         ))}
         {/* horas libres: fondo claro (unión de franjas) */}
         {tramos.map((t) => (
-          <span key={`f${t.d}${t.inicio_min}`} style={{ position: 'absolute', left: 0, right: 0, top: y(t.inicio_min), height: y(t.fin_min) - y(t.inicio_min), background: 'rgba(237,238,242,0.028)' }} />
+          <span key={`f${t.d}${t.inicio_min}`} style={{ position: 'absolute', left: 0, right: 0, top: y(t.inicio_min), height: y(t.fin_min) - y(t.inicio_min), background: 'rgba(237,238,242,0.055)' }} />
         ))}
         {/* mientras arrastras: dónde cabe esa disciplina */}
         {resaltar.map((t) => {
           const c = DISCIPLINE_COLORS[enArrastre.disciplina]
-          return <span key={`r${t.inicio_min}`} style={{ position: 'absolute', left: 1, right: 1, top: y(t.inicio_min), height: y(t.fin_min) - y(t.inicio_min), background: `${c}17`, boxShadow: `inset 0 0 0 1px ${c}40`, borderRadius: 5 }} />
+          return <span key={`r${t.inicio_min}`} style={{ position: 'absolute', left: 1, right: 1, top: y(t.inicio_min), height: y(t.fin_min) - y(t.inicio_min), background: `${c}25`, boxShadow: `inset 0 0 0 1px ${c}55`, borderRadius: 5 }} />
         })}
         {/* carriles fijos */}
         {tramos.map((t) => (
           <span
             key={`c${t.d}${t.inicio_min}`}
             title={`${DISCIPLINE_LABELS[t.d]}: ${formatTramo(t)}`}
-            style={{ position: 'absolute', left: CARRIL[t.d], width: 3, top: y(t.inicio_min), height: Math.max(y(t.fin_min) - y(t.inicio_min), 3), borderRadius: 2, background: DISCIPLINE_COLORS[t.d], opacity: enArrastre && enArrastre.disciplina !== t.d ? 0.35 : 0.9 }}
+            style={{ position: 'absolute', left: CARRIL[t.d], width: 3, top: y(t.inicio_min), height: Math.max(y(t.fin_min) - y(t.inicio_min), 3), borderRadius: 2, background: DISCIPLINE_COLORS[t.d], opacity: enArrastre && enArrastre.disciplina !== t.d ? 0.35 : 1 }}
           />
         ))}
         {inf.libre && (
