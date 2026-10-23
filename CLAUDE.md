@@ -93,7 +93,10 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - OAuth de Strava con `state` firmado (HMAC-SHA256 + nonce + expiración) en
   `lib/oauth-state.js` — anti-CSRF de vinculación.
 - Rate limit best-effort vía RPC `check_rate_limit` (`lib/rate-limit.js`), aplicado
-  en `accept-invitation` y `verify-intervals-key`. Fail-open.
+  en `accept-invitation` y `verify-intervals-key`, en las que leen Strava y (desde
+  2026-10-23) en las que escriben: `send-to-intervals`, `move-session`,
+  `delete-session` y `season` (solo upsert/delete), por uid, en paralelo con la
+  primera lectura (no añade latencia). Límites en `LIMITES`. Fail-open.
 - En el frontend, usar `authHeaders()` (`src/lib/authHeaders.js`) en todos los fetch.
 - **`profiles` es compartida con TriCoach v2** (mismo Supabase). Migración 016:
   trigger `profiles_proteger_campos` — si escribe un usuario (authenticated/anon)

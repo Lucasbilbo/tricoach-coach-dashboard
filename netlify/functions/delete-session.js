@@ -8,6 +8,7 @@
 const { verifyAuth, canCoachSession, UUID_REGEX } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
+const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +55,11 @@ exports.handler = async (event) => {
   if (!UUID_REGEX.test(sessionId || '')) return respuesta(400, { error: 'sessionId inválido' })
 
   try {
-    const ses = await rest('GET', `coach_sessions?id=eq.${sessionId}&select=id,coach_id,athlete_id,intervals_event_id`)
+    const [ses, dentroDeLimite] = await Promise.all([
+      rest('GET', `coach_sessions?id=eq.${sessionId}&select=id,coach_id,athlete_id,intervals_event_id`),
+      allowLimite('delete_session', auth.uid),
+    ])
+    if (!dentroDeLimite) return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
     const sesion = Array.isArray(ses.json) ? ses.json[0] : null
     if (!sesion) return respuesta(404, { error: 'Sesión no encontrada' })
     if (sesion.coach_id !== auth.uid) return respuesta(403, { error: 'Solo el entrenador que la creó puede borrarla' })
