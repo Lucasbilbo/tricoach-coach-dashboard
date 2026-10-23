@@ -22,6 +22,7 @@ const { withTimeout, httpsRequest } = require('./lib/http')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 const { construirEvento } = require('./lib/intervals-evento')
 const { validarMovimiento, ahoraMadrid } = require('./lib/mover-reglas.cjs')
+const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -177,6 +178,10 @@ exports.handler = async (event) => {
   let body
   try { body = JSON.parse(event.body || '{}') }
   catch { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'JSON inválido' }) } }
+
+  if (!(await allowLimite('move_session', auth.uid))) {
+    return { statusCode: 429, headers: CORS, body: JSON.stringify({ error: MENSAJE_429, code: 'RATE_LIMITED' }) }
+  }
 
   try {
     const r = await moverSesion({ auth, body, ahora: ahoraMadrid(), deps: depsReales })

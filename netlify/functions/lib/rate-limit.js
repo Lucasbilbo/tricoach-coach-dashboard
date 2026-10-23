@@ -91,6 +91,16 @@ const LIMITES = {
   dashboard_data: { max: 30, ventana: VENTANA_STRAVA_S },
   // coach-activity-detail: 2 peticiones (detalle + streams)
   activity_detail: { max: 60, ventana: VENTANA_STRAVA_S },
+  // Funciones que ESCRIBEN (auditoría 2026-10-22). Las tres primeras llaman a
+  // Intervals.icu con la key del atleta; sin límite, un bucle (de la UI o de una
+  // cuenta comprometida) podía crear/borrar eventos sin freno. Muy por encima del
+  // uso real (planificar una semana son ~10 envíos; arrastrar en la agenda,
+  // unos pocos movimientos).
+  send_intervals: { max: 60, ventana: VENTANA_STRAVA_S },
+  move_session: { max: 120, ventana: VENTANA_STRAVA_S },
+  delete_session: { max: 60, ventana: VENTANA_STRAVA_S },
+  // season upsert/delete (list y overview no cuentan)
+  season_write: { max: 120, ventana: VENTANA_STRAVA_S },
 }
 
 // allowRequest con un límite de LIMITES por nombre. Fail-open igual.

@@ -9,6 +9,7 @@ const https = require('https')
 const { verifyAuth, canCoachSession } = require('./lib/auth')
 const { construirEvento } = require('./lib/intervals-evento')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
+const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)) }
 
@@ -128,8 +129,15 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'sessionId (UUID) es requerido' }) }
     }
 
-    // Leer sesión completa: coach y atleta se derivan de ella, no del body
-    const sesiones = await supabaseGet(`coach_sessions?id=eq.${sessionId}&select=*`)
+    // Leer sesión completa: coach y atleta se derivan de ella, no del body.
+    // El rate limit va en paralelo (no añade latencia); fail-open.
+    const [sesiones, dentroDeLimite] = await Promise.all([
+      supabaseGet(`coach_sessions?id=eq.${sessionId}&select=*`),
+      allowLimite('send_intervals', auth.uid),
+    ])
+    if (!dentroDeLimite) {
+      return { statusCode: 429, headers: CORS, body: JSON.stringify({ error: MENSAJE_429, code: 'RATE_LIMITED' }) }
+    }
     if (!Array.isArray(sesiones) || sesiones.length === 0) {
       return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Sesión no encontrada' }) }
     }

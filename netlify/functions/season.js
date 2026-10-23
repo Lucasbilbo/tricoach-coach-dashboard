@@ -15,6 +15,7 @@
 const { verifyAuth, canAccessAthlete, UUID_REGEX } = require('./lib/auth')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { validarEvento, resumirCambio } = require('./lib/season-validate')
+const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -201,7 +202,14 @@ exports.handler = async (event) => {
 
     const { athleteId } = body
     if (!UUID_REGEX.test(athleteId || '')) return respuesta(400, { error: 'athleteId inválido' })
-    if (!(await canAccessAthlete(auth, athleteId))) return respuesta(403, { error: 'Sin acceso a este atleta' })
+    // Solo las escrituras cuentan para el rate limit (en paralelo con la autorización)
+    const escribe = body.action === 'upsert' || body.action === 'delete'
+    const [acceso, dentroDeLimite] = await Promise.all([
+      canAccessAthlete(auth, athleteId),
+      escribe ? allowLimite('season_write', auth.uid) : true,
+    ])
+    if (!acceso) return respuesta(403, { error: 'Sin acceso a este atleta' })
+    if (!dentroDeLimite) return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
 
     switch (body.action) {
       case 'list':
