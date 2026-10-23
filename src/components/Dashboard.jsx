@@ -95,11 +95,14 @@ export default function Dashboard() {
         // y la whitelist por su cuenta, así que lanzarla antes no abre nada. Si
         // al final no es coach se descarta (la caché nunca guarda fallos).
         const atletasP = datosDashboard().then((v) => ({ ok: v }), (err) => ({ err }))
+        // Las consultas de supabase-js no salen hasta que alguien las espera:
+        // .then() la lanza ya, en paralelo con todo lo demás.
         const invitacionesP = supabase
           .from('athlete_invitations')
           .select('*')
           .eq('coach_id', userId)
           .order('created_at', { ascending: false })
+          .then((r) => r)
 
         // El login con Google llega aquí sin pasar por la verificación de Login.jsx.
         // Comprobamos coach y perfil a la vez para enrutar correctamente (F2):
