@@ -244,20 +244,34 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 
 ## Estructura
 
-- `src/components/` — Login, Dashboard, AthleteView (coach), SessionsList,
-  WorkoutBuilder/WorkoutDetail (+ `workout/`), ActivityDetail, PolylineMap,
-  WeekCompare, `charts/` (ChartCard, PowerChart, TSSChart), `shared/`
-  (StravaAnalysis, TransitionLine).
+- `src/components/` — Login, Dashboard (panel del coach), AthleteView (atleta,
+  vista coach), SessionsList, SemanaCalendario + HojaMover (agenda),
+  WorkoutBuilder/WorkoutDetail (+ `workout/`: bloques, chips, parser, atajos),
+  AdjuntoEntreno, FeedbackSesion, Cumplimiento, AgendaAtleta,
+  DisponibilidadEditor, ActivityDetail, PolylineMap, PRsBlock, WeekCompare;
+  `charts/` (ChartCard, FormaChart, PowerChart, TSSChart), `shared/`
+  (StravaAnalysis, TransitionLine), `season/`, `ui/` (primitivas).
 - `src/pages/` — AthleteHome (atleta), IntervalsSetup, JoinPage (invitaciones).
-- `src/lib/` — supabase, theme, authHeaders, chartUtils, metrics(front), carga,
-  athleteStats, activityFormat, intervalsText.
+- `src/lib/` — datos/caché: supabase, authHeaders, connections, athleteData +
+  athleteDataCache, panelData, valueCache, clientCache, planCarga, *Api
+  (disponibilidad, feedback, season). Lógica pura (con tests): carga,
+  athleteStats, estadoSesion, cumplimiento, tssPrevisto, proyeccion, feedback,
+  disponibilidad, agenda, planificacion, season, adjuntos. Formato/UI: theme,
+  chartUtils, activityFormat, intervalsText (re-exporta el .cjs del backend).
+- `src/hooks/` — useDisponibilidad, useIsMobile.
 - `netlify/functions/` — coach-dashboard-data, coach-athlete-data,
-  coach-activity-detail, send-to-intervals, strava-auth, verify-intervals-key,
-  accept-invitation; `lib/` (auth, http, supabase-rest, strava, metrics,
-  rate-limit, oauth-state, intervals-text.cjs).
-- `supabase/migrations/` — 001–016 (+ ficheros `PENDIENTE_*` que NO se aplican solos).
+  coach-activity-detail, send-to-intervals, move-session, delete-session,
+  season, my-connections, strava-auth, verify-intervals-key, accept-invitation;
+  `lib/` (auth, http, supabase-rest, rate-limit, oauth-state, metrics, semanas,
+  strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
+  intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
+  season-validate).
+- `supabase/migrations/` — 001–016 (+ ficheros `PENDIENTE_*` que NO se aplican
+  solos). **016 está en el repo pero PENDIENTE de aplicar** (la herramienta de
+  Supabase pide confirmación interactiva; 2026-10-23).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
+- `test/` — `npm test` (node --test, sin dependencias).
 
 ## Temporada (calendario de pruebas del año) — 2026-10
 
