@@ -98,7 +98,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `delete-session` y `season` (solo upsert/delete), por uid, en paralelo con la
   primera lectura (no añade latencia). Límites en `LIMITES`. Fail-open.
 - En el frontend, usar `authHeaders()` (`src/lib/authHeaders.js`) en todos los fetch.
-- **`profiles` es compartida con TriCoach v2** (mismo Supabase). Migración 016:
+- **`profiles` es compartida con TriCoach v2** (mismo Supabase). Migración 016 (aplicada 2026-10-23):
   trigger `profiles_proteger_campos` — si escribe un usuario (authenticated/anon)
   NO puede cambiar `plan`, `stripe_customer_id`, `messages_today`,
   `last_message_date`, `ajustes_hoy`, `ultima_fecha_ajuste`, `deleted_at`,
@@ -267,8 +267,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
 - `supabase/migrations/` — 001–016 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). **016 está en el repo pero PENDIENTE de aplicar** (la herramienta de
-  Supabase pide confirmación interactiva; 2026-10-23).
+  solos). 016 aplicada 2026-10-23 (desde el SQL Editor; verificada).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).
