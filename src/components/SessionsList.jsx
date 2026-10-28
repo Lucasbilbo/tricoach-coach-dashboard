@@ -285,11 +285,15 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     cargarSesiones()
   }
 
-  function handleEditGuardado() {
-    setSesionEditando(null)
+  // { cerrar: false } = guardado a medias con un aviso en el creador: se
+  // refresca la lista pero el creador sigue abierto para que se lea.
+  function handleEditGuardado({ cerrar = true } = {}) {
+    if (cerrar) setSesionEditando(null)
     invalidarEstado()
     cargarSesiones()
-    if (onNewSession) onNewSession()
+    // El padre remonta esta lista (key) con onNewSession: con el creador
+    // abierto por un aviso eso lo cerraría y el aviso se perdería.
+    if (cerrar && onNewSession) onNewSession()
   }
 
   async function handleReenviarGarmin(sesion) {

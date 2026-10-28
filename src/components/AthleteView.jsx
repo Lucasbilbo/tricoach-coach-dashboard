@@ -186,9 +186,12 @@ export default function AthleteView() {
             coachId={coachId}
             atletaNombre={datos?.atleta?.nombre}
             onClose={() => setModalAbierto(false)}
-            onSaved={() => {
-              setModalAbierto(false)
-              setActiveTab('sesiones')
+            onSaved={({ cerrar = true } = {}) => {
+              // cerrar:false = aviso en el creador (reloj/nutrición): refrescar sin cerrar
+              if (cerrar) {
+                setModalAbierto(false)
+                setActiveTab('sesiones')
+              }
               setSesionesVersion((v) => v + 1)
             }}
           />

@@ -28,6 +28,9 @@ function fechaCorta(f) {
   return Number.isNaN(d.getTime()) ? f : `${DIAS_SEMANA[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`
 }
 
+// onSaved({ cerrar }): la sesión se guardó (hay que refrescar la lista). cerrar
+// es false cuando el guardado salió a medias y hay un aviso que leer (reloj sin
+// actualizar, nutrición sin guardar): el padre refresca pero NO cierra.
 // nutricionExistente: fila de sesion_nutricion de la sesión que se edita (o de
 // la original al duplicar), para precargar el plan de nutrición.
 export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, coachId, sessionExistente, atletaNombre, nutricionExistente }) {
@@ -318,7 +321,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       const nutriOk = await guardarNutri(sid)
       if (!nutriOk) {
         setError('Sesión guardada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
-        if (onSaved) onSaved()
+        if (onSaved) onSaved({ cerrar: false })
         return
       }
       if (yaEnviada) {
@@ -327,11 +330,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           // Guardado, pero el reloj sigue con la versión anterior: no cerrar,
           // que el coach lo vea. La lista la mostrará como pendiente de envío.
           setError('Cambios guardados, pero no se pudo actualizar el reloj. Queda pendiente de enviar.')
-          if (onSaved) onSaved()
+          if (onSaved) onSaved({ cerrar: false })
           return
         }
       }
-      if (onSaved) onSaved()
+      if (onSaved) onSaved({ cerrar: true })
       onClose()
     } catch (err) {
       setError(err.message)
@@ -355,10 +358,16 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       const nutriOk = await guardarNutri(sid)
       // coach/atleta se derivan de la sesión y del JWT en el backend
       const ok = await enviarAlReloj(sid)
-      if (!ok) return
+      if (!ok) {
+        // La sesión SÍ quedó guardada: refrescar la lista sin cerrar, para que
+        // el coach vea el error y pueda reintentar.
+        if (onSaved) onSaved({ cerrar: false })
+        return
+      }
       setExitoGarmin(true)
       if (!nutriOk) setError('Enviada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
-      if (onSaved) onSaved()
+      // Todo bien → se cierra; con algún aviso se queda abierto para leerlo.
+      if (onSaved) onSaved({ cerrar: nutriOk })
     } catch {
       setError('Error de conexión enviando a Garmin')
     } finally {
