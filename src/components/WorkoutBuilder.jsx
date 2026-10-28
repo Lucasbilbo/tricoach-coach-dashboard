@@ -23,7 +23,6 @@ import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutri
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-const DIAS_CHIPS = proximosDias(14)
 const DIAS_SEMANA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 function fechaCorta(f) {
@@ -52,6 +51,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // "Otra disciplina" las enseña todas (el coach puede forzar).
   const [todasDisciplinas, setTodasDisciplinas] = useState(false)
   const [ahora] = useState(() => ahoraMadrid())
+  // Se calculan al abrir (el creador se monta cada vez), en hora de Madrid
+  const DIAS_CHIPS = proximosDias(14, ahora.fecha)
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
   // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
   // sesión (necesita su id). Solo si la tabla existe (migración 017).

@@ -59,18 +59,19 @@ export const ZONAS = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-export function proximosDias(n = 14) {
+// Chips de fecha del creador: n días desde `desde` (YYYY-MM-DD, hoy en
+// Europe/Madrid). Aritmética en UTC sobre la fecha: no depende de la zona del
+// navegador. Antes se calculaba con la hora local al cargar el módulo y, con la
+// pestaña abierta pasada la medianoche, el primer chip era ayer (auditoría B4).
+export function proximosDias(n = 14, desde) {
+  const [y, m, d] = String(desde || '').split('-').map(Number)
+  const base = y && m && d ? Date.UTC(y, m - 1, d) : Date.now()
   const dias = []
-  const hoy = new Date()
   for (let i = 0; i < n; i++) {
-    const d = new Date(hoy)
-    d.setDate(hoy.getDate() + i)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
+    const f = new Date(base + i * 86400000)
     dias.push({
-      value: `${yyyy}-${mm}-${dd}`,
-      label: `${DIAS_SEMANA[d.getDay()]} ${d.getDate()} ${MESES_ES[d.getMonth()]}`,
+      value: f.toISOString().slice(0, 10),
+      label: `${DIAS_SEMANA[f.getUTCDay()]} ${f.getUTCDate()} ${MESES_ES[f.getUTCMonth()]}`,
     })
   }
   return dias
