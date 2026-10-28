@@ -365,7 +365,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
               onClick={() =>
                 // Copia sin id ni envío: el builder la trata como sesión nueva y
                 // solo falta elegir el día.
-                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false })
+                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false, _nutricionDe: sesion.id })
               }
               style={accionIconoStyle}
               aria-label="Duplicar sesión"
@@ -394,7 +394,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         <FeedbackTexto feedback={feedbacks.get(sesion.id)} />
         {nutricion.disponible && (
           <NutricionSesion
-            key={`${sesion.id}-${nutricion.mapa.get(sesion.id)?.updated_at || ''}`}
+            key={sesion.id}
             sesion={sesion}
             uid={coachId}
             quien="coach"
@@ -589,6 +589,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           coachId={coachId}
           sessionExistente={sesionEditando}
           atletaNombre={atletaNombre}
+          nutricionExistente={nutricion.mapa.get(sesionEditando.id ?? sesionEditando._nutricionDe)}
           onClose={() => setSesionEditando(null)}
           onSaved={handleEditGuardado}
         />

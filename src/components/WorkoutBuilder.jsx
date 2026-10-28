@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDisponibilidadConEstado } from '../hooks/useDisponibilidad'
 import { evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
 import { ahoraMadrid, disciplinasALaHora, horasPosibles } from '../lib/agenda'
@@ -14,6 +14,9 @@ import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
 import Icon from './ui/Icon'
+import { CamposPlanNutricion } from './NutricionSesion'
+import { aplicarSugerencia, formPlanDe, normalizarNutricion, resumenNutricion, sugerirNutricion, tienePlan } from '../lib/nutricion'
+import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
@@ -25,7 +28,9 @@ function fechaCorta(f) {
   return Number.isNaN(d.getTime()) ? f : `${DIAS_SEMANA[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`
 }
 
-export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, coachId, sessionExistente, atletaNombre }) {
+// nutricionExistente: fila de sesion_nutricion de la sesión que se edita (o de
+// la original al duplicar), para precargar el plan de nutrición.
+export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, coachId, sessionExistente, atletaNombre, nutricionExistente }) {
   const [form, setForm] = useState(initForm(sessionExistente))
   const [sessionId, setSessionId] = useState(sessionExistente?.id || null)
   const [guardando, setGuardando] = useState(false)
@@ -40,6 +45,17 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [todasDisciplinas, setTodasDisciplinas] = useState(false)
   const [ahora] = useState(() => ahoraMadrid())
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
+  // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
+  // sesión (necesita su id). Solo si la tabla existe (migración 017).
+  const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
+  const [nutriSucio, setNutriSucio] = useState(false)
+  const [nutriAbierta, setNutriAbierta] = useState(() => tienePlan(nutricionExistente))
+  const [nutriDisponible, setNutriDisponible] = useState(false)
+  useEffect(() => {
+    let activo = true
+    if (isOpen) nutricionDisponible().then((ok) => activo && setNutriDisponible(ok))
+    return () => { activo = false }
+  }, [isOpen])
 
   // Al abrir (o cambiar la sesión a editar) se reinicia el formulario. Se hace
   // durante el render comparando con las props previas (patrón de React para
@@ -57,6 +73,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setTodasDisciplinas(false)
       setErrorIntervals(false)
       setError(null)
+      setNutri(formPlanDe(nutricionExistente))
+      // Al duplicar, el plan copiado hay que guardarlo en la sesión nueva
+      setNutriSucio(!sessionExistente?.id && tienePlan(nutricionExistente))
+      setNutriAbierta(tienePlan(nutricionExistente))
       // Mostrar input si la fecha existente no está en los próximos 14 días
       setMostrarInputFecha(
         !!f.fecha && !DIAS_CHIPS.some((d) => d.value === f.fecha)
@@ -248,6 +268,22 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     }
   }
 
+  // Guarda (o quita) el plan de nutrición de la sesión sid. No bloquea: si
+  // falla, la sesión ya está guardada y se avisa. Devuelve true si fue bien.
+  async function guardarNutri(sid) {
+    if (!nutriDisponible || !nutriSucio) return true
+    try {
+      const fila = normalizarNutricion(nutri)
+      const habia = !!sessionExistente?.id && tienePlan(nutricionExistente)
+      if (fila) await guardarNutricion(sid, athleteId, coachId, fila)
+      else if (habia) await quitarParte(sid, athleteId, coachId, nutricionExistente, 'plan')
+      setNutriSucio(false)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   function validar() {
     if (!form.fecha || !form.nombre?.trim()) return 'La fecha y el nombre son obligatorios'
     const malos = ritmosInvalidos(form.bloques)
@@ -279,6 +315,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     setError(null)
     try {
       const sid = await saveToSupabase()
+      const nutriOk = await guardarNutri(sid)
+      if (!nutriOk) {
+        setError('Sesión guardada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
+        if (onSaved) onSaved()
+        return
+      }
       if (yaEnviada) {
         const ok = await enviarAlReloj(sid)
         if (!ok) {
@@ -310,10 +352,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     setErrorIntervals(false)
     try {
       const sid = await saveToSupabase()
+      const nutriOk = await guardarNutri(sid)
       // coach/atleta se derivan de la sesión y del JWT en el backend
       const ok = await enviarAlReloj(sid)
       if (!ok) return
       setExitoGarmin(true)
+      if (!nutriOk) setError('Enviada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
       if (onSaved) onSaved()
     } catch {
       setError('Error de conexión enviando a Garmin')
@@ -321,6 +365,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setEnviando(false)
     }
   }
+
+  // Sugerencia de nutrición con lo que lleva el formulario ahora mismo
+  const sugerenciaNutri = form.disciplina
+    ? sugerirNutricion({ disciplina: form.disciplina, workout_steps: { bloques: form.bloques }, duracion_min: duracionFinal })
+    : null
 
   // incluirNotas:true SOLO aquí (el coach debe ver que las escribió). El envío
   // real a Garmin las omite siempre — ver send-to-intervals.js.
@@ -697,6 +746,38 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             placeholder="Indicaciones técnicas, material extra..."
             style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: 16 }}
           />
+
+          {/* Nutrición (opcional): se ve en la app, no va al reloj */}
+          {nutriDisponible && form.disciplina !== 'other' && (
+            <div style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setNutriAbierta((v) => !v)}
+                aria-expanded={nutriAbierta}
+                style={{ ...separadorSection, display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${COLORS.cardBorder}`, cursor: 'pointer', padding: '0 0 6px', textAlign: 'left', fontFamily: FONTS.sans }}
+              >
+                <Icon name="chevronDown" size={15} style={{ transform: nutriAbierta ? 'rotate(180deg)' : 'none' }} />
+                Nutrición
+                <span style={{ fontWeight: 400, fontSize: 12, color: COLORS.textTertiary }}>
+                  {nutriAbierta ? null : normalizarNutricion(nutri) ? <span style={{ fontFamily: FONTS.mono, color: COLORS.textSecondary }}>· {resumenNutricion(normalizarNutricion(nutri)) || 'con notas'}</span> : '(opcional)'}
+                </span>
+              </button>
+              {nutriAbierta && (
+                <CamposPlanNutricion
+                  form={nutri}
+                  onCambiar={(campo, valor) => {
+                    setNutri((f) => ({ ...f, [campo]: valor }))
+                    setNutriSucio(true)
+                  }}
+                  sugerencia={sugerenciaNutri}
+                  onUsarSugerencia={() => {
+                    setNutri((f) => aplicarSugerencia(f, sugerenciaNutri))
+                    setNutriSucio(true)
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           {/* Preview Intervals */}
           <div style={separadorSection}>
