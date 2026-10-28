@@ -440,7 +440,7 @@ export default function AthleteHome() {
 
                         {nutricion.disponible && (
                           <NutricionSesion
-                            key={`${sesion.id}-${nutricion.mapa.get(sesion.id)?.updated_at || ''}`}
+                            key={sesion.id}
                             sesion={sesion}
                             uid={userId}
                             quien="atleta"
@@ -535,6 +535,18 @@ export default function AthleteHome() {
                         {abierta && (
                           <div style={{ padding: '0 16px 14px 31px' }}>
                             <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />
+                            {nutricion.disponible && (
+                              <div style={{ marginTop: 12, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                                <NutricionSesion
+                                  key={sesion.id}
+                                  sesion={sesion}
+                                  uid={userId}
+                                  quien="atleta"
+                                  inicial={nutricion.mapa.get(sesion.id)}
+                                  onCambio={actualizarNutricion}
+                                />
+                              </div>
+                            )}
                             {tieneDetalle && (
                               <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
                                 <WorkoutDetail sesion={sesion} mostrarNotas={true} />
