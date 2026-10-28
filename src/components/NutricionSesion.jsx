@@ -160,7 +160,9 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   const aviso = !esAtleta ? avisoTomado(inicial) : null
 
   // Atleta y sesión futura sin plan: solo merece la pena si hay algo que sugerir
-  const sugerenciaUtil = sugerencia && (sugerencia.carbohidratos_g_h || sugerencia.liquido_ml_h || sugerencia.sodio_mg_h)
+  // Solo si hay que COMER algo (hidratos o sales): "agua según sed" en un
+  // rodaje de 45' llenaba la lista del atleta de filas que no aportan.
+  const sugerenciaUtil = sugerencia && (sugerencia.carbohidratos_g_h || sugerencia.sodio_mg_h)
   if (esAtleta && !yaLlego && !inicial && !sugerenciaUtil) return null
   if (!sugerencia && !inicial && sesion.disciplina === 'other') return null
 

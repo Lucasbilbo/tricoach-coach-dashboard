@@ -374,7 +374,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
                 {n.choca && <span style={{ position: 'absolute', top: 5, right: 6, width: 5, height: 5, borderRadius: '50%', background: AMBAR }} />}
                 <div style={{ fontSize: 10.5, fontWeight: 600, color: activo || n.esHoy ? COLORS.accent : COLORS.textSecondary }}>{INICIAL_DIA[i]}</div>
                 <div style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, color: activo ? COLORS.accent : COLORS.textPrimary }}>{Number(d.fecha.slice(8))}</div>
-                <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: n.choca ? AMBAR : COLORS.textTertiary, minHeight: 11 }}>{n.minutos > 0 ? fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
+                <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: n.choca ? AMBAR : COLORS.textTertiary, minHeight: 11 }}>{n.minutos > 0 ? (n.estimadas ? '~' : '') + fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
               </button>
             )
           })}
