@@ -18,6 +18,8 @@ import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from './NutricionSesion'
+import Aviso from './ui/Aviso'
+import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import Cumplimiento from './Cumplimiento'
 import { calibrar, cargaSemana } from '../lib/proyeccion'
 
@@ -142,6 +144,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  // El reloj quedó con un entreno antiguo duplicado (no se pudo retirar)
+  const [avisoReloj, setAvisoReloj] = useState(null)
   const [sesionEditando, setSesionEditando] = useState(null)
   // Semanas vacías extra pedidas con "Planificar otra semana"
   const [semanasExtra, setSemanasExtra] = useState(0)
@@ -307,6 +311,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok) {
+        setAvisoReloj(avisoEventoAntiguo(json, sesion.fecha, 'coach'))
         cargarSesiones()
       } else {
         setError(json.error || 'Error enviando a Garmin')
@@ -465,6 +470,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         return { error: msg }
       }
       setError('')
+      setAvisoReloj(avisoEventoAntiguo(json, sesion.fecha, 'coach'))
       setSesiones((prev) => prev
         .map((s) => (s.id === sesion.id ? { ...s, ...json.sesion } : s))
         .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.hora_inicio_min ?? -1) - (b.hora_inicio_min ?? -1))))
@@ -523,6 +529,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   return (
     <div>
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
+      {avisoReloj && <Aviso onCerrar={() => setAvisoReloj(null)} style={{ marginBottom: 16 }}>{avisoReloj}</Aviso>}
 
       {sesiones.length === 0 && (
         // B4: estado vacío claro para el coach (en vez de solo "Sin sesiones esta semana").

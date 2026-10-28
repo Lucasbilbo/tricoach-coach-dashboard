@@ -14,6 +14,8 @@ import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
 import Icon from './ui/Icon'
+import Aviso from './ui/Aviso'
+import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import { CamposPlanNutricion } from './NutricionSesion'
 import { aplicarSugerencia, formPlanDe, normalizarNutricion, resumenNutricion, sugerirNutricion, tienePlan } from '../lib/nutricion'
 import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
@@ -41,6 +43,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [exitoGarmin, setExitoGarmin] = useState(false)
   const [errorIntervals, setErrorIntervals] = useState(false)
   const [error, setError] = useState(null)
+  // Reloj con el entreno antiguo aún puesto (no se pudo retirar): aviso ámbar
+  const [avisoReloj, setAvisoReloj] = useState(null)
   const [mostrarInputFecha, setMostrarInputFecha] = useState(false)
   const [mostrarInputHora, setMostrarInputHora] = useState(false)
   // Con hora puesta solo se ofrecen las disciplinas que caben a esa hora;
@@ -76,6 +80,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setTodasDisciplinas(false)
       setErrorIntervals(false)
       setError(null)
+      setAvisoReloj(null)
       setNutri(formPlanDe(nutricionExistente))
       // Al duplicar, el plan copiado hay que guardarlo en la sesión nueva
       setNutriSucio(!sessionExistente?.id && tienePlan(nutricionExistente))
@@ -302,7 +307,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       body: JSON.stringify({ sessionId: sid }),
     })
     const json = await res.json().catch(() => ({}))
-    if (res.ok) return true
+    if (res.ok) {
+      // Reenvío: el evento anterior era de la fecha que tenía la sesión al abrirla
+      const aviso = avisoEventoAntiguo(json, sessionExistente?.fecha, 'coach')
+      setAvisoReloj(aviso)
+      return aviso ? 'aviso' : true
+    }
     if (json.code === 'NO_INTERVALS') setErrorIntervals(true)
     else setError(json.error || 'Error enviando a Garmin')
     return false
@@ -326,6 +336,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       }
       if (yaEnviada) {
         const ok = await enviarAlReloj(sid)
+        if (ok === 'aviso') {
+          if (onSaved) onSaved({ cerrar: false })
+          return
+        }
         if (!ok) {
           // Guardado, pero el reloj sigue con la versión anterior: no cerrar,
           // que el coach lo vea. La lista la mostrará como pendiente de envío.
@@ -367,7 +381,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setExitoGarmin(true)
       if (!nutriOk) setError('Enviada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
       // Todo bien → se cierra; con algún aviso se queda abierto para leerlo.
-      if (onSaved) onSaved({ cerrar: nutriOk })
+      if (onSaved) onSaved({ cerrar: nutriOk && ok !== 'aviso' })
     } catch {
       setError('Error de conexión enviando a Garmin')
     } finally {
@@ -855,6 +869,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               Este atleta no tiene Intervals.icu configurado. Comparte con él el link de configuración desde la sección Configuración Garmin.
             </div>
           )}
+
+          {avisoReloj && <Aviso style={{ marginBottom: 12 }}>{avisoReloj}</Aviso>}
 
           {error && !errorIntervals && (
             <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 12 }}>{error}</p>

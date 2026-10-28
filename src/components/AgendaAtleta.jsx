@@ -10,12 +10,17 @@ import { COLORS, iconButtonStyle } from '../lib/theme'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import SemanaCalendario from './SemanaCalendario'
 import Icon from './ui/Icon'
+import Aviso from './ui/Aviso'
+import { avisoEventoAntiguo } from '../lib/avisosReloj'
 
 const ordenar = (a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.hora_inicio_min ?? -1) - (b.hora_inicio_min ?? -1))
 
 export default function AgendaAtleta({ userId, onCambio }) {
   const [lunes, setLunes] = useState(() => lunesDeSemana(hoyMadrid()))
   const [carga, setCarga] = useState({ clave: null, sesiones: [], error: false })
+  // Resultado del último movimiento que hay que contar: error (también al
+  // arrastrar, que antes fallaba en silencio) o reloj con el entreno duplicado
+  const [aviso, setAviso] = useState(null) // { texto, tono }
   const datos = useDisponibilidad(userId, true)
   const clave = `${userId}|${lunes}`
 
@@ -46,7 +51,13 @@ export default function AgendaAtleta({ userId, onCambio }) {
         body: JSON.stringify({ sessionId: sesion.id, fecha, hora_inicio_min: hora }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) return { error: json.error || 'No se pudo mover el entreno' }
+      if (!res.ok) {
+        const msg = json.error || 'No se pudo mover el entreno'
+        setAviso({ texto: msg, tono: 'error' })
+        return { error: msg }
+      }
+      const textoReloj = avisoEventoAntiguo(json, sesion.fecha, 'atleta')
+      setAviso(textoReloj ? { texto: textoReloj, tono: 'ambar' } : null)
       const fueraDeSemana = fecha < lunes || fecha > sumarDias(lunes, 6)
       setCarga((c) => ({
         ...c,
@@ -57,6 +68,7 @@ export default function AgendaAtleta({ userId, onCambio }) {
       onCambio?.()
       return { ok: true }
     } catch {
+      setAviso({ texto: 'Error de conexión moviendo el entreno', tono: 'error' })
       return { error: 'Error de conexión moviendo el entreno' }
     }
   }
@@ -77,6 +89,9 @@ export default function AgendaAtleta({ userId, onCambio }) {
           </button>
         </div>
       </div>
+      {aviso && (
+        <Aviso tono={aviso.tono} onCerrar={() => setAviso(null)} style={{ marginBottom: 10 }}>{aviso.texto}</Aviso>
+      )}
       {carga.error && carga.clave === clave ? (
         <p style={{ color: COLORS.error, fontSize: 14 }}>No se pudo cargar la semana.</p>
       ) : (
