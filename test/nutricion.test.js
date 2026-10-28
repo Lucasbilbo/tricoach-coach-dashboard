@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizarNutricion, resumenNutricion, sugerirNutricion, totalesNutricion } from '../src/lib/nutricion.js'
+import {
+  avisoTomado, normalizarNutricion, normalizarTomado, resumenNutricion, resumenTomado, sugerirNutricion, tienePlan, tieneTomado, totalesNutricion,
+} from '../src/lib/nutricion.js'
 import { segundosPrevistos } from '../src/lib/tssPrevisto.js'
 
 const paso = (cantidad, unidad, zona) => ({ tipo: 'step', cantidad, unidad, ...(zona ? { objetivo_tipo: 'zona', objetivo_valor: zona } : {}) })
@@ -65,4 +67,29 @@ test('resumen y totales', () => {
   assert.equal(resumenNutricion({ carbohidratos_g_h: 0, liquido_ml_h: 500 }), 'Sin comer · 500 ml/h')
   assert.deepEqual(totalesNutricion({ carbohidratos_g_h: 60, liquido_ml_h: 600 }, 135), { gramos: 135, mililitros: 1350 })
   assert.equal(totalesNutricion({ carbohidratos_g_h: 0 }, 40), null)
+})
+
+test('tomado: normaliza, vacío → null, estómago 1–3', () => {
+  assert.equal(normalizarTomado({ tomado_notas: ' ' }), null)
+  assert.deepEqual(normalizarTomado({ tomado_carbohidratos_g_h: '50', estomago: 4, tomado_notas: ' 2 geles ' }), {
+    tomado_carbohidratos_g_h: 50, tomado_liquido_ml_h: null, estomago: null, tomado_notas: '2 geles',
+  })
+  assert.equal(normalizarTomado({ estomago: 2 }).estomago, 2)
+})
+
+test('tomado: resumen con el plan al lado y avisos para el coach', () => {
+  const n = { carbohidratos_g_h: 60, liquido_ml_h: 600, tomado_carbohidratos_g_h: 50, tomado_liquido_ml_h: 500, estomago: 2 }
+  assert.equal(resumenTomado(n), '50 de 60 g/h · 500 de 600 ml/h · Estómago regular')
+  assert.equal(resumenTomado({ tomado_carbohidratos_g_h: 40 }), '40 g/h')
+  assert.equal(avisoTomado(n), null)
+  assert.equal(avisoTomado({ ...n, estomago: 1 }), 'Le sentó mal')
+  assert.equal(avisoTomado({ ...n, tomado_carbohidratos_g_h: 30 }), 'Comió bastante menos de lo previsto')
+  assert.equal(resumenTomado(null), '')
+})
+
+test('plan y tomado se distinguen', () => {
+  assert.equal(tienePlan({ tomado_carbohidratos_g_h: 40 }), false)
+  assert.equal(tieneTomado({ tomado_carbohidratos_g_h: 40 }), true)
+  assert.equal(tienePlan({ carbohidratos_g_h: 0 }), true)
+  assert.equal(tieneTomado({ carbohidratos_g_h: 0 }), false)
 })

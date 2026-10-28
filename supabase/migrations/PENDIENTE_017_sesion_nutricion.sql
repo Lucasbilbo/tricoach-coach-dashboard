@@ -1,7 +1,10 @@
 -- 017_sesion_nutricion.sql — plan de nutrición durante una sesión (2026-10)
 --
--- Carbohidratos g/h, líquido ml/h, sodio mg/h y una nota libre por sesión
+-- PLAN: carbohidratos g/h, líquido ml/h, sodio mg/h y una nota libre por sesión
 -- prescrita. LO EDITAN LOS DOS: el atleta de la sesión y su coach vinculado.
+-- REAL (tomado_*, estomago): lo que el atleta tomó de verdad y qué tal le sentó
+-- (1 mal · 2 regular · 3 bien). La UI solo deja escribirlo al atleta; Jon lo ve
+-- junto al plan.
 --
 -- Tabla propia (no columnas en coach_sessions) porque el atleta NO tiene
 -- escritura en coach_sessions (RLS) y así sigue. Mismo patrón que
@@ -22,11 +25,17 @@ CREATE TABLE IF NOT EXISTS public.sesion_nutricion (
   liquido_ml_h      smallint CHECK (liquido_ml_h IS NULL OR liquido_ml_h BETWEEN 0 AND 1500),
   sodio_mg_h        smallint CHECK (sodio_mg_h IS NULL OR sodio_mg_h BETWEEN 0 AND 2000),
   notas             text CHECK (notas IS NULL OR char_length(notas) <= 400),
+  tomado_carbohidratos_g_h smallint CHECK (tomado_carbohidratos_g_h IS NULL OR tomado_carbohidratos_g_h BETWEEN 0 AND 150),
+  tomado_liquido_ml_h      smallint CHECK (tomado_liquido_ml_h IS NULL OR tomado_liquido_ml_h BETWEEN 0 AND 1500),
+  estomago                 smallint CHECK (estomago IS NULL OR estomago BETWEEN 1 AND 3),
+  tomado_notas             text CHECK (tomado_notas IS NULL OR char_length(tomado_notas) <= 300),
   actualizado_por   uuid DEFAULT auth.uid(),
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
   CHECK (carbohidratos_g_h IS NOT NULL OR liquido_ml_h IS NOT NULL OR sodio_mg_h IS NOT NULL
-         OR char_length(coalesce(notas, '')) > 0)
+         OR char_length(coalesce(notas, '')) > 0
+         OR tomado_carbohidratos_g_h IS NOT NULL OR tomado_liquido_ml_h IS NOT NULL OR estomago IS NOT NULL
+         OR char_length(coalesce(tomado_notas, '')) > 0)
 );
 CREATE INDEX IF NOT EXISTS sesion_nutricion_athlete_idx ON public.sesion_nutricion (athlete_id);
 

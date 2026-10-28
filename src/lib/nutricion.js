@@ -123,3 +123,89 @@ export function totalesNutricion(n, minutos) {
   if (!g && !ml) return null
   return { gramos: g, mililitros: ml }
 }
+
+// ── Lo que TOMÓ el atleta (fase 2) ─────────────────────────────────────────
+// Lo apunta el atleta después (o el mismo día): cuánto tomó de verdad y qué tal
+// le sentó. Sirve para ensayar la estrategia de carrera: Jon ve plan vs real.
+
+export const LIMITE_NOTAS_TOMADO = 300
+
+export const ESTOMAGO = [
+  { value: 1, label: 'Mal' },
+  { value: 2, label: 'Regular' },
+  { value: 3, label: 'Bien' },
+]
+
+export function etiquetaEstomago(v) {
+  return ESTOMAGO.find((e) => e.value === v)?.label || ''
+}
+
+export const CAMPOS_PLAN = ['carbohidratos_g_h', 'liquido_ml_h', 'sodio_mg_h', 'notas']
+export const CAMPOS_TOMADO = ['tomado_carbohidratos_g_h', 'tomado_liquido_ml_h', 'estomago', 'tomado_notas']
+
+const tieneAlgo = (n, campos) => !!n && campos.some((c) => n[c] != null && n[c] !== '')
+export const tienePlan = (n) => tieneAlgo(n, CAMPOS_PLAN)
+export const tieneTomado = (n) => tieneAlgo(n, CAMPOS_TOMADO)
+
+// Formulario → campos tomado_* o null si no dice nada
+export function normalizarTomado(form) {
+  const notas = typeof form?.tomado_notas === 'string' ? form.tomado_notas.trim().slice(0, LIMITE_NOTAS_TOMADO) : ''
+  const est = Number(form?.estomago)
+  const fila = {
+    tomado_carbohidratos_g_h: cantidad(form?.tomado_carbohidratos_g_h, LIMITES.carbohidratos_g_h),
+    tomado_liquido_ml_h: cantidad(form?.tomado_liquido_ml_h, LIMITES.liquido_ml_h),
+    estomago: Number.isInteger(est) && est >= 1 && est <= 3 ? est : null,
+    tomado_notas: notas || null,
+  }
+  const vacio = fila.tomado_carbohidratos_g_h == null && fila.tomado_liquido_ml_h == null && fila.estomago == null && !fila.tomado_notas
+  return vacio ? null : fila
+}
+
+// "50 de 60 g/h · 500 ml/h · Estómago regular" (con el plan al lado si lo hay)
+export function resumenTomado(n) {
+  if (!tieneTomado(n)) return ''
+  const partes = []
+  const c = n.tomado_carbohidratos_g_h
+  if (c != null) {
+    partes.push(n.carbohidratos_g_h != null && n.carbohidratos_g_h > 0 ? `${c} de ${n.carbohidratos_g_h} g/h` : `${c} g/h`)
+  }
+  const l = n.tomado_liquido_ml_h
+  if (l != null) {
+    partes.push(n.liquido_ml_h ? `${l} de ${n.liquido_ml_h} ml/h` : `${l} ml/h`)
+  }
+  if (n.estomago) partes.push(`Estómago ${etiquetaEstomago(n.estomago).toLowerCase()}`)
+  return partes.join(' · ')
+}
+
+// ¿Merece aviso para el coach? Estómago mal o hidratos < 70 % de lo planificado.
+export function avisoTomado(n) {
+  if (!tieneTomado(n)) return null
+  if (n.estomago === 1) return 'Le sentó mal'
+  const plan = n.carbohidratos_g_h
+  const real = n.tomado_carbohidratos_g_h
+  if (plan > 0 && real != null && real < plan * 0.7) return 'Comió bastante menos de lo previsto'
+  return null
+}
+
+// ── Formulario del plan (compartido por la tarjeta y el creador de sesiones) ──
+export const formPlanDe = (n) => ({
+  carbohidratos_g_h: n?.carbohidratos_g_h ?? '',
+  liquido_ml_h: n?.liquido_ml_h ?? '',
+  sodio_mg_h: n?.sodio_mg_h ?? '',
+  notas: n?.notas ?? '',
+})
+
+// Valores sugeridos → formulario del plan (conserva las notas)
+export const aplicarSugerencia = (form, s) => ({
+  ...form,
+  carbohidratos_g_h: s.carbohidratos_g_h,
+  liquido_ml_h: s.liquido_ml_h || '',
+  sodio_mg_h: s.sodio_mg_h || '',
+})
+
+// 135 → "2 h 15" · 50 → "50 min"
+export function formatDuracion(min) {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return h ? `${h} h${m ? ` ${String(m).padStart(2, '0')}` : ''}` : `${m} min`
+}
