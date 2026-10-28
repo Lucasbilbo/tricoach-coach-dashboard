@@ -107,3 +107,27 @@ export function tssPrevisto(sesion) {
   const min = Number(sesion.duracion_min)
   return min > 0 ? Math.round((min / 60) * TSS_POR_HORA_SIN_FC[disciplina]) : null
 }
+
+// Duración PREVISTA (segundos) de la sesión a partir de sus pasos (los pasos
+// por distancia con su ritmo o el de referencia). Si no hay pasos medibles, la
+// duracion_min guardada. null si no se puede saber. La usa nutricion.js.
+export function segundosPrevistos(sesion) {
+  if (!sesion) return null
+  const disciplina = sesion.disciplina
+  const bloques = sesion.workout_steps?.bloques || []
+  let total = 0
+  let pasos = 0
+  for (const b of bloques) {
+    const lista = b.tipo === 'repeat' ? b.pasos || [] : [b]
+    const veces = b.tipo === 'repeat' ? Number(b.repeticiones) || 0 : 1
+    for (const p of lista) {
+      const s = segundosPaso(p, disciplina)
+      if (s == null) continue
+      total += s * veces
+      pasos++
+    }
+  }
+  if (pasos > 0) return Math.round(total)
+  const min = Number(sesion.duracion_min)
+  return min > 0 ? min * 60 : null
+}
