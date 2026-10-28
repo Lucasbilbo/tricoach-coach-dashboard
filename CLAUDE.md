@@ -181,7 +181,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
   se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
   sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
-  pasos por distancia).
+  pasos por distancia). Para agenda, avisos y emparejar actividades se usa
+  `duracionPrevista` (tssPrevisto.js): la real o la ESTIMADA con los ritmos,
+  que la UI marca con "~" y borde discontinuo (decidido 2026-10-29; ±10 %
+  frente al tiempo total de Strava). No se guarda: se calcula al pintar.
+- Avisos: si el reloj queda con el entreno antiguo (`anterior_retirado:false`
+  de send-to-intervals / move-session) sale un aviso ámbar (`ui/Aviso`,
+  `lib/avisosReloj.js`). El creador llama a `onSaved({ cerrar })`: con
+  `cerrar:false` (guardado a medias) el padre refresca pero no lo cierra.
 - Reenvío: **primero crea** el evento nuevo y **después borra** el anterior
   (antes al revés: un fallo intermedio dejaba al atleta sin entreno).
 - Borrar una sesión pasa por `delete-session.js`, que quita también el evento
