@@ -242,6 +242,23 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `invalidarDatosAtleta` y al editar la temporada). Tests: `test/feedback`,
   `cumplimiento`, `tss-previsto`, `proyeccion`.
 
+### Nutrición por sesión (2026-10-28, migración 017 PENDIENTE)
+- Tabla `sesion_nutricion` (PK `session_id`): carbohidratos g/h, líquido ml/h,
+  sodio mg/h y notas ("gel en el min 40"). **La editan los dos**: el atleta de
+  la sesión y su coach vinculado (RLS; `athlete_id` debe ser el de la sesión;
+  `actualizado_por` = quien guarda → "Editado por …").
+- Sugerencia automática por REGLAS (sin IA) en `src/lib/nutricion.js`
+  (`sugerirNutricion`): duración prevista (`segundosPrevistos` en
+  tssPrevisto.js, también pasos por distancia) + intensidad (IF desde el TSS
+  previsto, alta ≥ 0,75). <60 min nada; 75–150 min 45/60 g/h; >150 min 70/90
+  g/h (carrera tope 60); sodio desde 90 min; piscina sin hidratos; fuerza agua.
+- UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
+  "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
+- **NO va al reloj** a propósito: la descripción del evento es el texto del
+  workout y un texto libre ahí puede romper el parseo / congelar el reloj
+  (misma regla que las notas del entrenador).
+- Tests: `test/nutricion.test.js`.
+
 ## Estructura
 
 - `src/components/` — Login, Dashboard (panel del coach), AthleteView (atleta,
@@ -266,7 +283,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
-- `supabase/migrations/` — 001–016 (+ ficheros `PENDIENTE_*` que NO se aplican
+- `supabase/migrations/` — 001–016 (+ `PENDIENTE_017_sesion_nutricion.sql`) (+ ficheros `PENDIENTE_*` que NO se aplican
   solos). 016 aplicada 2026-10-23 (desde el SQL Editor; verificada).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
