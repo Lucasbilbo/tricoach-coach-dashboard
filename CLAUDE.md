@@ -254,6 +254,23 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   g/h (carrera tope 60); sodio desde 90 min; piscina sin hidratos; fuerza agua.
 - UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
   "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
+- **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
+  `estomago` (1 mal · 2 regular · 3 bien), `tomado_notas`. Lo apunta el atleta
+  desde el día de la sesión (Próximos si es hoy; Hechos y pendientes después);
+  en pasadas el atleta ve el plan pero no lo edita. Jon lo ve con el plan al
+  lado ("35 de 60 g/h") y aviso rojo si le sentó mal o comió < 70 % de lo
+  previsto (`avisoTomado`).
+- Guardados PARCIALES: `guardarNutricion` hace upsert solo de las columnas que
+  manda (plan o tomado), así uno no pisa al otro. `quitarParte` pone a null una
+  parte o borra la fila si no queda nada (la BD no admite filas vacías).
+- **Creador de sesiones**: sección "Nutrición" plegable en `WorkoutBuilder`
+  (`CamposPlanNutricion`, sugerencia en vivo con los bloques del formulario).
+  Se guarda DESPUÉS de la sesión (necesita su id); si falla, la sesión queda
+  guardada y se avisa. Duplicar copia también el plan (`_nutricionDe`). La
+  sección solo aparece si la tabla existe (`nutricionDisponible`).
+- RLS verificada en un Postgres local (2026-10-28): coach y atleta escriben;
+  extraño ni ve ni escribe; no se puede colgar una fila de la sesión de otro ni
+  falsificar `actualizado_por`; anon sin acceso.
 - **NO va al reloj** a propósito: la descripción del evento es el texto del
   workout y un texto libre ahí puede romper el parseo / congelar el reloj
   (misma regla que las notas del entrenador).
