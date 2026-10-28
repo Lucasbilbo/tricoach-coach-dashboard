@@ -77,6 +77,9 @@ const textoBtn = {
 }
 
 const PAGINA_PASADAS = 10
+// Próximos: con la planificación a 2–3 semanas caben 15–20; se pagina igual
+// (antes .limit(10) sin más: el resto no salía en la lista. Auditoría B3).
+const PAGINA_PROXIMAS = 10
 
 // Actividades de Strava que cubren las sesiones pasadas mostradas (tope 26
 // semanas). Devuelve el nuevo estado, o null si no hace falta pedir más o si no
@@ -136,6 +139,7 @@ export default function AthleteHome() {
   const [erroresGarmin, setErroresGarmin] = useState({})
   // Historial paginado + estado Hecha/Pendiente (misma lógica que ve el coach)
   const [hayMasPasadas, setHayMasPasadas] = useState(false)
+  const [hayMasProximas, setHayMasProximas] = useState(false)
   const [cargandoMas, setCargandoMas] = useState(false)
   const [estadoActs, setEstadoActs] = useState({ actividades: null, desde: null, semanas: 0 })
   // Cómo le fue cada sesión (sesion_feedback): Map<session_id, feedback>
@@ -179,7 +183,8 @@ export default function AthleteHome() {
           .gte('fecha', hoy)
           .order('fecha', { ascending: true })
           .order('hora_inicio_min', { ascending: true, nullsFirst: true })
-          .limit(10),
+          .order('id', { ascending: true }) // desempate estable para paginar
+          .range(0, PAGINA_PROXIMAS),
         supabase
           .from('coach_sessions')
           .select('*')
@@ -203,7 +208,10 @@ export default function AthleteHome() {
         setPasadas([])
       } else {
         setErrorSesiones(false)
-        setProximas(proximasRes.data || [])
+        // Se pide una de más para saber si hay otra página
+        const proximasLista = proximasRes.data || []
+        setHayMasProximas(proximasLista.length > PAGINA_PROXIMAS)
+        setProximas(proximasLista.slice(0, PAGINA_PROXIMAS))
         // Se pide una de más para saber si hay otra página
         const lista = pasadasRes.data || []
         setHayMasPasadas(lista.length > PAGINA_PASADAS)
@@ -254,6 +262,26 @@ export default function AthleteHome() {
     cargarStrava()
     return () => { activo = false }
   }, [userId, weeks, activeTab])
+
+  async function cargarMasProximas() {
+    if (!userId || cargandoMas) return
+    setCargandoMas(true)
+    const desde = proximas.length
+    const { data, error } = await supabase
+      .from('coach_sessions')
+      .select('*')
+      .eq('athlete_id', userId)
+      .gte('fecha', hoyMadrid())
+      .order('fecha', { ascending: true })
+      .order('hora_inicio_min', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
+      .range(desde, desde + PAGINA_PROXIMAS)
+    setCargandoMas(false)
+    if (error) return
+    setHayMasProximas((data || []).length > PAGINA_PROXIMAS)
+    const vistas = new Set(proximas.map((x) => x.id))
+    setProximas([...proximas, ...(data || []).slice(0, PAGINA_PROXIMAS).filter((x) => !vistas.has(x.id))])
+  }
 
   async function cargarMasPasadas() {
     if (!userId || cargandoMas) return
@@ -492,6 +520,11 @@ export default function AthleteHome() {
                     )
                   })}
                 </div>
+              )}
+              {hayMasProximas && !errorSesiones && (
+                <button onClick={cargarMasProximas} disabled={cargandoMas} style={{ ...ghostButtonStyle, width: '100%', marginTop: 10, color: COLORS.textSecondary }}>
+                  {cargandoMas ? 'Cargando…' : 'Ver más entrenos'}
+                </button>
               )}
             </section>
 
