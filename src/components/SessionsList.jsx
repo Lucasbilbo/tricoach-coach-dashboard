@@ -22,6 +22,7 @@ import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import Cumplimiento from './Cumplimiento'
 import { calibrar, cargaSemana } from '../lib/proyeccion'
+import DuracionSesion from './DuracionSesion'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -355,7 +356,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 {formatFechaSesion(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
               </span>
               <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
-              {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+              <DuracionSesion sesion={sesion} />
               {sesion.movida_por === 'atleta' && (
                 <span title={sesion.movida_at ? `Movida el ${new Date(sesion.movida_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : undefined}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: COLORS.accent, fontSize: 12, fontWeight: 600 }}>

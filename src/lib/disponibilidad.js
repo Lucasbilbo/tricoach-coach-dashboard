@@ -11,6 +11,7 @@
 //      sustituyen a la plantilla de ESA fecha entera.
 //  - Si el atleta no ha configurado nada, no hay avisos ('sin_datos').
 import { diaSemanaISO, sumarDias } from './chartUtils'
+import { duracionPrevista } from './tssPrevisto'
 
 export const DISCIPLINAS_DISPONIBILIDAD = ['swim', 'bike', 'run', 'strength']
 export const MIN_POR_SLOT = 30
@@ -200,17 +201,23 @@ export function filasExcepcion({ fecha, tipo, tramos, nota }) {
 
 // ── Presentación para el coach ──────────────────────────────────────────────
 
-// Minutos prescritos en una lista de sesiones. Las sesiones por distancia no
-// traen duración (duracion_min null): se cuentan aparte, no se estiman.
+// Minutos prescritos en una lista de sesiones. Las que van por distancia
+// (duracion_min null) suman su duración ESTIMADA (duracionPrevista) y se
+// cuentan en `estimadas` para marcar el total con "~"; solo las que no se
+// pueden estimar van a `sinDuracion`. (Antes no se estimaban: ~3/4 de las
+// sesiones no contaban. Decidido con Lucas 2026-10-29.)
 export function minutosPlanificados(sesiones) {
   let minutos = 0
   let sinDuracion = 0
+  let estimadas = 0
   for (const s of lista(sesiones)) {
     if (!esFila(s)) continue
-    if (typeof s.duracion_min === 'number' && Number.isFinite(s.duracion_min) && s.duracion_min > 0) minutos += s.duracion_min
-    else sinDuracion += 1
+    const dp = duracionPrevista(s)
+    if (!dp) { sinDuracion += 1; continue }
+    minutos += dp.min
+    if (dp.estimada) estimadas += 1
   }
-  return { minutos, sinDuracion }
+  return { minutos, sinDuracion, estimadas }
 }
 
 const NOMBRES = { swim: 'natación', bike: 'ciclismo', run: 'carrera', strength: 'fuerza' }

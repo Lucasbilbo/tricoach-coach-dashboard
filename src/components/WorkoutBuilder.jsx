@@ -17,6 +17,7 @@ import Icon from './ui/Icon'
 import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import { CamposPlanNutricion } from './NutricionSesion'
+import { duracionPrevista } from '../lib/tssPrevisto'
 import { aplicarSugerencia, formPlanDe, normalizarNutricion, resumenNutricion, sugerirNutricion, tienePlan } from '../lib/nutricion'
 import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
 
@@ -94,16 +95,23 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
 
   if (!isOpen) return null
 
+  // Duración para los avisos y las horas que encajan: la de los bloques por
+  // tiempo o, si van por distancia, la estimada con los ritmos (antes null: el
+  // aviso no saltaba justo en las sesiones largas por km).
+  const duracionAviso = duracionTotalMin(form.bloques)
+    ?? (form.disciplina ? duracionPrevista({ disciplina: form.disciplina, workout_steps: { bloques: form.bloques }, duracion_min: Number(form.duracionManual) || null })?.min : null)
+    ?? null
+
   // Aviso informativo de disponibilidad del atleta (nunca bloquea el guardado)
   const avisoDisponibilidad = form.fecha && form.disciplina
-    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), form.hora ?? undefined), form.disciplina)
+    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionAviso ?? undefined, form.hora ?? undefined), form.disciplina)
     : null
 
   // Horas de inicio que encajan en las franjas del atleta para esa disciplina y
   // día (cada 30 min). La hora es opcional: sin hora la sesión va a la fila
   // "sin hora" de la agenda y al reloj sin hora concreta.
   const horasSugeridas = form.fecha && form.disciplina
-    ? horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), ahora)
+    ? horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionAviso, ahora)
     : []
   const chipsHora = form.hora != null && !horasSugeridas.includes(form.hora)
     ? [...horasSugeridas, form.hora].sort((a, b) => a - b)
@@ -626,7 +634,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               </div>
               {form.disciplina && horasSugeridas.length === 0 && (
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
-                  {form.fecha === ahora.fecha && horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), null).length > 0
+                  {form.fecha === ahora.fecha && horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionAviso, null).length > 0
                     ? 'Las franjas de hoy para esto ya han pasado.'
                     : 'El atleta no tiene franjas para esto ese día.'}
                 </p>
@@ -805,9 +813,13 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           {/* Preview Intervals */}
           <div style={separadorSection}>
             Así llega al reloj
-            {duracionFinal != null && (
+            {duracionFinal != null ? (
               <span style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textPrimary }}>
                 · {duracionFinal} min
+              </span>
+            ) : duracionAviso != null && (
+              <span title="Estimada con los ritmos de cada paso" style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textSecondary }}>
+                · ~{duracionAviso} min
               </span>
             )}
           </div>

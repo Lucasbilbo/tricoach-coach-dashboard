@@ -23,6 +23,7 @@ import { FeedbackEditor } from '../components/FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
+import DuracionSesion from '../components/DuracionSesion'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -418,7 +419,7 @@ export default function AthleteHome() {
                             {formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
                           </span>
                           <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
-                          {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+                          <DuracionSesion sesion={sesion} />
                         </div>
                         <h3 style={{ margin: '6px 0 0', fontSize: 17, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
                         {sesion.notas && (

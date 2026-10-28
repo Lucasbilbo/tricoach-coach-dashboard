@@ -170,9 +170,12 @@ test('filasExcepcion: día libre, tramos y entradas inválidas', () => {
 })
 
 test('minutosPlanificados', () => {
-  assert.deepEqual(minutosPlanificados([{ duracion_min: 60 }, { duracion_min: 45 }, { duracion_min: null }, {}]), { minutos: 105, sinDuracion: 2 })
-  assert.deepEqual(minutosPlanificados(null), { minutos: 0, sinDuracion: 0 })
-  assert.deepEqual(minutosPlanificados([null, { duracion_min: 0 }]), { minutos: 0, sinDuracion: 1 })
+  assert.deepEqual(minutosPlanificados([{ duracion_min: 60 }, { duracion_min: 45 }, { duracion_min: null }, {}]), { minutos: 105, sinDuracion: 2, estimadas: 0 })
+  assert.deepEqual(minutosPlanificados(null), { minutos: 0, sinDuracion: 0, estimadas: 0 })
+  assert.deepEqual(minutosPlanificados([null, { duracion_min: 0 }]), { minutos: 0, sinDuracion: 1, estimadas: 0 })
+  // Por distancia: se estima (10 km de carrera a 5:45/km ≈ 58 min) y se marca
+  const porDistancia = { disciplina: 'run', duracion_min: null, workout_steps: { bloques: [{ tipo: 'step', cantidad: 10, unidad: 'km' }] } }
+  assert.deepEqual(minutosPlanificados([{ duracion_min: 30 }, porDistancia]), { minutos: 88, sinDuracion: 0, estimadas: 1 })
 })
 
 test('textoAviso: frases por motivo y silencio si no hay aviso', () => {
