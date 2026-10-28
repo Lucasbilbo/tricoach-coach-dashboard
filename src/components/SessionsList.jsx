@@ -16,6 +16,8 @@ import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
+import { cargarNutricion } from '../lib/nutricionApi'
+import NutricionSesion from './NutricionSesion'
 import Cumplimiento from './Cumplimiento'
 import { calibrar, cargaSemana } from '../lib/proyeccion'
 
@@ -155,6 +157,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const disponibilidad = useDisponibilidad(athleteId)
   // Cómo le fue al atleta cada sesión (lo escribe él; aquí solo se lee)
   const [feedbacks, setFeedbacks] = useState(() => new Map())
+  // Plan de nutrición por sesión (lo editan coach y atleta). disponible=false si
+  // la tabla aún no existe (migración 017): la sección no se muestra.
+  const [nutricion, setNutricion] = useState(() => ({ mapa: new Map(), disponible: false }))
+
+  function actualizarNutricion(id, n) {
+    setNutricion((prev) => {
+      const mapa = new Map(prev.mapa)
+      if (n) mapa.set(id, n)
+      else mapa.delete(id)
+      return { ...prev, mapa }
+    })
+  }
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -164,7 +178,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   // cambiar de atleta: así no pisa la lista del atleta nuevo.
   const cargarSesiones = useCallback(async (senal) => {
     try {
-      const [{ data, error: queryError }, mapaFeedback] = await Promise.all([
+      const [{ data, error: queryError }, mapaFeedback, datosNutricion] = await Promise.all([
         supabase
           .from('coach_sessions')
           .select('*')
@@ -173,9 +187,11 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           .order('fecha', { ascending: true })
           .order('hora_inicio_min', { ascending: true, nullsFirst: true }),
         cargarFeedback(athleteId),
+        cargarNutricion(athleteId),
       ])
       if (senal && !senal.activo) return
       setFeedbacks(mapaFeedback)
+      setNutricion(datosNutricion)
 
       if (queryError) {
         setError('No se pudieron cargar las sesiones')
@@ -376,6 +392,17 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           <FeedbackLinea feedback={feedbacks.get(sesion.id)} nombre={atletaNombre} />
         </div>
         <FeedbackTexto feedback={feedbacks.get(sesion.id)} />
+        {nutricion.disponible && (
+          <NutricionSesion
+            key={`${sesion.id}-${nutricion.mapa.get(sesion.id)?.updated_at || ''}`}
+            sesion={sesion}
+            uid={coachId}
+            quien="coach"
+            otroNombre={atletaNombre}
+            inicial={nutricion.mapa.get(sesion.id)}
+            onCambio={actualizarNutricion}
+          />
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>

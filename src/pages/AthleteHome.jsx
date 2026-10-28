@@ -20,6 +20,8 @@ import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { resumenFeedback } from '../lib/feedback'
 import { FeedbackEditor } from '../components/FeedbackSesion'
+import { cargarNutricion } from '../lib/nutricionApi'
+import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
@@ -138,6 +140,8 @@ export default function AthleteHome() {
   // Cómo le fue cada sesión (sesion_feedback): Map<session_id, feedback>
   const [feedbacks, setFeedbacks] = useState(() => new Map())
   const [feedbackAbierto, setFeedbackAbierto] = useState({})
+  // Plan de nutrición por sesión (sesion_nutricion; lo editan atleta y coach)
+  const [nutricion, setNutricion] = useState(() => ({ mapa: new Map(), disponible: false }))
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
@@ -164,7 +168,7 @@ export default function AthleteHome() {
       setCargandoSesiones(true)
 
       // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
-      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback] = await Promise.all([
+      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback, datosNutricion] = await Promise.all([
         supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
         misConexiones(),
         supabase
@@ -183,11 +187,13 @@ export default function AthleteHome() {
           .order('fecha', { ascending: false })
           .range(0, PAGINA_PASADAS),
         cargarFeedback(uid),
+        cargarNutricion(uid),
       ])
 
       if (!activo) return
       setPerfil({ ...(perfilRes.data || {}), conexiones })
       setFeedbacks(mapaFeedback)
+      setNutricion(datosNutricion)
 
       // Distinguir un error de carga de un "no hay entrenamientos" legítimo (F4b)
       if (proximasRes.error || pasadasRes.error) {
@@ -271,6 +277,15 @@ export default function AthleteHome() {
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  function actualizarNutricion(id, n) {
+    setNutricion((prev) => {
+      const mapa = new Map(prev.mapa)
+      if (n) mapa.set(id, n)
+      else mapa.delete(id)
+      return { ...prev, mapa }
+    })
   }
 
   function actualizarFeedback(id, fb) {
@@ -422,6 +437,17 @@ export default function AthleteHome() {
                             </button>
                           )}
                         </div>
+
+                        {nutricion.disponible && (
+                          <NutricionSesion
+                            key={`${sesion.id}-${nutricion.mapa.get(sesion.id)?.updated_at || ''}`}
+                            sesion={sesion}
+                            uid={userId}
+                            quien="atleta"
+                            inicial={nutricion.mapa.get(sesion.id)}
+                            onCambio={actualizarNutricion}
+                          />
+                        )}
 
                         {relativo === 'Hoy' && (
                           <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
