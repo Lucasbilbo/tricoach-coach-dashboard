@@ -52,12 +52,16 @@ function cargarHandler({ paginas, fallaPagina = null, limite = true }) {
   return { handler: require(fn).handler, llamadas, buckets }
 }
 
+const BASE_ACTS = Date.now() - 86400e3
+
 function acts(n, desdeId) {
   return Array.from({ length: n }, (_, i) => ({
     id: desdeId + i,
     type: 'Run',
     sport_type: 'Run',
-    start_date: new Date(Date.UTC(2026, 8, 1) + (desdeId + i) * 3600e3).toISOString(),
+    // Relativas a hoy (antes fijas en sept. 2026: con weeks:8 quedaban fuera de la
+    // ventana según pasaba el tiempo y los tests de splits fallaban solos)
+    start_date: new Date(BASE_ACTS - (desdeId + i) * 3600e3).toISOString(),
     moving_time: 1800,
     distance: 5000,
     average_heartrate: 140,
