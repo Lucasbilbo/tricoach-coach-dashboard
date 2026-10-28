@@ -40,3 +40,32 @@ test('semanasNecesarias cubre la sesión pasada más antigua, con tope', () => {
   assert.equal(semanasNecesarias(['2026-10-05'], '2026-10-01'), null)
   assert.equal(fechaHaceSemanas('2026-10-01', 4), '2026-09-03')
 })
+
+test('dobles por distancia: cada sesión coge la actividad de distancia más parecida (B2)', () => {
+  const km = (n) => ({ bloques: [{ tipo: 'step', cantidad: n, unidad: 'km' }] })
+  const s = [
+    { id: 'series', fecha: '2026-10-20', disciplina: 'run', duracion_min: null, workout_steps: km(8) },
+    { id: 'largo', fecha: '2026-10-20', disciplina: 'run', duracion_min: null, workout_steps: km(18) },
+  ]
+  const a = [
+    { id: 'manana', fecha: '2026-10-20', disciplina: 'run', duracion_min: 95, distancia_km: 17.6 },
+    { id: 'tarde', fecha: '2026-10-20', disciplina: 'run', duracion_min: 42, distancia_km: 8.1 },
+  ]
+  const m = asignarActividades(s, a)
+  assert.equal(m.get('series').id, 'tarde')
+  assert.equal(m.get('largo').id, 'manana')
+})
+
+test('sesión sin referencia se queda con lo que sobra, después de las que sí la tienen', () => {
+  const s = [
+    { id: 'libre', fecha: '2026-10-20', disciplina: 'strength', duracion_min: null, workout_steps: { adjunto: { texto: 'Hyrox' } } },
+    { id: 'medida', fecha: '2026-10-20', disciplina: 'strength', duracion_min: 30 },
+  ]
+  const a = [
+    { id: 'larga', fecha: '2026-10-20', disciplina: 'strength', duracion_min: 70 },
+    { id: 'corta', fecha: '2026-10-20', disciplina: 'strength', duracion_min: 32 },
+  ]
+  const m = asignarActividades(s, a)
+  assert.equal(m.get('medida').id, 'corta')
+  assert.equal(m.get('libre').id, 'larga')
+})
