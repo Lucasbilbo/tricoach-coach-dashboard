@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import Icon from './ui/Icon'
-import { COLORS, inputStyle } from '../lib/theme'
+import { COLORS, FONTS, inputStyle } from '../lib/theme'
 import { formatFechaCorta, sumarDias } from '../lib/chartUtils'
 
-const VERDE = '#2FBFAF'
-const ROJO = '#E85D5D'
+// Sin verde/rojo: eran el teal de natación y el coral de carrera, y además más
+// km no es "bueno" ni menos "malo" (una semana de descarga baja a propósito).
+// La flecha dice el sentido; el color no juzga.
 
 const FILAS = [
   { clave: 'km_run', label: 'Km carrera' },
@@ -12,7 +13,7 @@ const FILAS = [
   { clave: 'km_swim', label: 'Km natación' },
   { clave: 'horas_totales', label: 'Horas totales' },
   { clave: 'n_sesiones', label: 'Nº sesiones' },
-  { clave: 'tss_total', label: 'TSS total', neutro: true },
+  { clave: 'tss_total', label: 'TSS total' },
 ]
 
 // 'YYYY-MM-DD' (lunes) → '2 Jun – 8 Jun'
@@ -20,7 +21,7 @@ function etiquetaSemana(lunes) {
   return `${formatFechaCorta(lunes)} – ${formatFechaCorta(sumarDias(lunes, 6))}`
 }
 
-function Diferencia({ a, b, neutro }) {
+function Diferencia({ a, b }) {
   if (a == null || b == null) {
     return <span style={{ color: COLORS.textSecondary }}>—</span>
   }
@@ -28,10 +29,9 @@ function Diferencia({ a, b, neutro }) {
   if (delta === 0) {
     return <span style={{ color: COLORS.textSecondary }}>=</span>
   }
-  const color = neutro ? COLORS.textSecondary : delta > 0 ? VERDE : ROJO
   const flecha = delta > 0 ? '▲' : '▼'
   return (
-    <span style={{ color, fontWeight: 600 }}>
+    <span style={{ color: COLORS.textPrimary, fontWeight: 600, fontFamily: FONTS.mono }}>
       {flecha} {Math.abs(delta)}
     </span>
   )
@@ -68,7 +68,7 @@ export default function WeekCompare({ semanas, onClose }) {
         boxSizing: 'border-box',
         overflowY: 'auto',
         zIndex: 90,
-        fontFamily: "'Archivo', sans-serif",
+        fontFamily: FONTS.sans,
         boxShadow: '-8px 0 24px rgba(0,0,0,0.4)',
       }}
     >
@@ -165,14 +165,14 @@ export default function WeekCompare({ semanas, onClose }) {
                 return (
                   <tr key={fila.clave}>
                     <td style={{ ...celdaStyle, color: COLORS.textSecondary }}>{fila.label}</td>
-                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary, fontWeight: 600 }}>
+                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary, fontWeight: 600, fontFamily: FONTS.mono }}>
                       {valorA != null ? valorA : '—'}
                     </td>
-                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary }}>
+                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary, fontFamily: FONTS.mono }}>
                       {valorB != null ? valorB : '—'}
                     </td>
                     <td style={{ ...celdaStyle, textAlign: 'right' }}>
-                      <Diferencia a={valorA} b={valorB} neutro={fila.neutro} />
+                      <Diferencia a={valorA} b={valorB} />
                     </td>
                   </tr>
                 )
