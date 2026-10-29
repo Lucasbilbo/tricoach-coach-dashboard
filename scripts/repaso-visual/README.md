@@ -1,6 +1,6 @@
 # Repaso visual
 
-Recorre la app con **datos simulados** y saca capturas de 12 pantallas (coach y
+Recorre la app con **datos simulados** y saca capturas de 15 pantallas (coach y
 atleta) en móvil (375 px) y escritorio (1280 px). Sirve para revisar un lote de
 cambios antes de mergear sin tocar producción ni cuentas reales.
 
@@ -28,7 +28,11 @@ horizontal (si no, `SCROLL ancho>viewport` y/o los errores).
   nutrición (plan y lo tomado).
 
 Para añadir una pantalla, añade una entrada a `PANTALLAS` en `repaso.cjs`. Los
-pasos posibles son `tab:<nombre>`, `nutricion`, `historial` y `editar`.
+pasos posibles son `tab:<nombre>`, `semanas:<4|8|12|24>`, `nutricion`,
+`historial`, `editar` y `actividad` (abre el detalle de la primera carrera).
+Opciones de una pantalla: `soloPantalla: true` captura solo el viewport (para
+modales fijos) y `esperado: /regex/` ignora los errores de consola que la
+pantalla provoca a propósito (p. ej. el 409 de una atleta sin Strava).
 
 Limitaciones: no prueba el envío real a Intervals ni Strava, y el arrastre en la
 agenda no se simula.
