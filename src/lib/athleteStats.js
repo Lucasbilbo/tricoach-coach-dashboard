@@ -137,6 +137,7 @@ export function buildTransitionColumns(actividades, semanas) {
     const h = horas[s.semana] || {}
     const total = totalPorSemana[i]
     const segments = DISCIPLINAS_ORDEN.filter((d) => (h[d] || 0) > 0).map((d) => ({
+      disciplina: d,
       color: DISCIPLINE_COLORS[d],
       pct: total > 0 ? Math.round(((h[d] || 0) / total) * 100) : 0,
     }))

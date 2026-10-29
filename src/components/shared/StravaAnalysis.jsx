@@ -243,7 +243,7 @@ export default function StravaAnalysis({
             gap={isMobile ? 6 : 14}
             maxBarWidth={isMobile ? null : 52}
             barRadius={isMobile ? 4 : 6}
-            showLegend={!isMobile}
+            showLegend
             showStatusLabel={!isMobile}
             dowFontSize={isMobile ? 10 : 11}
           />

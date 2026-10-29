@@ -1,4 +1,4 @@
-import { COLORS, FONTS, DISCIPLINE_COLORS } from '../../lib/theme'
+import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '../../lib/theme'
 
 // Línea de Transición — elemento de firma del sistema. Franja de barras apiladas
 // por columna (día o semana), cada una segmentada por disciplina, con 3 estados
@@ -11,11 +11,14 @@ import { COLORS, FONTS, DISCIPLINE_COLORS } from '../../lib/theme'
 // Es de presentación pura: recibe `columns` ya normalizadas (las construye
 // buildTransitionColumns en lib/athleteStats.js).
 
-const LEYENDA = [
-  { label: 'Natación', color: DISCIPLINE_COLORS.swim },
-  { label: 'Ciclismo', color: DISCIPLINE_COLORS.bike },
-  { label: 'Running', color: DISCIPLINE_COLORS.run },
-]
+// Leyenda con las disciplinas que de verdad salen en las barras (fuerza
+// incluida, que antes se pintaba en violeta sin explicar), con los nombres de
+// la app ("Carrera", no "Running").
+const ORDEN_LEYENDA = ['swim', 'bike', 'run', 'strength']
+function leyendaDe(columns) {
+  const hay = new Set(columns.flatMap((c) => c.segments.map((s) => s.disciplina).filter(Boolean)))
+  return ORDEN_LEYENDA.filter((d) => hay.has(d)).map((d) => ({ label: DISCIPLINE_LABELS[d], color: DISCIPLINE_COLORS[d] }))
+}
 
 export default function TransitionLine({
   columns = [],
@@ -33,7 +36,8 @@ export default function TransitionLine({
 }) {
   const transitionBar = animate ? 'height 180ms ease' : 'none'
   const transitionSeg = animate ? 'height 180ms ease, opacity 180ms ease' : 'none'
-  const mostrarHeader = !!titulo || showLegend
+  const leyenda = showLegend ? leyendaDe(columns) : []
+  const mostrarHeader = !!titulo || leyenda.length > 0
 
   return (
     <div style={bare ? undefined : { ...cardStyleLocal }}>
@@ -51,9 +55,9 @@ export default function TransitionLine({
           <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
             {titulo}
           </span>
-          {showLegend && (
-            <div style={{ display: 'flex', gap: 16 }}>
-              {LEYENDA.map((l) => (
+          {leyenda.length > 0 && (
+            <div style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap' }}>
+              {leyenda.map((l) => (
                 <span
                   key={l.label}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: COLORS.textSecondary }}
