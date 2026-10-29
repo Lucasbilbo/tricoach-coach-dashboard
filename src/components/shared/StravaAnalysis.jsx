@@ -217,6 +217,22 @@ export default function StravaAnalysis({
         ))}
       </div>
 
+      {/* Primero la carga: es la pregunta del coach (¿cómo va de forma y fatiga?) */}
+      {semanas.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 14 : 16, marginBottom: isMobile ? 14 : 24 }}>
+          <ChartCard title="Forma (CTL · ATL)" flush>
+            <Suspense fallback={<HuecoGrafico alto={240} />}>
+              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} proyeccion={proyeccion} />
+            </Suspense>
+          </ChartCard>
+          <ChartCard title="Carga semanal (TSS)" flush>
+            <Suspense fallback={<HuecoGrafico alto={240} />}>
+              <TSSChart semanas={semanas} />
+            </Suspense>
+          </ChartCard>
+        </div>
+      )}
+
       {/* Línea de Transición (volumen semanal segmentado por disciplina) */}
       {columnas.length > 0 && (
         <div style={{ marginBottom: isMobile ? 14 : 24 }}>
@@ -234,10 +250,8 @@ export default function StravaAnalysis({
         </div>
       )}
 
-      <PRsBlock records={records} weeks={weeks} />
-
       {/* Fila de 2 gráficos: zonas FC + progresión ritmo */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 14 : 16, marginBottom: isMobile ? 14 : 24 }}>
         {zonas.length > 0 && (
           <div style={cardStyle}>
             <div style={seccionLabel}>Tiempo en cada zona de pulso</div>
@@ -289,20 +303,7 @@ export default function StravaAnalysis({
         </ChartCard>
       )}
 
-      {semanas.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 14 }}>
-          <ChartCard title="Carga semanal (TSS)" flush>
-            <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <TSSChart semanas={semanas} />
-            </Suspense>
-          </ChartCard>
-          <ChartCard title="Forma (CTL · ATL)" flush>
-            <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} proyeccion={proyeccion} />
-            </Suspense>
-          </ChartCard>
-        </div>
-      )}
+      <PRsBlock records={records} weeks={weeks} />
 
       {/* Filtros + CSV */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '24px 0 10px' }}>
