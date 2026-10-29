@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid, sumarDias } from '../../lib/chartUtils'
 import { pedirDatosAtleta } from '../../lib/athleteData'
 import { useIsMobile } from '../../hooks/useIsMobile'
-import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle, metricNumberStyle } from '../../lib/theme'
+import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle, metricNumberStyle, railStyle } from '../../lib/theme'
 import { FILTROS_DISCIPLINA, descargarCsv } from '../../lib/activityFormat'
 import {
   computeResumenStats,
@@ -448,7 +448,6 @@ export default function StravaAnalysis({
           )}
 
           {actividadesVisibles.map((act, i) => {
-            const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
             return (
               <div
                 key={act.id || `${act.fecha}-${i}`}
@@ -463,6 +462,7 @@ export default function StravaAnalysis({
                   alignItems: 'center',
                   borderTop: `1px solid ${COLORS.cardBorder}`,
                   cursor: act.id ? 'pointer' : 'default',
+                  ...railStyle(act.disciplina),
                 }}
               >
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
@@ -488,18 +488,8 @@ export default function StravaAnalysis({
                 >
                   {tssTexto(act)}
                 </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color,
-                    border: `1px solid ${color}`,
-                    borderRadius: 20,
-                    padding: '3px 10px',
-                    textAlign: 'center',
-                    width: 'fit-content',
-                    fontFamily: FONTS.sans,
-                  }}
-                >
+                {/* Deporte en texto: el color ya va en el filo de la fila (sin pastillas) */}
+                <span style={{ fontSize: 13, color: act.disciplina === 'other' ? COLORS.textTertiary : COLORS.textSecondary, fontFamily: FONTS.sans }}>
                   {etiquetaActividad(act)}
                 </span>
               </div>
