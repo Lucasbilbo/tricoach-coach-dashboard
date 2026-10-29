@@ -10,6 +10,7 @@ import { buildIntervalsText } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle, chipStyle, chipDisciplinaStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
+import { nombrePorDefecto } from './workout/resumen'
 import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
@@ -267,7 +268,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       athlete_id: athleteId,
       fecha: form.fecha,
       disciplina: form.disciplina,
-      descripcion: form.nombre,
+      // Sin nombre escrito, el propuesto («Carrera · 6×3′ Z4»)
+      descripcion: form.nombre?.trim() || nombrePorDefecto(form.disciplina, form.bloques),
       notas: form.notas || null,
       duracion_min: duracionFinal,
       workout_steps: form.bloques.length > 0 || adjunto
@@ -328,7 +330,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   function validar() {
-    if (!form.fecha || !form.nombre?.trim()) return 'La fecha y el nombre son obligatorios'
+    if (!form.fecha) return 'Elige el día'
     const malos = ritmosInvalidos(form.bloques)
     if (malos.length) return `Ritmo mal escrito: ${malos.join(', ')}. Usa 5:00 o un rango 4:50-5:10`
     return null
@@ -702,12 +704,13 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
 
           {/* Nombre */}
           <div style={{ marginBottom: 14 }}>
-            <label style={sectionLabel}>Nombre del entrenamiento</label>
+            <label style={sectionLabel}>Nombre <span style={{ fontWeight: 400, color: COLORS.textTertiary }}>(opcional)</span></label>
+            {/* Opcional: si se deja vacío se guarda el propuesto (el placeholder) */}
             <input
               type="text"
               value={form.nombre}
               onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
-              placeholder="ej: Series umbrales piscina"
+              placeholder={nombrePorDefecto(form.disciplina, form.bloques)}
               style={{ ...inputStyle, width: '100%' }}
             />
           </div>
@@ -873,7 +876,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               marginBottom: 16,
             }}
           >
-            {preview || (adjunto ? `Fuerza · ${form.nombre?.trim() || 'Entrenamiento'}${duracionFinal ? ` · ${duracionFinal} min` : ''}
+            {preview || (adjunto ? `Fuerza · ${form.nombre?.trim() || nombrePorDefecto(form.disciplina, form.bloques)}${duracionFinal ? ` · ${duracionFinal} min` : ''}
 (el detalle lo ve en la app)` : '(sin bloques aún)')}
           </pre>
           {usaZonaNatacion(form.bloques, form.disciplina) && (
