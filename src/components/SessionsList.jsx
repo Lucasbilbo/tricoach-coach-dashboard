@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import WorkoutBuilder from './WorkoutBuilder'
@@ -95,7 +95,8 @@ const accionIconoStyle = {
 }
 
 // Ámbar: sesión que aún no está en el reloj.
-const COLOR_PENDIENTE = DISCIPLINE_COLORS.bike
+// Ámbar de aviso (el de la agenda), no el de bici: "sin enviar" no es una disciplina
+const COLOR_PENDIENTE = '#E8B84A'
 
 // "TSS 210 de ~320": real (violeta de carga) frente a lo previsto (estimación,
 // con "~"). Semanas futuras: solo lo previsto.
