@@ -51,7 +51,8 @@ function aplanar(bloques) {
   return out
 }
 
-function Perfil({ bloques, disciplina }) {
+// También lo usa el creador como vista previa de lo que verá el reloj.
+export function Perfil({ bloques, disciplina }) {
   const pasos = aplanar(bloques)
   const total = pasos.reduce((s, p) => s + pesoPaso(p, disciplina), 0)
   if (!total) return null

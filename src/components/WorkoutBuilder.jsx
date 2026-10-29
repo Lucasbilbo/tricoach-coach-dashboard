@@ -11,6 +11,7 @@ import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, r
 import { sectionLabel, separadorSection, addBtnStyle, chipStyle, chipDisciplinaStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import { nombrePorDefecto } from './workout/resumen'
+import { Perfil } from './WorkoutDetail'
 import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
@@ -68,8 +69,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // sesión (necesita su id). Solo si la tabla existe (migración 017).
   const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
   const [nutriSucio, setNutriSucio] = useState(false)
-  const [nutriAbierta, setNutriAbierta] = useState(() => tienePlan(nutricionExistente))
   const [nutriDisponible, setNutriDisponible] = useState(false)
+  // Notas y nutrición van en "Más opciones" (plegado salvo que ya tengan algo)
+  const [masAbierto, setMasAbierto] = useState(() => !!initForm(sessionExistente).notas || tienePlan(nutricionExistente))
+  // El texto exacto que llega al reloj, plegado (se ve el perfil de intensidad)
+  const [verTexto, setVerTexto] = useState(false)
   useEffect(() => {
     let activo = true
     if (isOpen) nutricionDisponible().then((ok) => activo && setNutriDisponible(ok))
@@ -97,7 +101,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setNutri(formPlanDe(nutricionExistente))
       // Al duplicar, el plan copiado hay que guardarlo en la sesión nueva
       setNutriSucio(!sessionExistente?.id && tienePlan(nutricionExistente))
-      setNutriAbierta(tienePlan(nutricionExistente))
+      setMasAbierto(!!f.notas || tienePlan(nutricionExistente))
+      setVerTexto(false)
       // Mostrar input si la fecha existente no está en los próximos 14 días
       setMostrarInputFecha(
         !!f.fecha && !DIAS_CHIPS.some((d) => d.value === f.fecha)
@@ -806,170 +811,192 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             ))}
           </div>
 
-          {/* Notas */}
-          <div style={separadorSection}>Notas para el atleta</div>
-          <textarea
-            value={form.notas}
-            onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
-            rows={3}
-            placeholder="Indicaciones técnicas, material extra..."
-            style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: 16 }}
-          />
-
-          {/* Nutrición (opcional): se ve en la app, no va al reloj */}
-          {nutriDisponible && form.disciplina !== 'other' && (
+          {/* Así llega al reloj: el perfil de intensidad (como lo dibuja el
+              reloj) y, si se quiere, el texto exacto. Antes el texto iba
+              siempre abierto en un bloque de código. */}
+          {(preview || adjunto) && (
             <div style={{ marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => setNutriAbierta((v) => !v)}
-                aria-expanded={nutriAbierta}
-                style={{ ...separadorSection, display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${COLORS.cardBorder}`, cursor: 'pointer', padding: '0 0 6px', textAlign: 'left', fontFamily: FONTS.sans }}
-              >
-                <Icon name="chevronDown" size={15} style={{ transform: nutriAbierta ? 'rotate(180deg)' : 'none' }} />
-                Nutrición
-                <span style={{ fontWeight: 400, fontSize: 12, color: COLORS.textTertiary }}>
-                  {nutriAbierta ? null : normalizarNutricion(nutri) ? <span style={{ fontFamily: FONTS.mono, color: COLORS.textSecondary }}>· {resumenNutricion(normalizarNutricion(nutri)) || 'con notas'}</span> : '(opcional)'}
-                </span>
+              <div style={separadorSection}>
+                Así llega al reloj
+                {duracionFinal != null ? (
+                  <span style={{ marginLeft: 8, fontFamily: FONTS.mono, color: COLORS.textPrimary }}>· {duracionFinal} min</span>
+                ) : duracionAviso != null && (
+                  <span title="Estimada con los ritmos de cada paso" style={{ marginLeft: 8, fontFamily: FONTS.mono, color: COLORS.textSecondary }}>· ~{duracionAviso} min</span>
+                )}
+              </div>
+              {form.bloques.length > 0 && <Perfil bloques={form.bloques} disciplina={form.disciplina} />}
+              <button type="button" onClick={() => setVerTexto((v) => !v)} aria-expanded={verTexto} style={{ background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', fontFamily: FONTS.sans, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="chevronDown" size={14} style={{ transform: verTexto ? 'rotate(180deg)' : 'none' }} />
+                {verTexto ? 'Ocultar el texto' : 'Ver el texto que recibe el reloj'}
               </button>
-              {nutriAbierta && (
-                <CamposPlanNutricion
-                  form={nutri}
-                  onCambiar={(campo, valor) => {
-                    setNutri((f) => ({ ...f, [campo]: valor }))
-                    setNutriSucio(true)
+              {verTexto && (
+                <pre
+                  style={{
+                    background: COLORS.background,
+                    border: `1px solid ${COLORS.cardBorder}`,
+                    borderRadius: 8,
+                    padding: 12,
+                    fontSize: 12,
+                    color: COLORS.textSecondary,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    fontFamily: FONTS.mono,
+                    margin: '8px 0 0',
                   }}
-                  sugerencia={sugerenciaNutri}
-                  onUsarSugerencia={() => {
-                    setNutri((f) => aplicarSugerencia(f, sugerenciaNutri))
-                    setNutriSucio(true)
-                  }}
-                />
+                >
+                  {preview || `Fuerza · ${form.nombre?.trim() || nombrePorDefecto(form.disciplina, form.bloques)}${duracionFinal ? ` · ${duracionFinal} min` : ''}
+(el detalle lo ve en la app)`}
+                </pre>
+              )}
+              {usaZonaNatacion(form.bloques, form.disciplina) && (
+                <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.45 }}>
+                  La zona de natación se manda como zona de ritmo: necesita el ritmo umbral de natación
+                  configurado en Intervals. Si el atleta no lo tiene, usa ritmo /100m.
+                </p>
               )}
             </div>
           )}
 
-          {/* Preview Intervals */}
-          <div style={separadorSection}>
-            Así llega al reloj
-            {duracionFinal != null ? (
-              <span style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textPrimary }}>
-                · {duracionFinal} min
-              </span>
-            ) : duracionAviso != null && (
-              <span title="Estimada con los ritmos de cada paso" style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textSecondary }}>
-                · ~{duracionAviso} min
-              </span>
+          {/* Más opciones: notas y nutrición. Plegado, salvo que ya tengan algo */}
+          <div style={{ marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={() => setMasAbierto((v) => !v)}
+              aria-expanded={masAbierto}
+              style={{ ...separadorSection, display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${COLORS.cardBorder}`, cursor: 'pointer', padding: '0 0 6px', textAlign: 'left', fontFamily: FONTS.sans }}
+            >
+              <Icon name="chevronDown" size={15} style={{ transform: masAbierto ? 'rotate(180deg)' : 'none' }} />
+              Más opciones
+              {!masAbierto && (
+                <span style={{ fontWeight: 400, fontSize: 12, color: COLORS.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  · {[form.notas?.trim() ? 'Notas' : null, normalizarNutricion(nutri) ? `Nutrición ${resumenNutricion(normalizarNutricion(nutri)) || 'con notas'}` : null].filter(Boolean).join(' · ') || 'notas y nutrición'}
+                </span>
+              )}
+            </button>
+            {masAbierto && (
+              <div style={{ paddingTop: 4 }}>
+                <label style={{ ...sectionLabel, marginTop: 4 }}>Notas para el atleta</label>
+                <textarea
+                  value={form.notas}
+                  onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
+                  rows={3}
+                  placeholder="Indicaciones técnicas, material extra..."
+                  style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: 16 }}
+                />
+                {/* Nutrición (opcional): se ve en la app, no va al reloj. Dentro de
+                    "Más opciones" ya no lleva su propio plegable (eran dos clics). */}
+                {nutriDisponible && form.disciplina !== 'other' && (
+                  <div style={{ marginBottom: 4 }}>
+                    <label style={sectionLabel}>Nutrición</label>
+                    <CamposPlanNutricion
+                      form={nutri}
+                      onCambiar={(campo, valor) => {
+                        setNutri((f) => ({ ...f, [campo]: valor }))
+                        setNutriSucio(true)
+                      }}
+                      sugerencia={sugerenciaNutri}
+                      onUsarSugerencia={() => {
+                        setNutri((f) => aplicarSugerencia(f, sugerenciaNutri))
+                        setNutriSucio(true)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
           </div>
-          <pre
-            style={{
-              background: '#0B0D12',
-              border: `1px solid ${COLORS.cardBorder}`,
-              borderRadius: 8,
-              padding: 12,
-              fontSize: 12,
-              color: COLORS.textSecondary,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: FONTS.mono,
-              minHeight: 80,
-              marginBottom: 16,
-            }}
-          >
-            {preview || (adjunto ? `Fuerza · ${form.nombre?.trim() || nombrePorDefecto(form.disciplina, form.bloques)}${duracionFinal ? ` · ${duracionFinal} min` : ''}
-(el detalle lo ve en la app)` : '(sin bloques aún)')}
-          </pre>
-          {usaZonaNatacion(form.bloques, form.disciplina) && (
-            <p style={{ margin: '-8px 0 16px', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.45 }}>
-              La zona de natación se manda como zona de ritmo: necesita el ritmo umbral de natación
-              configurado en Intervals. Si el atleta no lo tiene, usa ritmo /100m.
-            </p>
-          )}
 
-          {/* Mensajes de estado */}
-          {exitoGarmin && (
-            <div
-              style={{
-                background: 'rgba(47,191,175,0.1)',
-                border: '1px solid rgba(47,191,175,0.3)',
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 12,
-                fontSize: 13,
-                color: '#2FBFAF',
-              }}
-            >
-              Enviado al reloj de {atletaNombre || 'el atleta'}
-            </div>
-          )}
-
-          {errorIntervals && (
-            <div
-              style={{
-                background: 'rgba(232,93,93,0.1)',
-                border: '1px solid rgba(232,93,93,0.3)',
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 12,
-                fontSize: 13,
-                color: COLORS.error,
-              }}
-            >
-              <Icon name="alert" size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />
-              Este atleta no tiene Intervals.icu configurado. Comparte con él el link de configuración desde la sección Configuración Garmin.
-            </div>
-          )}
-
-          {avisoReloj && <Aviso style={{ marginBottom: 12 }}>{avisoReloj}</Aviso>}
-
-          {error && !errorIntervals && (
-            <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 12 }}>{error}</p>
-          )}
-
-          {/* Botones principales */}
-          <div style={{ display: 'flex', gap: 10, paddingBottom: 24 }}>
-            <button
-              onClick={handleGuardar}
-              disabled={guardando || enviando}
-              style={{
-                flex: 1,
-                background: 'transparent',
-                color: COLORS.textSecondary,
-                border: `1px solid ${COLORS.cardBorder}`,
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: guardando ? 'wait' : 'pointer',
-                fontFamily: "'Archivo', sans-serif",
-                opacity: guardando || enviando ? 0.6 : 1,
-              }}
-            >
-              {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : 'Guardar borrador'}
-            </button>
-            <button
-              onClick={handleEnviarGarmin}
-              disabled={guardando || enviando}
-              style={{
-                flex: 1,
-                background: COLORS.accent,
-                color: '#0B0D12',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: enviando ? 'wait' : 'pointer',
-                fontFamily: "'Archivo', sans-serif",
-                opacity: guardando || enviando ? 0.6 : 1,
-              }}
-            >
-              {enviando ? 'Enviando…' : 'Guardar y enviar al reloj'}
-            </button>
-          </div>
             </>
           )}
         </div>
+
+        {/* Pie fijo: avisos y botones siempre a la vista. Antes estaban al final
+            del contenido y había que bajar todo el formulario para guardar. */}
+        {form.disciplina && (
+          <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, padding: '12px 24px calc(12px + env(safe-area-inset-bottom))', background: COLORS.card, maxHeight: '45dvh', overflowY: 'auto' }}>
+          {/* Mensajes de estado */}
+            {exitoGarmin && (
+              <div
+                style={{
+                  background: 'rgba(47,191,175,0.1)',
+                  border: '1px solid rgba(47,191,175,0.3)',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 12,
+                  fontSize: 13,
+                  color: '#2FBFAF',
+                }}
+              >
+                Enviado al reloj de {atletaNombre || 'el atleta'}
+              </div>
+            )}
+
+            {errorIntervals && (
+              <div
+                style={{
+                  background: 'rgba(232,93,93,0.1)',
+                  border: '1px solid rgba(232,93,93,0.3)',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 12,
+                  fontSize: 13,
+                  color: COLORS.error,
+                }}
+              >
+                <Icon name="alert" size={15} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }} />
+                Este atleta no tiene Intervals.icu configurado. Comparte con él el link de configuración desde la sección Configuración Garmin.
+              </div>
+            )}
+
+            {avisoReloj && <Aviso style={{ marginBottom: 12 }}>{avisoReloj}</Aviso>}
+
+            {error && !errorIntervals && (
+              <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 12 }}>{error}</p>
+            )}
+
+            {/* Botones principales */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={handleGuardar}
+                disabled={guardando || enviando}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  color: COLORS.textSecondary,
+                  border: `1px solid ${COLORS.cardBorder}`,
+                  borderRadius: 8,
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: guardando ? 'wait' : 'pointer',
+                  fontFamily: "'Archivo', sans-serif",
+                  opacity: guardando || enviando ? 0.6 : 1,
+                }}
+              >
+                {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : 'Guardar borrador'}
+              </button>
+              <button
+                onClick={handleEnviarGarmin}
+                disabled={guardando || enviando}
+                style={{
+                  flex: 1,
+                  background: COLORS.accent,
+                  color: '#0B0D12',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: enviando ? 'wait' : 'pointer',
+                  fontFamily: "'Archivo', sans-serif",
+                  opacity: guardando || enviando ? 0.6 : 1,
+                }}
+              >
+                {enviando ? 'Enviando…' : 'Guardar y enviar al reloj'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
