@@ -249,7 +249,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `invalidarDatosAtleta` y al editar la temporada). Tests: `test/feedback`,
   `cumplimiento`, `tss-previsto`, `proyeccion`.
 
-### Nutrición por sesión (2026-10-28, migración 017 PENDIENTE)
+### Nutrición por sesión (2026-10-28, migración 017, aplicada 2026-10-29)
 - Tabla `sesion_nutricion` (PK `session_id`): carbohidratos g/h, líquido ml/h,
   sodio mg/h y notas ("gel en el min 40"). **La editan los dos**: el atleta de
   la sesión y su coach vinculado (RLS; `athlete_id` debe ser el de la sesión;
@@ -307,8 +307,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
-- `supabase/migrations/` — 001–016 (+ `PENDIENTE_017_sesion_nutricion.sql`) (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 016 aplicada 2026-10-23 (desde el SQL Editor; verificada).
+- `supabase/migrations/` — 001–017 (+ ficheros `PENDIENTE_*` que NO se aplican
+  solos). 017 aplicada 2026-10-29 (desde el SQL Editor; verificadas sus 4 policies).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).

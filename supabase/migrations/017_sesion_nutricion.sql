@@ -1,4 +1,5 @@
 -- 017_sesion_nutricion.sql — plan de nutrición durante una sesión (2026-10)
+-- APLICADA en producción el 2026-10-29 (SQL Editor); 4 policies verificadas.
 --
 -- PLAN: carbohidratos g/h, líquido ml/h, sodio mg/h y una nota libre por sesión
 -- prescrita. LO EDITAN LOS DOS: el atleta de la sesión y su coach vinculado.
