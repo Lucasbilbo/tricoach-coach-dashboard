@@ -18,6 +18,7 @@ import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from './NutricionSesion'
+import { avisoTomado, tienePlan, tieneTomado } from '../lib/nutricion'
 import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import Cumplimiento from './Cumplimiento'
@@ -174,6 +175,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       return { ...prev, mapa }
     })
   }
+
+  // Panel de nutrición abierto (uno a la vez, como "Ver entreno")
+  const [nutriAbiertaId, setNutriAbiertaId] = useState(null)
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -344,6 +348,14 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     const tieneWorkout = tieneEntreno(sesion.workout_steps)
     const expandida = expandidaId === sesion.id
     const enviada = !!sesion.enviado_a_garmin
+    // Pasada: el reloj ya no importa (ni el aviso naranja ni "Enviar al reloj").
+    // Hoy sí: puede que aún no haya entrenado.
+    const pasada = sesion.fecha < hoy
+    const nutri = nutricion.mapa.get(sesion.id)
+    // Nutrición: en futuras siempre (para planificar); en pasadas solo si hay algo
+    const mostrarNutri = nutricion.disponible && sesion.disciplina !== 'other' && (!pasada || tienePlan(nutri) || tieneTomado(nutri))
+    const avisoNutri = avisoTomado(nutri)
+    const nutriAbierta = nutriAbiertaId === sesion.id
 
     return (
       <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 12px 18px', ...railStyle(sesion.disciplina) }}>
@@ -395,24 +407,15 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             {estado.texto.replace('✓ ', '')}
           </span>
           {completada && <Cumplimiento sesion={sesion} actividad={estado.actividadStrava} />}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
-            <Icon name="watch" size={15} />
-            {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
-          </span>
+          {!pasada && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
+              <Icon name="watch" size={15} />
+              {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
+            </span>
+          )}
           <FeedbackLinea feedback={feedbacks.get(sesion.id)} nombre={atletaNombre} />
         </div>
         <FeedbackTexto feedback={feedbacks.get(sesion.id)} />
-        {nutricion.disponible && (
-          <NutricionSesion
-            key={sesion.id}
-            sesion={sesion}
-            uid={coachId}
-            quien="coach"
-            otroNombre={atletaNombre}
-            inicial={nutricion.mapa.get(sesion.id)}
-            onCambio={actualizarNutricion}
-          />
-        )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -428,8 +431,22 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 Actividad
               </button>
             )}
+            {mostrarNutri && (
+              <button
+                onClick={() => setNutriAbiertaId((prev) => (prev === sesion.id ? null : sesion.id))}
+                style={{ ...textoBtnStyle, color: avisoNutri ? COLORS.error : textoBtnStyle.color }}
+                aria-expanded={nutriAbierta}
+                title={avisoNutri || undefined}
+              >
+                <Icon name={avisoNutri ? 'alert' : 'chevronDown'} size={16} style={{ transform: !avisoNutri && nutriAbierta ? 'rotate(180deg)' : 'none' }} />
+                Nutrición
+                {nutri?.carbohidratos_g_h > 0 && !avisoNutri && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary }}>{nutri.carbohidratos_g_h} g/h</span>
+                )}
+              </button>
+            )}
           </div>
-          {!enviada && tieneWorkout && (
+          {!enviada && !pasada && tieneWorkout && (
             <button
               onClick={() => handleReenviarGarmin(sesion)}
               disabled={reenviando === sesion.id}
@@ -440,6 +457,21 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             </button>
           )}
         </div>
+
+        {nutriAbierta && mostrarNutri && (
+          <div style={{ marginTop: 4, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+            <NutricionSesion
+              key={sesion.id}
+              soloPanel
+              sesion={sesion}
+              uid={coachId}
+              quien="coach"
+              otroNombre={atletaNombre}
+              inicial={nutri}
+              onCambio={actualizarNutricion}
+            />
+          </div>
+        )}
 
         {expandida && tieneWorkout && (
           <div style={{ marginTop: 10 }}>
