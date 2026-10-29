@@ -452,6 +452,16 @@ export default function StravaAnalysis({
               <div
                 key={act.id || `${act.fecha}-${i}`}
                 onClick={() => act.id && setSelectedActivityId(act.id)}
+                // Fila de tabla clicable: también con teclado (antes solo ratón)
+                role={act.id ? 'button' : undefined}
+                tabIndex={act.id ? 0 : undefined}
+                aria-label={act.id ? `Ver detalle: ${act.nombre_actividad || etiquetaActividad(act)}, ${act.fecha ? formatDiaMes(act.fecha) : ''}` : undefined}
+                onKeyDown={(e) => {
+                  if (act.id && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    setSelectedActivityId(act.id)
+                  }
+                }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                 style={{
