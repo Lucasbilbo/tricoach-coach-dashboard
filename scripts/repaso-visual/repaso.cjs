@@ -243,6 +243,7 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-sesion-abierta', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion'] },
   { quien: 'coach', nombre: 'atleta-analisis', url: `/athlete/${F.A}`, pasos: ['tab:Análisis'] },
   { quien: 'coach', nombre: 'atleta-actividad', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'actividad'], soloPantalla: true },
+  { quien: 'coach', nombre: 'sin-strava-analisis', url: `/athlete/${F.B}`, pasos: ['tab:Análisis'], esperado: /status of 409/ },
   { quien: 'coach', nombre: 'atleta-temporada', url: `/athlete/${F.A}?tab=temporada` },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'] },
   { quien: 'atleta', nombre: 'home', url: '/home' },
@@ -264,7 +265,8 @@ const PANTALLAS = [
       const page = await context.newPage()
       const errores = []
       page.on('pageerror', (e) => errores.push('pageerror: ' + e.message))
-      page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_FAILED/.test(m.text())) errores.push('console: ' + m.text()) })
+      // esperado: errores de red que la pantalla provoca a propósito (p. ej. el 409 sin Strava)
+      page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_FAILED/.test(m.text()) && !(p.esperado && p.esperado.test(m.text()))) errores.push('console: ' + m.text()) })
       await page.goto(`http://localhost:5299${p.url}`)
       await page.waitForTimeout(2500)
       for (const paso of p.pasos || []) {
