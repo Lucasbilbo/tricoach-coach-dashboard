@@ -252,6 +252,7 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
   { quien: 'atleta', nombre: 'home-nutricion', url: '/home', pasos: ['nutricion'] },
+  { quien: 'atleta', nombre: 'home-feedback', url: '/home', pasos: ['feedback'] },
   { quien: 'atleta', nombre: 'home-historial', url: '/home', pasos: ['historial'] },
   { quien: 'atleta', nombre: 'home-disponibilidad', url: '/home', pasos: ['tab:Horario'] },
   { quien: 'atleta', nombre: 'home-temporada', url: '/home?tab=temporada' },
@@ -283,6 +284,7 @@ const PANTALLAS = [
           else if (paso === 'nuevo') await page.getByRole('button', { name: 'Prescribir entreno' }).first().click()
           else if (paso.startsWith('disciplina:')) await page.getByRole('button', { name: paso.slice(11), exact: true }).last().click()
           else if (paso.startsWith('rapida:')) { await page.getByPlaceholder(/Z1 \+|cal 400/).first().fill(paso.slice(7)); await page.getByRole('button', { name: 'Generar' }).first().click() }
+          else if (paso === 'feedback') await page.getByRole('button', { name: '¿Cómo te fue?' }).first().click()
           else if (paso === 'comparar') await page.getByRole('button', { name: 'Comparar semanas' }).first().click()
           else if (paso === 'actividad') { const b = page.getByText(/^Run \d/).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           await page.waitForTimeout(1500)
