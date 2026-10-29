@@ -1,11 +1,14 @@
 // estadoSesion.js — ¿se hizo la sesión prescrita? Fuente ÚNICA para la vista
-// del coach (SessionsList) y la del atleta (AthleteHome). Funciones puras (sin
-// imports) para poder probarlas con node --test.
+// del coach (SessionsList) y la del atleta (AthleteHome). Funciones puras para
+// poder probarlas con node --test (solo importa otros módulos puros).
 //
 // Criterio: una actividad de Strava de la misma disciplina el mismo día
 // (Europe/Madrid). Cada actividad completa COMO MUCHO una sesión: si hay dos
 // sesiones de carrera el mismo día y una sola actividad, solo una sale hecha
 // (F6 de la auditoría: antes la misma actividad marcaba las dos).
+
+import { metrosPrescritos } from './cumplimiento'
+import { duracionPrevista } from './tssPrevisto'
 
 export const ESTADO = {
   completada: 'completada',
@@ -15,8 +18,31 @@ export const ESTADO = {
 }
 
 // Empareja sesiones con actividades. Dentro de cada (fecha, disciplina) asigna
-// a cada sesión la actividad libre de duración más parecida a la prescrita.
+// a cada sesión la actividad libre MÁS PARECIDA:
+//  - si todos sus pasos van por distancia (~3/4 de las sesiones), por metros
+//    (diferencia relativa con la distancia de la actividad);
+//  - si no, por duración: la real o la estimada con los ritmos.
+//  - sin ninguna referencia (fuerza "tal cual" sin duración), la primera libre.
+// Antes las sesiones sin duracion_min cogían la primera actividad del día y en
+// un doble podían cruzarse (auditoría 2026-10-28, B2).
 // Devuelve Map<sesion.id, actividad>.
+function referencia(s) {
+  const metros = metrosPrescritos(s.workout_steps)
+  if (metros) return { tipo: 'metros', valor: metros }
+  const dp = duracionPrevista(s)
+  if (dp) return { tipo: 'min', valor: dp.min }
+  return null
+}
+
+function diferencia(ref, a) {
+  if (ref.tipo === 'metros') {
+    const m = (Number(a.distancia_km) || 0) * 1000
+    return m > 0 ? Math.abs(m - ref.valor) / ref.valor : Infinity
+  }
+  const min = Number(a.duracion_min) || 0
+  return Math.abs(min - ref.valor) / ref.valor
+}
+
 export function asignarActividades(sesiones, actividades) {
   const libres = new Map()
   for (const a of actividades || []) {
@@ -27,16 +53,17 @@ export function asignarActividades(sesiones, actividades) {
   }
 
   const asignadas = new Map()
-  // Primero las sesiones con duración conocida (emparejan mejor), luego el resto.
-  const orden = [...(sesiones || [])].sort((x, y) => (y.duracion_min ? 1 : 0) - (x.duracion_min ? 1 : 0))
-  for (const s of orden) {
+  // Primero las sesiones con referencia (emparejan mejor), luego el resto.
+  const conRef = (sesiones || []).map((s) => ({ s, ref: referencia(s) }))
+  const orden = conRef.sort((x, y) => (y.ref ? 1 : 0) - (x.ref ? 1 : 0))
+  for (const { s, ref } of orden) {
     const candidatas = libres.get(`${s.fecha}|${s.disciplina}`)
     if (!candidatas || candidatas.length === 0) continue
     let mejor = 0
-    if (s.duracion_min) {
+    if (ref) {
       let menorDif = Infinity
       candidatas.forEach((a, i) => {
-        const dif = Math.abs((a.duracion_min ?? 0) - s.duracion_min)
+        const dif = diferencia(ref, a)
         if (dif < menorDif) {
           menorDif = dif
           mejor = i

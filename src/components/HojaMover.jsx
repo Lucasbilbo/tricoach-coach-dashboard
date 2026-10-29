@@ -8,6 +8,7 @@ import { sumarDias } from '../lib/chartUtils'
 import { disponibilidadDelDia, evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
 import { horasPosibles, validarMovimiento } from '../lib/agenda'
 import Icon from './ui/Icon'
+import { duracionPrevista } from '../lib/tssPrevisto'
 
 const INICIAL = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
 const NOMBRE = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
@@ -29,7 +30,8 @@ function chip(sel, extra = {}) {
 }
 
 export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCerrar, onEditar }) {
-  const dur = Number.isFinite(sesion.duracion_min) && sesion.duracion_min > 0 ? sesion.duracion_min : null
+  // Real o estimada (pasos por distancia): sirve para avisar si no cabe
+  const dur = duracionPrevista(sesion)?.min ?? null
   const [fecha, setFecha] = useState(sesion.fecha >= ahora.fecha ? sesion.fecha : ahora.fecha)
   const [hora, setHora] = useState(Number.isInteger(sesion.hora_inicio_min) ? sesion.hora_inicio_min : null)
   const [guardando, setGuardando] = useState(false)
@@ -79,7 +81,7 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
         }}>
           <span style={{ fontSize: 14, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titulo}</span>
           <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}>
-            {dur ? fmtDur(dur) : 'sin duración'}
+            {dur ? `${duracionPrevista(sesion).estimada ? '~' : ''}${fmtDur(dur)}` : 'sin duración'}
           </span>
         </div>
 

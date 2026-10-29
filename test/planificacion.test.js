@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { esPlanificable, semanasFuturas, SEMANAS_FUTURAS_MINIMAS } from '../src/lib/planificacion.js'
+import { proximosDias } from '../src/components/workout/constants.js'
 
 const ACTUAL = '2026-10-19' // lunes
 
@@ -31,4 +32,13 @@ test('solo se planifica hoy o en el futuro', () => {
   assert.equal(esPlanificable('2026-10-21', '2026-10-20'), true)
   assert.equal(esPlanificable('2026-10-19', '2026-10-20'), false)
   assert.equal(esPlanificable(undefined, '2026-10-20'), false)
+})
+
+test('proximosDias: desde la fecha dada (Madrid), sin depender de la zona del navegador (B4)', () => {
+  const d = proximosDias(3, '2026-10-31')
+  assert.deepEqual(d.map((x) => x.value), ['2026-10-31', '2026-11-01', '2026-11-02'])
+  assert.equal(d[0].label, 'Sáb 31 Oct')
+  // Cambio de hora (último domingo de octubre) no duplica ni salta días
+  assert.equal(proximosDias(14, '2026-10-20').length, 14)
+  assert.equal(proximosDias(14, '2026-10-20')[13].value, '2026-11-02')
 })

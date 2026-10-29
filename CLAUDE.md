@@ -181,7 +181,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - Editar una sesión ya enviada la **reenvía sola** ("Guardar y actualizar reloj");
   se marca `enviado_a_garmin=false` hasta confirmar, así un fallo no deja un ✅
   sobre una versión vieja. `duracion_min` se calcula al guardar (null si hay
-  pasos por distancia).
+  pasos por distancia). Para agenda, avisos y emparejar actividades se usa
+  `duracionPrevista` (tssPrevisto.js): la real o la ESTIMADA con los ritmos,
+  que la UI marca con "~" y borde discontinuo (decidido 2026-10-29; ±10 %
+  frente al tiempo total de Strava). No se guarda: se calcula al pintar.
+- Avisos: si el reloj queda con el entreno antiguo (`anterior_retirado:false`
+  de send-to-intervals / move-session) sale un aviso ámbar (`ui/Aviso`,
+  `lib/avisosReloj.js`). El creador llama a `onSaved({ cerrar })`: con
+  `cerrar:false` (guardado a medias) el padre refresca pero no lo cierra.
 - Reenvío: **primero crea** el evento nuevo y **después borra** el anterior
   (antes al revés: un fallo intermedio dejaba al atleta sin entreno).
 - Borrar una sesión pasa por `delete-session.js`, que quita también el evento
@@ -242,6 +249,40 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `invalidarDatosAtleta` y al editar la temporada). Tests: `test/feedback`,
   `cumplimiento`, `tss-previsto`, `proyeccion`.
 
+### Nutrición por sesión (2026-10-28, migración 017 PENDIENTE)
+- Tabla `sesion_nutricion` (PK `session_id`): carbohidratos g/h, líquido ml/h,
+  sodio mg/h y notas ("gel en el min 40"). **La editan los dos**: el atleta de
+  la sesión y su coach vinculado (RLS; `athlete_id` debe ser el de la sesión;
+  `actualizado_por` = quien guarda → "Editado por …").
+- Sugerencia automática por REGLAS (sin IA) en `src/lib/nutricion.js`
+  (`sugerirNutricion`): duración prevista (`segundosPrevistos` en
+  tssPrevisto.js, también pasos por distancia) + intensidad (IF desde el TSS
+  previsto, alta ≥ 0,75). <60 min nada; 75–150 min 45/60 g/h; >150 min 70/90
+  g/h (carrera tope 60); sodio desde 90 min; piscina sin hidratos; fuerza agua.
+- UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
+  "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
+- **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
+  `estomago` (1 mal · 2 regular · 3 bien), `tomado_notas`. Lo apunta el atleta
+  desde el día de la sesión (Próximos si es hoy; Hechos y pendientes después);
+  en pasadas el atleta ve el plan pero no lo edita. Jon lo ve con el plan al
+  lado ("35 de 60 g/h") y aviso rojo si le sentó mal o comió < 70 % de lo
+  previsto (`avisoTomado`).
+- Guardados PARCIALES: `guardarNutricion` hace upsert solo de las columnas que
+  manda (plan o tomado), así uno no pisa al otro. `quitarParte` pone a null una
+  parte o borra la fila si no queda nada (la BD no admite filas vacías).
+- **Creador de sesiones**: sección "Nutrición" plegable en `WorkoutBuilder`
+  (`CamposPlanNutricion`, sugerencia en vivo con los bloques del formulario).
+  Se guarda DESPUÉS de la sesión (necesita su id); si falla, la sesión queda
+  guardada y se avisa. Duplicar copia también el plan (`_nutricionDe`). La
+  sección solo aparece si la tabla existe (`nutricionDisponible`).
+- RLS verificada en un Postgres local (2026-10-28): coach y atleta escriben;
+  extraño ni ve ni escribe; no se puede colgar una fila de la sesión de otro ni
+  falsificar `actualizado_por`; anon sin acceso.
+- **NO va al reloj** a propósito: la descripción del evento es el texto del
+  workout y un texto libre ahí puede romper el parseo / congelar el reloj
+  (misma regla que las notas del entrenador).
+- Tests: `test/nutricion.test.js`.
+
 ## Estructura
 
 - `src/components/` — Login, Dashboard (panel del coach), AthleteView (atleta,
@@ -266,7 +307,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
-- `supabase/migrations/` — 001–016 (+ ficheros `PENDIENTE_*` que NO se aplican
+- `supabase/migrations/` — 001–016 (+ `PENDIENTE_017_sesion_nutricion.sql`) (+ ficheros `PENDIENTE_*` que NO se aplican
   solos). 016 aplicada 2026-10-23 (desde el SQL Editor; verificada).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).

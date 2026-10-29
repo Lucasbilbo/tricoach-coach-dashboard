@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDisponibilidadConEstado } from '../hooks/useDisponibilidad'
 import { evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
 import { ahoraMadrid, disciplinasALaHora, horasPosibles } from '../lib/agenda'
@@ -14,10 +14,15 @@ import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
 import Icon from './ui/Icon'
+import Aviso from './ui/Aviso'
+import { avisoEventoAntiguo } from '../lib/avisosReloj'
+import { CamposPlanNutricion } from './NutricionSesion'
+import { duracionPrevista } from '../lib/tssPrevisto'
+import { aplicarSugerencia, formPlanDe, normalizarNutricion, resumenNutricion, sugerirNutricion, tienePlan } from '../lib/nutricion'
+import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-const DIAS_CHIPS = proximosDias(14)
 const DIAS_SEMANA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 function fechaCorta(f) {
@@ -25,7 +30,12 @@ function fechaCorta(f) {
   return Number.isNaN(d.getTime()) ? f : `${DIAS_SEMANA[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`
 }
 
-export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, coachId, sessionExistente, atletaNombre }) {
+// onSaved({ cerrar }): la sesión se guardó (hay que refrescar la lista). cerrar
+// es false cuando el guardado salió a medias y hay un aviso que leer (reloj sin
+// actualizar, nutrición sin guardar): el padre refresca pero NO cierra.
+// nutricionExistente: fila de sesion_nutricion de la sesión que se edita (o de
+// la original al duplicar), para precargar el plan de nutrición.
+export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, coachId, sessionExistente, atletaNombre, nutricionExistente }) {
   const [form, setForm] = useState(initForm(sessionExistente))
   const [sessionId, setSessionId] = useState(sessionExistente?.id || null)
   const [guardando, setGuardando] = useState(false)
@@ -33,13 +43,28 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [exitoGarmin, setExitoGarmin] = useState(false)
   const [errorIntervals, setErrorIntervals] = useState(false)
   const [error, setError] = useState(null)
+  // Reloj con el entreno antiguo aún puesto (no se pudo retirar): aviso ámbar
+  const [avisoReloj, setAvisoReloj] = useState(null)
   const [mostrarInputFecha, setMostrarInputFecha] = useState(false)
   const [mostrarInputHora, setMostrarInputHora] = useState(false)
   // Con hora puesta solo se ofrecen las disciplinas que caben a esa hora;
   // "Otra disciplina" las enseña todas (el coach puede forzar).
   const [todasDisciplinas, setTodasDisciplinas] = useState(false)
   const [ahora] = useState(() => ahoraMadrid())
+  // Se calculan al abrir (el creador se monta cada vez), en hora de Madrid
+  const DIAS_CHIPS = proximosDias(14, ahora.fecha)
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
+  // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
+  // sesión (necesita su id). Solo si la tabla existe (migración 017).
+  const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
+  const [nutriSucio, setNutriSucio] = useState(false)
+  const [nutriAbierta, setNutriAbierta] = useState(() => tienePlan(nutricionExistente))
+  const [nutriDisponible, setNutriDisponible] = useState(false)
+  useEffect(() => {
+    let activo = true
+    if (isOpen) nutricionDisponible().then((ok) => activo && setNutriDisponible(ok))
+    return () => { activo = false }
+  }, [isOpen])
 
   // Al abrir (o cambiar la sesión a editar) se reinicia el formulario. Se hace
   // durante el render comparando con las props previas (patrón de React para
@@ -57,6 +82,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setTodasDisciplinas(false)
       setErrorIntervals(false)
       setError(null)
+      setAvisoReloj(null)
+      setNutri(formPlanDe(nutricionExistente))
+      // Al duplicar, el plan copiado hay que guardarlo en la sesión nueva
+      setNutriSucio(!sessionExistente?.id && tienePlan(nutricionExistente))
+      setNutriAbierta(tienePlan(nutricionExistente))
       // Mostrar input si la fecha existente no está en los próximos 14 días
       setMostrarInputFecha(
         !!f.fecha && !DIAS_CHIPS.some((d) => d.value === f.fecha)
@@ -66,16 +96,23 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
 
   if (!isOpen) return null
 
+  // Duración para los avisos y las horas que encajan: la de los bloques por
+  // tiempo o, si van por distancia, la estimada con los ritmos (antes null: el
+  // aviso no saltaba justo en las sesiones largas por km).
+  const duracionAviso = duracionTotalMin(form.bloques)
+    ?? (form.disciplina ? duracionPrevista({ disciplina: form.disciplina, workout_steps: { bloques: form.bloques }, duracion_min: Number(form.duracionManual) || null })?.min : null)
+    ?? null
+
   // Aviso informativo de disponibilidad del atleta (nunca bloquea el guardado)
   const avisoDisponibilidad = form.fecha && form.disciplina
-    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), form.hora ?? undefined), form.disciplina)
+    ? textoAviso(evaluarDisponibilidad(disponibilidad, form.fecha, form.disciplina, duracionAviso ?? undefined, form.hora ?? undefined), form.disciplina)
     : null
 
   // Horas de inicio que encajan en las franjas del atleta para esa disciplina y
   // día (cada 30 min). La hora es opcional: sin hora la sesión va a la fila
   // "sin hora" de la agenda y al reloj sin hora concreta.
   const horasSugeridas = form.fecha && form.disciplina
-    ? horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), ahora)
+    ? horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionAviso, ahora)
     : []
   const chipsHora = form.hora != null && !horasSugeridas.includes(form.hora)
     ? [...horasSugeridas, form.hora].sort((a, b) => a - b)
@@ -248,6 +285,22 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     }
   }
 
+  // Guarda (o quita) el plan de nutrición de la sesión sid. No bloquea: si
+  // falla, la sesión ya está guardada y se avisa. Devuelve true si fue bien.
+  async function guardarNutri(sid) {
+    if (!nutriDisponible || !nutriSucio) return true
+    try {
+      const fila = normalizarNutricion(nutri)
+      const habia = !!sessionExistente?.id && tienePlan(nutricionExistente)
+      if (fila) await guardarNutricion(sid, athleteId, coachId, fila)
+      else if (habia) await quitarParte(sid, athleteId, coachId, nutricionExistente, 'plan')
+      setNutriSucio(false)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   function validar() {
     if (!form.fecha || !form.nombre?.trim()) return 'La fecha y el nombre son obligatorios'
     const malos = ritmosInvalidos(form.bloques)
@@ -263,7 +316,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       body: JSON.stringify({ sessionId: sid }),
     })
     const json = await res.json().catch(() => ({}))
-    if (res.ok) return true
+    if (res.ok) {
+      // Reenvío: el evento anterior era de la fecha que tenía la sesión al abrirla
+      const aviso = avisoEventoAntiguo(json, sessionExistente?.fecha, 'coach')
+      setAvisoReloj(aviso)
+      return aviso ? 'aviso' : true
+    }
     if (json.code === 'NO_INTERVALS') setErrorIntervals(true)
     else setError(json.error || 'Error enviando a Garmin')
     return false
@@ -279,17 +337,27 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     setError(null)
     try {
       const sid = await saveToSupabase()
+      const nutriOk = await guardarNutri(sid)
+      if (!nutriOk) {
+        setError('Sesión guardada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
+        if (onSaved) onSaved({ cerrar: false })
+        return
+      }
       if (yaEnviada) {
         const ok = await enviarAlReloj(sid)
+        if (ok === 'aviso') {
+          if (onSaved) onSaved({ cerrar: false })
+          return
+        }
         if (!ok) {
           // Guardado, pero el reloj sigue con la versión anterior: no cerrar,
           // que el coach lo vea. La lista la mostrará como pendiente de envío.
           setError('Cambios guardados, pero no se pudo actualizar el reloj. Queda pendiente de enviar.')
-          if (onSaved) onSaved()
+          if (onSaved) onSaved({ cerrar: false })
           return
         }
       }
-      if (onSaved) onSaved()
+      if (onSaved) onSaved({ cerrar: true })
       onClose()
     } catch (err) {
       setError(err.message)
@@ -310,17 +378,30 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     setErrorIntervals(false)
     try {
       const sid = await saveToSupabase()
+      const nutriOk = await guardarNutri(sid)
       // coach/atleta se derivan de la sesión y del JWT en el backend
       const ok = await enviarAlReloj(sid)
-      if (!ok) return
+      if (!ok) {
+        // La sesión SÍ quedó guardada: refrescar la lista sin cerrar, para que
+        // el coach vea el error y pueda reintentar.
+        if (onSaved) onSaved({ cerrar: false })
+        return
+      }
       setExitoGarmin(true)
-      if (onSaved) onSaved()
+      if (!nutriOk) setError('Enviada, pero no se pudo guardar la nutrición. Vuelve a intentarlo.')
+      // Todo bien → se cierra; con algún aviso se queda abierto para leerlo.
+      if (onSaved) onSaved({ cerrar: nutriOk && ok !== 'aviso' })
     } catch {
       setError('Error de conexión enviando a Garmin')
     } finally {
       setEnviando(false)
     }
   }
+
+  // Sugerencia de nutrición con lo que lleva el formulario ahora mismo
+  const sugerenciaNutri = form.disciplina
+    ? sugerirNutricion({ disciplina: form.disciplina, workout_steps: { bloques: form.bloques }, duracion_min: duracionFinal })
+    : null
 
   // incluirNotas:true SOLO aquí (el coach debe ver que las escribió). El envío
   // real a Garmin las omite siempre — ver send-to-intervals.js.
@@ -554,7 +635,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               </div>
               {form.disciplina && horasSugeridas.length === 0 && (
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
-                  {form.fecha === ahora.fecha && horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionTotalMin(form.bloques), null).length > 0
+                  {form.fecha === ahora.fecha && horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionAviso, null).length > 0
                     ? 'Las franjas de hoy para esto ya han pasado.'
                     : 'El atleta no tiene franjas para esto ese día.'}
                 </p>
@@ -698,12 +779,48 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: 16 }}
           />
 
+          {/* Nutrición (opcional): se ve en la app, no va al reloj */}
+          {nutriDisponible && form.disciplina !== 'other' && (
+            <div style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setNutriAbierta((v) => !v)}
+                aria-expanded={nutriAbierta}
+                style={{ ...separadorSection, display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${COLORS.cardBorder}`, cursor: 'pointer', padding: '0 0 6px', textAlign: 'left', fontFamily: FONTS.sans }}
+              >
+                <Icon name="chevronDown" size={15} style={{ transform: nutriAbierta ? 'rotate(180deg)' : 'none' }} />
+                Nutrición
+                <span style={{ fontWeight: 400, fontSize: 12, color: COLORS.textTertiary }}>
+                  {nutriAbierta ? null : normalizarNutricion(nutri) ? <span style={{ fontFamily: FONTS.mono, color: COLORS.textSecondary }}>· {resumenNutricion(normalizarNutricion(nutri)) || 'con notas'}</span> : '(opcional)'}
+                </span>
+              </button>
+              {nutriAbierta && (
+                <CamposPlanNutricion
+                  form={nutri}
+                  onCambiar={(campo, valor) => {
+                    setNutri((f) => ({ ...f, [campo]: valor }))
+                    setNutriSucio(true)
+                  }}
+                  sugerencia={sugerenciaNutri}
+                  onUsarSugerencia={() => {
+                    setNutri((f) => aplicarSugerencia(f, sugerenciaNutri))
+                    setNutriSucio(true)
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           {/* Preview Intervals */}
           <div style={separadorSection}>
             Así llega al reloj
-            {duracionFinal != null && (
+            {duracionFinal != null ? (
               <span style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textPrimary }}>
                 · {duracionFinal} min
+              </span>
+            ) : duracionAviso != null && (
+              <span title="Estimada con los ritmos de cada paso" style={{ marginLeft: 8, fontFamily: "'JetBrains Mono', monospace", color: COLORS.textSecondary }}>
+                · ~{duracionAviso} min
               </span>
             )}
           </div>
@@ -765,6 +882,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               Este atleta no tiene Intervals.icu configurado. Comparte con él el link de configuración desde la sección Configuración Garmin.
             </div>
           )}
+
+          {avisoReloj && <Aviso style={{ marginBottom: 12 }}>{avisoReloj}</Aviso>}
 
           {error && !errorIntervals && (
             <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 12 }}>{error}</p>

@@ -16,8 +16,13 @@ import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
+import { cargarNutricion } from '../lib/nutricionApi'
+import NutricionSesion from './NutricionSesion'
+import Aviso from './ui/Aviso'
+import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import Cumplimiento from './Cumplimiento'
 import { calibrar, cargaSemana } from '../lib/proyeccion'
+import DuracionSesion from './DuracionSesion'
 
 const DISC_LABELS = {
   run: 'Carrera',
@@ -140,6 +145,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  // El reloj quedó con un entreno antiguo duplicado (no se pudo retirar)
+  const [avisoReloj, setAvisoReloj] = useState(null)
   const [sesionEditando, setSesionEditando] = useState(null)
   // Semanas vacías extra pedidas con "Planificar otra semana"
   const [semanasExtra, setSemanasExtra] = useState(0)
@@ -155,6 +162,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const disponibilidad = useDisponibilidad(athleteId)
   // Cómo le fue al atleta cada sesión (lo escribe él; aquí solo se lee)
   const [feedbacks, setFeedbacks] = useState(() => new Map())
+  // Plan de nutrición por sesión (lo editan coach y atleta). disponible=false si
+  // la tabla aún no existe (migración 017): la sección no se muestra.
+  const [nutricion, setNutricion] = useState(() => ({ mapa: new Map(), disponible: false }))
+
+  function actualizarNutricion(id, n) {
+    setNutricion((prev) => {
+      const mapa = new Map(prev.mapa)
+      if (n) mapa.set(id, n)
+      else mapa.delete(id)
+      return { ...prev, mapa }
+    })
+  }
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -164,7 +183,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   // cambiar de atleta: así no pisa la lista del atleta nuevo.
   const cargarSesiones = useCallback(async (senal) => {
     try {
-      const [{ data, error: queryError }, mapaFeedback] = await Promise.all([
+      const [{ data, error: queryError }, mapaFeedback, datosNutricion] = await Promise.all([
         supabase
           .from('coach_sessions')
           .select('*')
@@ -173,9 +192,11 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           .order('fecha', { ascending: true })
           .order('hora_inicio_min', { ascending: true, nullsFirst: true }),
         cargarFeedback(athleteId),
+        cargarNutricion(athleteId),
       ])
       if (senal && !senal.activo) return
       setFeedbacks(mapaFeedback)
+      setNutricion(datosNutricion)
 
       if (queryError) {
         setError('No se pudieron cargar las sesiones')
@@ -269,11 +290,15 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     cargarSesiones()
   }
 
-  function handleEditGuardado() {
-    setSesionEditando(null)
+  // { cerrar: false } = guardado a medias con un aviso en el creador: se
+  // refresca la lista pero el creador sigue abierto para que se lea.
+  function handleEditGuardado({ cerrar = true } = {}) {
+    if (cerrar) setSesionEditando(null)
     invalidarEstado()
     cargarSesiones()
-    if (onNewSession) onNewSession()
+    // El padre remonta esta lista (key) con onNewSession: con el creador
+    // abierto por un aviso eso lo cerraría y el aviso se perdería.
+    if (cerrar && onNewSession) onNewSession()
   }
 
   async function handleReenviarGarmin(sesion) {
@@ -287,6 +312,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok) {
+        setAvisoReloj(avisoEventoAntiguo(json, sesion.fecha, 'coach'))
         cargarSesiones()
       } else {
         setError(json.error || 'Error enviando a Garmin')
@@ -330,7 +356,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 {formatFechaSesion(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
               </span>
               <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
-              {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+              <DuracionSesion sesion={sesion} />
               {sesion.movida_por === 'atleta' && (
                 <span title={sesion.movida_at ? `Movida el ${new Date(sesion.movida_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : undefined}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: COLORS.accent, fontSize: 12, fontWeight: 600 }}>
@@ -349,7 +375,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
               onClick={() =>
                 // Copia sin id ni envío: el builder la trata como sesión nueva y
                 // solo falta elegir el día.
-                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false })
+                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false, _nutricionDe: sesion.id })
               }
               style={accionIconoStyle}
               aria-label="Duplicar sesión"
@@ -376,6 +402,17 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           <FeedbackLinea feedback={feedbacks.get(sesion.id)} nombre={atletaNombre} />
         </div>
         <FeedbackTexto feedback={feedbacks.get(sesion.id)} />
+        {nutricion.disponible && (
+          <NutricionSesion
+            key={sesion.id}
+            sesion={sesion}
+            uid={coachId}
+            quien="coach"
+            otroNombre={atletaNombre}
+            inicial={nutricion.mapa.get(sesion.id)}
+            onCambio={actualizarNutricion}
+          />
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -434,6 +471,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         return { error: msg }
       }
       setError('')
+      setAvisoReloj(avisoEventoAntiguo(json, sesion.fecha, 'coach'))
       setSesiones((prev) => prev
         .map((s) => (s.id === sesion.id ? { ...s, ...json.sesion } : s))
         .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.hora_inicio_min ?? -1) - (b.hora_inicio_min ?? -1))))
@@ -492,6 +530,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   return (
     <div>
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
+      {avisoReloj && <Aviso onCerrar={() => setAvisoReloj(null)} style={{ marginBottom: 16 }}>{avisoReloj}</Aviso>}
 
       {sesiones.length === 0 && (
         // B4: estado vacío claro para el coach (en vez de solo "Sin sesiones esta semana").
@@ -562,6 +601,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           coachId={coachId}
           sessionExistente={sesionEditando}
           atletaNombre={atletaNombre}
+          nutricionExistente={nutricion.mapa.get(sesionEditando.id ?? sesionEditando._nutricionDe)}
           onClose={() => setSesionEditando(null)}
           onSaved={handleEditGuardado}
         />

@@ -4,6 +4,7 @@
 // con la función move-session (mismo criterio en cliente y servidor).
 import { disponibilidadDelDia, DISCIPLINAS_DISPONIBILIDAD } from './disponibilidad'
 import { DISCIPLINE_LABELS } from './theme'
+import { duracionPrevista } from './tssPrevisto'
 
 export { ahoraMadrid, validarMovimiento, esMovible, ajustar, horaValida } from '../../netlify/functions/lib/mover-reglas.cjs'
 
@@ -13,7 +14,8 @@ const POR_DEFECTO = [360, 1320] // 6:00–22:00 si no hay nada
 
 const lista = (x) => (Array.isArray(x) ? x : [])
 const conHora = (s) => Number.isInteger(s?.hora_inicio_min)
-const durDe = (s) => (Number.isFinite(s?.duracion_min) && s.duracion_min > 0 ? s.duracion_min : null)
+// Duración real o, si va por distancia, estimada (tssPrevisto.duracionPrevista)
+const durDe = (s) => duracionPrevista(s)?.min ?? null
 
 // Ventana horaria a dibujar: los tramos del atleta Y las sesiones con hora,
 // redondeada a la hora con media hora de aire y mínimo 7 h. Sin nada, 6–22.
@@ -44,14 +46,15 @@ export function ventanaAgenda(dias, sesiones) {
 }
 
 // Sesiones de UN día con hora → bloques con columna para las que se solapan:
-//   [{ sesion, inicio, fin, sinDuracion, col, cols }]
+//   [{ sesion, inicio, fin, sinDuracion, estimada, col, cols }]
 // Las que se pisan se reparten a lo ancho (col / cols) dentro de su grupo.
 export function colocarDia(sesiones) {
   const bloques = lista(sesiones)
     .filter(conHora)
     .map((s) => {
-      const d = durDe(s)
-      return { sesion: s, inicio: s.hora_inicio_min, fin: s.hora_inicio_min + (d ?? DURACION_POR_DEFECTO), sinDuracion: d == null }
+      const dp = duracionPrevista(s)
+      const d = dp?.min ?? null
+      return { sesion: s, inicio: s.hora_inicio_min, fin: s.hora_inicio_min + (d ?? DURACION_POR_DEFECTO), sinDuracion: d == null, estimada: !!dp?.estimada }
     })
     .sort((a, b) => a.inicio - b.inicio || b.fin - a.fin)
 

@@ -20,6 +20,7 @@ import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS } from '../lib/them
 import { DISCIPLINAS_DISPONIBILIDAD, evaluarDisponibilidad, formatHora, formatTramo, minutosPlanificados, resumenSemana } from '../lib/disponibilidad'
 import { ahoraMadrid, ajustar, colocarDia, esMovible, sinHora, tituloSesion, validarMovimiento, ventanaAgenda } from '../lib/agenda'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { duracionPrevista } from '../lib/tssPrevisto'
 import HojaMover from './HojaMover'
 import Icon from './ui/Icon'
 
@@ -35,6 +36,8 @@ const MARGEN_TARJETA = 21 // las tarjetas empiezan tras los carriles
 const RAYADO = 'repeating-linear-gradient(135deg, #1B202C 0 5px, transparent 5px 11px)'
 
 const fmtDur = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
+// Duración real o estimada (pasos por distancia) en minutos, para dibujar
+const durMin = (s) => duracionPrevista(s)?.min ?? null
 
 // Aviso corto para la tarjeta (el largo va en el title / la lista).
 function avisoCorto(ev, disciplina) {
@@ -56,7 +59,10 @@ function marcas(min, max) {
 function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 'normal', onClick, arrastrable, onDragStart, onDragEnd, compacta, capa = 0 }) {
   const color = DISCIPLINE_COLORS[sesion.disciplina] || COLORS.textTertiary
   const h = Number.isInteger(sesion.hora_inicio_min) ? formatHora(sesion.hora_inicio_min) : null
-  const dur = Number.isFinite(sesion.duracion_min) && sesion.duracion_min > 0 ? fmtDur(sesion.duracion_min) : null
+  // Estimada (va por distancia): "~1:05" y borde discontinuo
+  const dp = duracionPrevista(sesion)
+  const estimada = !!dp?.estimada
+  const dur = dp ? `${estimada ? '~' : ''}${fmtDur(dp.min)}` : null
   const linea = aviso ? `⚠ ${aviso}` : [h, dur].filter(Boolean).join(' · ') || 'sin duración'
   const enUnaLinea = compacta || height < 32
   const fantasma = estilo === 'fantasma'
@@ -70,7 +76,7 @@ function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 
       draggable={arrastrable || undefined}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      title={`${tituloSesion(sesion)}${h ? ` · ${h}` : ''}${dur ? ` · ${dur}` : ''}${aviso ? ` · ${aviso}` : ''}${movidaPor ? ` · movida por ${movidaPor}` : ''}`}
+      title={`${tituloSesion(sesion)}${h ? ` · ${h}` : ''}${dur ? ` · ${dur}${estimada ? ' (estimada)' : ''}` : ''}${aviso ? ` · ${aviso}` : ''}${movidaPor ? ` · movida por ${movidaPor}` : ''}`}
       style={{
         position: top == null ? 'relative' : 'absolute',
         ...(top == null ? {} : { top, height, left, right }),
@@ -83,7 +89,7 @@ function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 
         overflow: 'hidden',
         borderRadius: 7,
         background: fantasma ? 'transparent' : flotante ? '#1D2230' : '#181C26',
-        border: fantasma ? '1px dashed #3A4256' : aviso ? `1px dashed ${AMBAR}` : flotante ? `1px solid ${color}8C` : '1px solid #232A38',
+        border: fantasma ? '1px dashed #3A4256' : aviso ? `1px dashed ${AMBAR}` : flotante ? `1px solid ${color}8C` : estimada ? '1px dashed #343C4D' : '1px solid #232A38',
         boxShadow: fantasma ? 'none' : `inset 3px 0 0 ${color}${flotante ? ', 0 14px 30px rgba(0,0,0,0.55)' : capa ? ', -4px 0 10px rgba(0,0,0,0.45)' : ''}`,
         opacity: fantasma ? 0.7 : 1,
         zIndex: flotante ? 5 : 2 + capa,
@@ -141,7 +147,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
   const hayMover = !!onMover
   const movible = (s) => hayMover && esMovible(s.fecha, ahora)
   const nombreMovida = (s) => (quien === 'coach' && s.movida_por === 'atleta' ? nombreAtleta || 'el atleta' : null)
-  const avisoDe = (s) => avisoCorto(evaluarDisponibilidad(datos, s.fecha, s.disciplina, s.duracion_min, s.hora_inicio_min ?? undefined), s.disciplina)
+  const avisoDe = (s) => avisoCorto(evaluarDisponibilidad(datos, s.fecha, s.disciplina, durMin(s) ?? undefined, s.hora_inicio_min ?? undefined), s.disciplina)
 
   const abrir = (s) => {
     if (esMovil && movible(s)) setHoja(s)
@@ -194,18 +200,18 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
 
   const infoDia = (dia) => {
     const delDia = vista.filter((s) => s.fecha === dia.fecha)
-    const { minutos, sinDuracion } = minutosPlanificados(delDia)
+    const { minutos, sinDuracion, estimadas } = minutosPlanificados(delDia)
     const libre = dia.origen === 'dia_libre'
     const conTramos = DISCIPLINAS_DISPONIBILIDAD.filter((d) => dia.disciplinas[d])
     const sinActividad = libre || (dia.origen !== 'sin_datos' && conTramos.length === 0)
     const pasado = dia.fecha < ahora.fecha
     const choca = delDia.some((s) => avisoDe(s))
-    return { delDia, minutos, sinDuracion, libre, sinActividad, pasado, choca, esHoy: dia.fecha === ahora.fecha, pulsable: !!onDia && !pasado && !sinActividad }
+    return { delDia, minutos, sinDuracion, estimadas, libre, sinActividad, pasado, choca, esHoy: dia.fecha === ahora.fecha, pulsable: !!onDia && !pasado && !sinActividad }
   }
 
   const totalTexto = (inf) => {
     if (inf.delDia.length === 0) return ''
-    if (inf.minutos > 0) return fmtDur(inf.minutos) + (inf.sinDuracion ? ` +${inf.sinDuracion}` : '')
+    if (inf.minutos > 0) return (inf.estimadas ? '~' : '') + fmtDur(inf.minutos) + (inf.sinDuracion ? ` +${inf.sinDuracion}` : '')
     return 'sin hora'
   }
 
@@ -284,7 +290,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
           <Tarjeta
             sesion={{ ...enArrastre, fecha: destino.fecha, hora_inicio_min: destino.hora }}
             top={y(destino.hora)}
-            height={Math.max(y(destino.hora + (enArrastre.duracion_min || 60)) - y(destino.hora), 18)}
+            height={Math.max(y(destino.hora + (durMin(enArrastre) || 60)) - y(destino.hora), 18)}
             left={MARGEN_TARJETA - 3}
             right={1}
             aviso={avisoDe({ ...enArrastre, fecha: destino.fecha, hora_inicio_min: destino.hora })}
@@ -292,8 +298,8 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
           />
         )}
         {enArrastre && destino && destino.fecha === dia.fecha && destino.hora != null && (
-          <span style={{ position: 'absolute', zIndex: 6, left: MARGEN_TARJETA, top: Math.min(y(destino.hora + (enArrastre.duracion_min || 60)) + 4, alto - 18), padding: '1px 6px', borderRadius: 5, background: COLORS.accent, color: COLORS.background, fontFamily: FONTS.mono, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-            {formatHora(destino.hora)}{enArrastre.duracion_min ? ` – ${formatHora(destino.hora + enArrastre.duracion_min)}` : ''}
+          <span style={{ position: 'absolute', zIndex: 6, left: MARGEN_TARJETA, top: Math.min(y(destino.hora + (durMin(enArrastre) || 60)) + 4, alto - 18), padding: '1px 6px', borderRadius: 5, background: COLORS.accent, color: COLORS.background, fontFamily: FONTS.mono, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+            {formatHora(destino.hora)}{durMin(enArrastre) ? ` – ${duracionPrevista(enArrastre).estimada ? '~' : ''}${formatHora(destino.hora + durMin(enArrastre))}` : ''}
           </span>
         )}
         {/* ahora */}
@@ -368,7 +374,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
                 {n.choca && <span style={{ position: 'absolute', top: 5, right: 6, width: 5, height: 5, borderRadius: '50%', background: AMBAR }} />}
                 <div style={{ fontSize: 10.5, fontWeight: 600, color: activo || n.esHoy ? COLORS.accent : COLORS.textSecondary }}>{INICIAL_DIA[i]}</div>
                 <div style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, color: activo ? COLORS.accent : COLORS.textPrimary }}>{Number(d.fecha.slice(8))}</div>
-                <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: n.choca ? AMBAR : COLORS.textTertiary, minHeight: 11 }}>{n.minutos > 0 ? fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
+                <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: n.choca ? AMBAR : COLORS.textTertiary, minHeight: 11 }}>{n.minutos > 0 ? (n.estimadas ? '~' : '') + fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
               </button>
             )
           })}

@@ -20,7 +20,10 @@ import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { resumenFeedback } from '../lib/feedback'
 import { FeedbackEditor } from '../components/FeedbackSesion'
+import { cargarNutricion } from '../lib/nutricionApi'
+import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
+import DuracionSesion from '../components/DuracionSesion'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -74,6 +77,9 @@ const textoBtn = {
 }
 
 const PAGINA_PASADAS = 10
+// Próximos: con la planificación a 2–3 semanas caben 15–20; se pagina igual
+// (antes .limit(10) sin más: el resto no salía en la lista. Auditoría B3).
+const PAGINA_PROXIMAS = 10
 
 // Actividades de Strava que cubren las sesiones pasadas mostradas (tope 26
 // semanas). Devuelve el nuevo estado, o null si no hace falta pedir más o si no
@@ -133,11 +139,14 @@ export default function AthleteHome() {
   const [erroresGarmin, setErroresGarmin] = useState({})
   // Historial paginado + estado Hecha/Pendiente (misma lógica que ve el coach)
   const [hayMasPasadas, setHayMasPasadas] = useState(false)
+  const [hayMasProximas, setHayMasProximas] = useState(false)
   const [cargandoMas, setCargandoMas] = useState(false)
   const [estadoActs, setEstadoActs] = useState({ actividades: null, desde: null, semanas: 0 })
   // Cómo le fue cada sesión (sesion_feedback): Map<session_id, feedback>
   const [feedbacks, setFeedbacks] = useState(() => new Map())
   const [feedbackAbierto, setFeedbackAbierto] = useState({})
+  // Plan de nutrición por sesión (sesion_nutricion; lo editan atleta y coach)
+  const [nutricion, setNutricion] = useState(() => ({ mapa: new Map(), disponible: false }))
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
@@ -164,7 +173,7 @@ export default function AthleteHome() {
       setCargandoSesiones(true)
 
       // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
-      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback] = await Promise.all([
+      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback, datosNutricion] = await Promise.all([
         supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
         misConexiones(),
         supabase
@@ -174,7 +183,8 @@ export default function AthleteHome() {
           .gte('fecha', hoy)
           .order('fecha', { ascending: true })
           .order('hora_inicio_min', { ascending: true, nullsFirst: true })
-          .limit(10),
+          .order('id', { ascending: true }) // desempate estable para paginar
+          .range(0, PAGINA_PROXIMAS),
         supabase
           .from('coach_sessions')
           .select('*')
@@ -183,11 +193,13 @@ export default function AthleteHome() {
           .order('fecha', { ascending: false })
           .range(0, PAGINA_PASADAS),
         cargarFeedback(uid),
+        cargarNutricion(uid),
       ])
 
       if (!activo) return
       setPerfil({ ...(perfilRes.data || {}), conexiones })
       setFeedbacks(mapaFeedback)
+      setNutricion(datosNutricion)
 
       // Distinguir un error de carga de un "no hay entrenamientos" legítimo (F4b)
       if (proximasRes.error || pasadasRes.error) {
@@ -196,7 +208,10 @@ export default function AthleteHome() {
         setPasadas([])
       } else {
         setErrorSesiones(false)
-        setProximas(proximasRes.data || [])
+        // Se pide una de más para saber si hay otra página
+        const proximasLista = proximasRes.data || []
+        setHayMasProximas(proximasLista.length > PAGINA_PROXIMAS)
+        setProximas(proximasLista.slice(0, PAGINA_PROXIMAS))
         // Se pide una de más para saber si hay otra página
         const lista = pasadasRes.data || []
         setHayMasPasadas(lista.length > PAGINA_PASADAS)
@@ -248,6 +263,26 @@ export default function AthleteHome() {
     return () => { activo = false }
   }, [userId, weeks, activeTab])
 
+  async function cargarMasProximas() {
+    if (!userId || cargandoMas) return
+    setCargandoMas(true)
+    const desde = proximas.length
+    const { data, error } = await supabase
+      .from('coach_sessions')
+      .select('*')
+      .eq('athlete_id', userId)
+      .gte('fecha', hoyMadrid())
+      .order('fecha', { ascending: true })
+      .order('hora_inicio_min', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
+      .range(desde, desde + PAGINA_PROXIMAS)
+    setCargandoMas(false)
+    if (error) return
+    setHayMasProximas((data || []).length > PAGINA_PROXIMAS)
+    const vistas = new Set(proximas.map((x) => x.id))
+    setProximas([...proximas, ...(data || []).slice(0, PAGINA_PROXIMAS).filter((x) => !vistas.has(x.id))])
+  }
+
   async function cargarMasPasadas() {
     if (!userId || cargandoMas) return
     setCargandoMas(true)
@@ -271,6 +306,15 @@ export default function AthleteHome() {
 
   function toggleDetalle(id) {
     setExpandidas((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  function actualizarNutricion(id, n) {
+    setNutricion((prev) => {
+      const mapa = new Map(prev.mapa)
+      if (n) mapa.set(id, n)
+      else mapa.delete(id)
+      return { ...prev, mapa }
+    })
   }
 
   function actualizarFeedback(id, fb) {
@@ -403,7 +447,7 @@ export default function AthleteHome() {
                             {formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
                           </span>
                           <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
-                          {sesion.duracion_min ? <span style={{ fontFamily: FONTS.mono }}>{sesion.duracion_min} min</span> : null}
+                          <DuracionSesion sesion={sesion} />
                         </div>
                         <h3 style={{ margin: '6px 0 0', fontSize: 17, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
                         {sesion.notas && (
@@ -422,6 +466,17 @@ export default function AthleteHome() {
                             </button>
                           )}
                         </div>
+
+                        {nutricion.disponible && (
+                          <NutricionSesion
+                            key={sesion.id}
+                            sesion={sesion}
+                            uid={userId}
+                            quien="atleta"
+                            inicial={nutricion.mapa.get(sesion.id)}
+                            onCambio={actualizarNutricion}
+                          />
+                        )}
 
                         {relativo === 'Hoy' && (
                           <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
@@ -466,6 +521,11 @@ export default function AthleteHome() {
                   })}
                 </div>
               )}
+              {hayMasProximas && !errorSesiones && (
+                <button onClick={cargarMasProximas} disabled={cargandoMas} style={{ ...ghostButtonStyle, width: '100%', marginTop: 10, color: COLORS.textSecondary }}>
+                  {cargandoMas ? 'Cargando…' : 'Ver más entrenos'}
+                </button>
+              )}
             </section>
 
             <section>
@@ -509,6 +569,18 @@ export default function AthleteHome() {
                         {abierta && (
                           <div style={{ padding: '0 16px 14px 31px' }}>
                             <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />
+                            {nutricion.disponible && (
+                              <div style={{ marginTop: 12, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                                <NutricionSesion
+                                  key={sesion.id}
+                                  sesion={sesion}
+                                  uid={userId}
+                                  quien="atleta"
+                                  inicial={nutricion.mapa.get(sesion.id)}
+                                  onCambio={actualizarNutricion}
+                                />
+                              </div>
+                            )}
                             {tieneDetalle && (
                               <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
                                 <WorkoutDetail sesion={sesion} mostrarNotas={true} />
