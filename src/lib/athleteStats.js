@@ -7,13 +7,15 @@ import { decimalToRitmo, formatHorasMin, formatFechaCorta, lunesDeSemana, hoyMad
 import { computeCargaHoy } from './carga'
 import { DISCIPLINE_COLORS } from './theme'
 
-// Colores de zona FC (frío→caliente): teal → ámbar → coral, como el spec.
+// Zonas de FC: una sola tinta (violeta de carga) que se intensifica de Z1 a
+// Z5. Antes iban de teal a coral, que son natación y carrera, y una barra de
+// Z3 parecía bici (regla: colores de disciplina solo para disciplinas).
 const ZONA_COLORS = {
-  Z1: '#2FBFAF',
-  Z2: '#5FA69C',
-  Z3: '#E8934A',
-  Z4: '#DE7548',
-  Z5: '#E85D5D',
+  Z1: 'rgba(139,127,209,0.35)',
+  Z2: 'rgba(139,127,209,0.5)',
+  Z3: 'rgba(139,127,209,0.68)',
+  Z4: 'rgba(139,127,209,0.85)',
+  Z5: '#8B7FD1',
 }
 const ZONAS = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
 // B1: 'other' (golf, paseos…) queda fuera del volumen y de la Línea de Transición.
@@ -54,13 +56,16 @@ export function computeZonas(actividades) {
   }, {})
   const max = Math.max(...ZONAS.map((z) => minutos[z] || 0), 0)
   if (max === 0) return []
+  const total = ZONAS.reduce((t, z) => t + (minutos[z] || 0), 0)
   return ZONAS.map((z) => {
     const min = Math.round(minutos[z] || 0)
     return {
       label: z,
       minutos: min,
-      minutesLabel: `${min}'`,
-      pct: Math.round((min / max) * 100),
+      // "40h 9m" en vez de "2409'": a partir de unas horas los minutos no se leen
+      minutesLabel: min > 0 ? formatHorasMin(min / 60) : '—',
+      pct: Math.round((min / max) * 100), // ancho de la barra (relativo a la mayor)
+      pctTotal: Math.round(((minutos[z] || 0) / total) * 100), // % del tiempo total
       color: ZONA_COLORS[z],
     }
   })

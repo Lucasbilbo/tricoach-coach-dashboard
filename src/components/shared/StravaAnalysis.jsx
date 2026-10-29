@@ -254,7 +254,12 @@ export default function StravaAnalysis({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 14 : 16, marginBottom: isMobile ? 14 : 24 }}>
         {zonas.length > 0 && (
           <div style={cardStyle}>
-            <div style={seccionLabel}>Tiempo en cada zona de pulso</div>
+            <div style={{ ...seccionLabel, marginBottom: 4 }}>Tiempo por zona de pulso</div>
+            {/* Honesto con el dato: no es tiempo en zona segundo a segundo, sino
+                la duración de cada actividad en la zona de su FC media. */}
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.4 }}>
+              Cada actividad cuenta en la zona de su pulso medio
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
               {zonas.map((z) => (
                 <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
@@ -262,8 +267,11 @@ export default function StravaAnalysis({
                   <div style={{ flex: 1, background: COLORS.background, borderRadius: 4, height: isMobile ? 12 : 16, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${z.pct}%`, background: z.color, borderRadius: 4, transition: 'width 180ms ease' }} />
                   </div>
-                  <span style={{ width: isMobile ? 42 : 52, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 13, color: COLORS.textPrimary }}>
+                  <span style={{ width: isMobile ? 64 : 76, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 13, color: z.minutos > 0 ? COLORS.textPrimary : COLORS.textTertiary, whiteSpace: 'nowrap' }}>
                     {z.minutesLabel}
+                  </span>
+                  <span style={{ width: isMobile ? 30 : 36, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 12, color: COLORS.textTertiary }}>
+                    {z.pctTotal} %
                   </span>
                 </div>
               ))}
