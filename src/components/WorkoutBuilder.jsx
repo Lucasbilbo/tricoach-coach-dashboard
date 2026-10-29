@@ -962,8 +962,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 style={{
                   flex: 1,
                   background: 'transparent',
-                  color: COLORS.textSecondary,
-                  border: `1px solid ${COLORS.cardBorder}`,
+                  // Ink, no Mist: en gris parecía un botón deshabilitado
+                  color: COLORS.textPrimary,
+                  border: '1px solid #2A3040',
                   borderRadius: 8,
                   padding: '10px 16px',
                   fontSize: 14,
@@ -973,7 +974,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   opacity: guardando || enviando ? 0.6 : 1,
                 }}
               >
-                {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : 'Guardar borrador'}
+                {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : 'Guardar sin enviar'}
               </button>
               <button
                 onClick={handleEnviarGarmin}
