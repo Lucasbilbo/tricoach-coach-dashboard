@@ -121,13 +121,13 @@ export const iconButtonStyle = {
 }
 
 // Título de sección: frase normal, sin mayúsculas forzadas.
+// Título de sección en frase normal (regla del design system: nada de
+// MAYÚSCULAS espaciadas). Antes "HOY", "PRÓXIMOS"… en gris y versalitas.
 export const sectionTitleStyle = {
   margin: '0 0 12px',
-  fontSize: 13,
-  fontWeight: 500,
-  color: COLORS.textSecondary,
-  letterSpacing: '0.02em',
-  textTransform: 'uppercase',
+  fontSize: 15,
+  fontWeight: 600,
+  color: COLORS.textPrimary,
 }
 
 // Número grande de métrica: mono, tracking negativo, carácter de instrumento.

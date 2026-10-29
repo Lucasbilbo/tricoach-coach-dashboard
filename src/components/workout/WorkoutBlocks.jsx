@@ -11,6 +11,7 @@ import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER } from './constants'
 import Icon from '../ui/Icon'
 import { labelSm, miniBtn, addBtnStyle } from './styles'
 import { MaterialChips, ZonasChips } from './WorkoutChips'
+import { resumenBloque } from './resumen'
 
 const rejilla = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }
 const campo = { ...inputStyle, width: '100%', minWidth: 0 }
@@ -36,6 +37,34 @@ function BotonesBloque({ idx, total, onMove, onRemove }) {
       <button type="button" onClick={() => onRemove(idx)} style={iconBtn} aria-label="Quitar bloque">
         <Icon name="trash" size={14} />
       </button>
+    </div>
+  )
+}
+
+// Cabecera de un bloque: título + resumen de una línea, y al pulsarla se abre o
+// se pliega. Plegado por defecto (revisión 2026-10-29): un entreno de 3 bloques
+// medía ~2.400 px en móvil con todos los campos abiertos; plegado se lee de un
+// vistazo («6 × (3′ Z4 / 2′ Z1)») y se abre solo el que se quiere tocar.
+function CabeceraBloque({ titulo, color, bloque, abierto, onToggle, children }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: abierto ? 12 : 0 }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={abierto}
+        style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', color: COLORS.textPrimary, fontFamily: FONTS.sans }}
+      >
+        <Icon name="chevronDown" size={15} style={{ flexShrink: 0, color: COLORS.textTertiary, transform: abierto ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: color || COLORS.textPrimary }}>{titulo}</span>
+          {!abierto && (
+            <span style={{ display: 'block', marginTop: 2, fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {resumenBloque(bloque)}
+            </span>
+          )}
+        </span>
+      </button>
+      {children}
     </div>
   )
 }
@@ -99,36 +128,39 @@ function CamposPaso({ datos, disciplina, onCambio }) {
   )
 }
 
-export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove }) {
+export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove, abierto = true, onToggle }) {
   const titulo = bloque.tipo === 'warmup' ? 'Calentamiento'
     : bloque.tipo === 'cooldown' ? 'Vuelta a la calma'
     : 'Paso'
 
   return (
-    <div style={tarjeta}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>{titulo}</span>
+    <div style={{ ...tarjeta, padding: abierto ? 12 : '10px 12px' }}>
+      <CabeceraBloque titulo={titulo} bloque={bloque} abierto={abierto} onToggle={onToggle}>
         <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
-      </div>
+      </CabeceraBloque>
 
-      <CamposPaso datos={bloque} disciplina={disciplina} onCambio={(c) => onUpdate(idx, c)} />
+      {abierto && (
+        <>
+          <CamposPaso datos={bloque} disciplina={disciplina} onCambio={(c) => onUpdate(idx, c)} />
 
-      <div style={{ marginTop: 8 }}>
-        <label style={labelSm}>Nombre / cue (opcional)</label>
-        <input
-          type="text"
-          value={bloque.nombre || ''}
-          onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
-          placeholder="ej: Progresivo"
-          style={campo}
-        />
-      </div>
+          <div style={{ marginTop: 8 }}>
+            <label style={labelSm}>Nombre / cue (opcional)</label>
+            <input
+              type="text"
+              value={bloque.nombre || ''}
+              onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
+              placeholder="ej: Progresivo"
+              style={campo}
+            />
+          </div>
 
-      <MaterialChips
-        material={bloque.material}
-        disciplina={disciplina}
-        onChange={(mat) => onUpdate(idx, { material: mat })}
-      />
+          <MaterialChips
+            material={bloque.material}
+            disciplina={disciplina}
+            onChange={(mat) => onUpdate(idx, { material: mat })}
+          />
+        </>
+      )}
     </div>
   )
 }
@@ -162,12 +194,11 @@ export function PasoRepeat({ paso, pasoIdx, repeatIdx, disciplina, onUpdatePaso,
   )
 }
 
-export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove, onUpdatePaso, onRemovePaso, onAddPaso }) {
+export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemove, onMove, onUpdatePaso, onRemovePaso, onAddPaso, abierto = true, onToggle }) {
   return (
-    <div style={tarjeta}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.load, flexShrink: 0 }}>Serie</span>
+    <div style={{ ...tarjeta, padding: abierto ? 12 : '10px 12px' }}>
+      <CabeceraBloque titulo={bloque.nombre?.trim() ? `Serie · ${bloque.nombre.trim()}` : 'Serie'} color={COLORS.load} bloque={bloque} abierto={abierto} onToggle={onToggle}>
+        {abierto && (
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, fontSize: 13, color: COLORS.textSecondary }}>
             <input
               type="number"
@@ -180,33 +211,38 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
             />
             ×
           </label>
-        </div>
+        )}
         <BotonesBloque idx={idx} total={total} onMove={onMove} onRemove={onRemove} />
-      </div>
-      <input
-        type="text"
-        value={bloque.nombre || ''}
-        onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
-        placeholder="Nombre de la serie (opcional)"
-        aria-label="Nombre de la serie"
-        style={{ ...campo, marginBottom: 12, fontSize: 13 }}
-      />
+      </CabeceraBloque>
 
-      {(bloque.pasos || []).map((paso, pi) => (
-        <PasoRepeat
-          key={pi}
-          paso={paso}
-          pasoIdx={pi}
-          repeatIdx={idx}
-          disciplina={disciplina}
-          onUpdatePaso={onUpdatePaso}
-          onRemovePaso={onRemovePaso}
-        />
-      ))}
+      {abierto && (
+        <>
+          <input
+            type="text"
+            value={bloque.nombre || ''}
+            onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
+            placeholder="Nombre de la serie (opcional)"
+            aria-label="Nombre de la serie"
+            style={{ ...campo, marginBottom: 12, fontSize: 13 }}
+          />
 
-      <button type="button" onClick={() => onAddPaso(idx)} style={{ ...addBtnStyle, marginTop: 2 }}>
-        + Añadir paso
-      </button>
+          {(bloque.pasos || []).map((paso, pi) => (
+            <PasoRepeat
+              key={pi}
+              paso={paso}
+              pasoIdx={pi}
+              repeatIdx={idx}
+              disciplina={disciplina}
+              onUpdatePaso={onUpdatePaso}
+              onRemovePaso={onRemovePaso}
+            />
+          ))}
+
+          <button type="button" onClick={() => onAddPaso(idx)} style={{ ...addBtnStyle, marginTop: 2 }}>
+            + Añadir paso
+          </button>
+        </>
+      )}
     </div>
   )
 }

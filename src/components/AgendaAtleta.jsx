@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { formatDiaMes, hoyMadrid, lunesDeSemana, sumarDias } from '../lib/chartUtils'
-import { COLORS, iconButtonStyle } from '../lib/theme'
+import { COLORS, iconButtonStyle, sectionTitleStyle } from '../lib/theme'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
 import SemanaCalendario from './SemanaCalendario'
 import Icon from './ui/Icon'
@@ -77,7 +77,7 @@ export default function AgendaAtleta({ userId, onCambio }) {
     <section style={{ marginBottom: 28 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{esActual ? 'Mi semana' : `Semana del ${formatDiaMes(lunes)}`}</h2>
+          <h2 style={{ ...sectionTitleStyle, margin: 0 }}>{esActual ? 'Mi semana' : `Semana del ${formatDiaMes(lunes)}`}</h2>
           <p style={{ margin: '2px 0 0', fontSize: 12.5, color: COLORS.textTertiary }}>Toca un entreno para moverlo de día u hora.</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>

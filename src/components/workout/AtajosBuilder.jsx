@@ -4,6 +4,8 @@ import { COLORS, inputStyle } from '../../lib/theme'
 import { parsearEntreno } from './parser'
 import { sectionLabel, miniBtn } from './styles'
 
+const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo', sans-serif" }
+
 // Atajos del WorkoutBuilder para que el coach prescriba rápido:
 //  1) Escritura rápida: una línea → bloques (parser.js).
 //  2) Plantillas: cargar/guardar sesiones típicas (tabla coach_plantillas, RLS
@@ -15,6 +17,8 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
   const [guardandoComo, setGuardandoComo] = useState(false)
   const [nombrePlantilla, setNombrePlantilla] = useState('')
   const [aviso, setAviso] = useState('')
+  // La chuleta de la sintaxis, plegada: se abre a mano o si hay un error
+  const [ayuda, setAyuda] = useState(false)
 
   useEffect(() => {
     let activo = true
@@ -94,9 +98,15 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
           Generar
         </button>
       </div>
-      <p style={{ margin: '6px 0 0', fontSize: 11, color: COLORS.textTertiary, lineHeight: 1.5 }}>
-        ' minutos · " segundos · m/km distancia (en natación, un número suelto son metros) · Z1–Z5 · ritmo 4:50-5:10 · series: 8x100m 1:45 rec 20" o Nx( … / … ). Reemplaza los bloques.
-      </p>
+      {ayuda || errores.length > 0 ? (
+        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: COLORS.textTertiary, lineHeight: 1.5 }}>
+          ' minutos · " segundos · m/km distancia (en natación, un número suelto son metros) · Z1–Z5 · ritmo 4:50-5:10 · series: 8x100m 1:45 rec 20" o Nx( … / … ). Reemplaza los bloques.
+        </p>
+      ) : (
+        <button type="button" onClick={() => setAyuda(true)} style={linkStyle}>
+          Cómo se escribe
+        </button>
+      )}
       {errores.length > 0 && (
         <ul style={{ margin: '6px 0 0', paddingLeft: 18, color: COLORS.error, fontSize: 12 }}>
           {errores.map((e) => (
@@ -105,55 +115,56 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
         </ul>
       )}
 
-      {plantillas !== null && (
-        <div style={{ marginTop: 14 }}>
-          <label style={sectionLabel}>Plantillas</label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* Plantillas: el selector solo si hay alguna de esta disciplina; guardar,
+          solo cuando ya hay bloques (antes eran dos controles siempre a la vista,
+          con un "Aún no hay plantillas" deshabilitado). */}
+      {plantillas !== null && (propias.length > 0 || bloques.length > 0) && (
+        <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {propias.length > 0 && (
             <select
               value=""
               onChange={(e) => e.target.value && cargarPlantilla(e.target.value)}
-              disabled={propias.length === 0}
+              aria-label="Cargar plantilla"
               style={{ ...inputStyle, flex: '1 1 180px', width: 'auto' }}
             >
-              <option value="">{propias.length ? 'Cargar plantilla…' : 'Aún no hay plantillas'}</option>
+              <option value="">Cargar plantilla…</option>
               {propias.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nombre}
                 </option>
               ))}
             </select>
-            {!guardandoComo && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNombrePlantilla(nombre || '')
-                  setGuardandoComo(true)
-                }}
-                disabled={bloques.length === 0}
-                style={{ ...miniBtn, padding: '8px 10px', opacity: bloques.length === 0 ? 0.5 : 1 }}
-              >
-                Guardar como plantilla
-              </button>
-            )}
-          </div>
-          {guardandoComo && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              <input
-                value={nombrePlantilla}
-                onChange={(e) => setNombrePlantilla(e.target.value)}
-                placeholder="Nombre de la plantilla"
-                maxLength={80}
-                autoFocus
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <button type="button" onClick={guardarPlantilla} style={{ ...miniBtn, padding: '0 10px', color: COLORS.accent, borderColor: COLORS.accent }}>
-                Guardar
-              </button>
-              <button type="button" onClick={() => setGuardandoComo(false)} style={{ ...miniBtn, padding: '0 10px' }}>
-                ×
-              </button>
-            </div>
           )}
+          {!guardandoComo && bloques.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setNombrePlantilla(nombre || '')
+                setGuardandoComo(true)
+              }}
+              style={linkStyle}
+            >
+              Guardar como plantilla
+            </button>
+          )}
+        </div>
+      )}
+      {guardandoComo && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          <input
+            value={nombrePlantilla}
+            onChange={(e) => setNombrePlantilla(e.target.value)}
+            placeholder="Nombre de la plantilla"
+            maxLength={80}
+            autoFocus
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button type="button" onClick={guardarPlantilla} style={{ ...miniBtn, padding: '0 10px', color: COLORS.accent, borderColor: COLORS.accent }}>
+            Guardar
+          </button>
+          <button type="button" onClick={() => setGuardandoComo(false)} aria-label="Cancelar" style={{ ...miniBtn, padding: '0 10px' }}>
+            ×
+          </button>
         </div>
       )}
 

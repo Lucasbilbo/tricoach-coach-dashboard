@@ -6,7 +6,7 @@ import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta } from '../lib/athleteData'
 import { misConexiones } from '../lib/connections'
 import { ESTADO, asignarActividades, estadoDeSesion, fechaHaceSemanas, semanasNecesarias } from '../lib/estadoSesion'
-import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
+import { formatDiaMes, hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
 import { COLORS, DISCIPLINE_COLORS, FONTS, buttonStyle, cardStyle, ghostButtonStyle, iconButtonStyle, pageStyle, railStyle } from '../lib/theme'
 import Icon from '../components/ui/Icon'
 import { PageHeader, Segmented, SectionTitle, Tabs } from '../components/ui/Layout'
@@ -26,6 +26,7 @@ import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
 import DuracionSesion from '../components/DuracionSesion'
+import { duracionPrevista } from '../lib/tssPrevisto'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -442,14 +443,27 @@ export default function AthleteHome() {
 
         {relativo === 'Hoy' && (
           <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
-            <button
-              onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
-              style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
-              aria-expanded={!!feedbackAbierto[sesion.id]}
-            >
-              <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
-              {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
-            </button>
+            {/* Sin feedback aún: botón de verdad (es lo que el atleta tiene que hacer
+                al acabar). Con feedback: una línea que lo resume y lo reabre. */}
+            {feedbacks.has(sesion.id) || feedbackAbierto[sesion.id] ? (
+              <button
+                onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+                style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
+                aria-expanded={!!feedbackAbierto[sesion.id]}
+              >
+                <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
+                {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: true }))}
+                aria-expanded={false}
+                style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 6, padding: '8px 14px', fontSize: 13.5 }}
+              >
+                <Icon name="check" size={15} />
+                ¿Cómo te fue?
+              </button>
+            )}
             {feedbackAbierto[sesion.id] && (
               <div style={{ padding: '4px 0 8px' }}>
                 <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
@@ -479,6 +493,81 @@ export default function AthleteHome() {
           </div>
         )}
       </article>
+    )
+  }
+
+  // Fila de "Próximos": una línea por entreno, como "Hechos y pendientes", y al
+  // pulsarla se abre con el entreno, el envío al reloj y la nutrición. Antes era
+  // una tarjeta completa por sesión: 10 tarjetas ≈ 1.300 px en el móvil.
+  const renderProximaFila = (sesion, i) => {
+    const tieneDetalle = tieneEntreno(sesion.workout_steps)
+    const abierta = !!expandidas[sesion.id]
+    const relativo = diaRelativo(sesion.fecha)
+    const enviada = !!sesion.enviado_a_garmin
+    // "Aún no está en tu reloj" solo importa si toca hoy o mañana; para la
+    // semana que viene es normal (el entrenador lo manda más cerca).
+    const avisarReloj = !enviada && (relativo === 'Hoy' || relativo === 'Mañana')
+    const plan = nutricion.disponible ? nutricion.mapa.get(sesion.id) : null
+    return (
+      <div key={sesion.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}` }}>
+        <button
+          onClick={() => toggleDetalle(sesion.id)}
+          aria-expanded={abierta}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: 'pointer', color: COLORS.textPrimary }}
+        >
+          <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
+            <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
+              {/* "Sábado · 31 Oct", no "Sábado · Sáb 31 Oct" */}
+              {relativo && <span style={{ color: COLORS.textPrimary, fontWeight: 600 }}>{relativo} · </span>}
+              <span style={{ fontFamily: FONTS.mono }}>
+                {relativo ? formatDiaMes(sesion.fecha) : formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
+              </span>
+              {' · '}{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
+              {duracionPrevista(sesion) && <> · <DuracionSesion sesion={sesion} /></>}
+            </span>
+          </span>
+          {avisarReloj && (
+            <span title="Aún no está en tu reloj" aria-label="Aún no está en tu reloj" style={{ color: AVISO_RELOJ, display: 'inline-flex' }}>
+              <Icon name="watch" size={16} />
+            </span>
+          )}
+          <Icon name="chevronDown" size={16} style={{ color: COLORS.textTertiary, flexShrink: 0, transform: abierta ? 'rotate(180deg)' : 'none' }} />
+        </button>
+        {abierta && (
+          <div style={{ padding: '0 16px 14px 31px' }}>
+            {sesion.notas && <p style={{ margin: '0 0 8px', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
+              <Icon name="watch" size={15} />
+              {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
+            </span>
+            {intervalsOk && !enviada && (
+              <div style={{ marginTop: 8 }}>
+                {erroresGarmin[sesion.id] && <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>}
+                <button
+                  onClick={() => enviarAGarmin(sesion)}
+                  disabled={enviandoGarmin[sesion.id]}
+                  style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: enviandoGarmin[sesion.id] ? 0.6 : 1 }}
+                >
+                  <Icon name="send" size={15} />
+                  {enviandoGarmin[sesion.id] ? 'Enviando…' : 'Enviar a mi reloj'}
+                </button>
+              </div>
+            )}
+            {tieneDetalle && (
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                <WorkoutDetail sesion={sesion} mostrarNotas={false} />
+              </div>
+            )}
+            {nutricion.disponible && (
+              <div style={{ marginTop: 10, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                <NutricionSesion key={sesion.id} sesion={sesion} uid={userId} quien="atleta" inicial={plan} onCambio={actualizarNutricion} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     )
   }
 
@@ -548,8 +637,8 @@ export default function AthleteHome() {
             {!cargandoSesiones && !errorSesiones && (restoProximas.length > 0 || hayMasProximas) && (
             <section style={{ marginBottom: 32 }}>
               <SectionTitle>Próximos</SectionTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {restoProximas.map(renderProxima)}
+              <div style={{ ...cardStyle, padding: '2px 0' }}>
+                {restoProximas.map(renderProximaFila)}
               </div>
               {hayMasProximas && (
                 <button onClick={cargarMasProximas} disabled={cargandoMas} style={{ ...ghostButtonStyle, width: '100%', marginTop: 10, color: COLORS.textSecondary }}>

@@ -247,9 +247,12 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-actividad', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'actividad'], soloPantalla: true },
   { quien: 'coach', nombre: 'sin-strava-analisis', url: `/athlete/${F.B}`, pasos: ['tab:Análisis'], esperado: /status of 409/ },
   { quien: 'coach', nombre: 'atleta-temporada', url: `/athlete/${F.A}?tab=temporada` },
-  { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'] },
+  { quien: 'coach', nombre: 'creador-nuevo', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo'], expandir: true },
+  { quien: 'coach', nombre: 'creador-carrera', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`], expandir: true },
+  { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
   { quien: 'atleta', nombre: 'home-nutricion', url: '/home', pasos: ['nutricion'] },
+  { quien: 'atleta', nombre: 'home-feedback', url: '/home', pasos: ['feedback'] },
   { quien: 'atleta', nombre: 'home-historial', url: '/home', pasos: ['historial'] },
   { quien: 'atleta', nombre: 'home-disponibilidad', url: '/home', pasos: ['tab:Horario'] },
   { quien: 'atleta', nombre: 'home-temporada', url: '/home?tab=temporada' },
@@ -278,6 +281,10 @@ const PANTALLAS = [
           else if (paso === 'historial') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Rodaje largo' }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'editar') await page.getByRole('button', { name: 'Editar sesión' }).first().click()
           else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()
+          else if (paso === 'nuevo') await page.getByRole('button', { name: 'Prescribir entreno' }).first().click()
+          else if (paso.startsWith('disciplina:')) await page.getByRole('button', { name: paso.slice(11), exact: true }).last().click()
+          else if (paso.startsWith('rapida:')) { await page.getByPlaceholder(/Z1 \+|cal 400/).first().fill(paso.slice(7)); await page.getByRole('button', { name: 'Generar' }).first().click() }
+          else if (paso === 'feedback') await page.getByRole('button', { name: '¿Cómo te fue?' }).first().click()
           else if (paso === 'comparar') await page.getByRole('button', { name: 'Comparar semanas' }).first().click()
           else if (paso === 'actividad') { const b = page.getByText(/^Run \d/).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           await page.waitForTimeout(1500)
@@ -285,6 +292,17 @@ const PANTALLAS = [
       }
       const ancho = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
       const archivo = `${vista.nombre}-${p.quien}-${p.nombre}.png`
+      // expandir: un cajón fijo con scroll propio se despliega entero para la captura
+      if (p.expandir) {
+        await page.evaluate(() => {
+          for (const el of document.querySelectorAll('div')) {
+            const cs = getComputedStyle(el)
+            if (cs.position === 'fixed' && el.offsetHeight >= window.innerHeight - 1) Object.assign(el.style, { position: 'absolute', height: 'auto', minHeight: '100vh' })
+            if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) Object.assign(el.style, { overflowY: 'visible', flex: 'none' })
+          }
+        })
+        await page.waitForTimeout(300)
+      }
       // soloPantalla: un modal fijo se ve en el viewport, no en la página entera
       await page.screenshot({ path: path.join(OUT, archivo), fullPage: !p.soloPantalla })
       informe.push({ archivo, scrollHorizontal: ancho.sw > ancho.cw ? `${ancho.sw}>${ancho.cw}` : null, errores })

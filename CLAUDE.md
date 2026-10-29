@@ -195,6 +195,22 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   de Intervals (→ reloj); si Intervals falla, la sesión NO se borra.
 - HTTP de Intervals compartido en `lib/intervals-api.js`. Tests: `test/entrenos-reloj.test.js`.
 
+### Creador simplificado (2026-10-29)
+- Lo esencial a la vista: disciplina, día (+ hora), nombre y el entreno. Nada
+  se ha quitado; lo demás se pliega:
+  - **Bloques plegados** con su resumen (`workout/resumen.js`: `resumenBloque`
+    «6 × (3′ Z4 / 2′ Z1)»); se abre solo el que se toca (`abiertos` en el
+    builder; el añadido a mano sale abierto, generar/plantilla los pliega).
+  - **Nombre opcional**: vacío → `nombrePorDefecto` («Carrera · 6×3′ Z4»),
+    que también es el placeholder. Para guardar solo hace falta el día.
+  - Escritura rápida con la chuleta plegada («Cómo se escribe»); selector de
+    plantillas solo si hay; «Guardar como plantilla» solo con bloques.
+  - **«Así llega al reloj»** = perfil de intensidad (`Perfil` de
+    WorkoutDetail) + texto exacto a un clic.
+  - **«Más opciones»** (notas + nutrición), plegado salvo que tengan algo.
+  - **Pie fijo** con avisos y botones («Guardar sin enviar» · «Guardar y
+    enviar al reloj»).
+
 ### Atajos del coach (2026-10)
 - **Escritura rápida** (`workout/parser.js`, `AtajosBuilder.jsx`): una línea →
   bloques. `15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1`; `'` min, `"` seg, m/km, Z1–Z5,
@@ -426,6 +442,11 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   atleta: "Hoy" (o "Tu próximo entreno") arriba, luego Mi semana, Próximos y
   Hechos. "Sin enviar / Aún no está en tu reloj" en el ámbar de aviso `#E8B84A`,
   nunca en el de bici.
+- **/home más corto (2026-10-29)**: "Próximos" es una lista de una línea por
+  entreno (como "Hechos y pendientes"); al pulsar se abre con notas, reloj,
+  entreno y nutrición. El aviso de reloj (icono ámbar) solo si toca hoy o
+  mañana. "¿Cómo te fue?" de hoy es un botón (teal) hasta que hay feedback.
+  Títulos de sección (`sectionTitleStyle`) en frase normal, 15 px, Ink.
 - Pendiente (decidido no hacer aún): copiar semana entera, avisar al coach
   cuando el atleta cambia su disponibilidad.
 
@@ -485,8 +506,10 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   `npx vite build --config vite.preview.config.mjs && npx vite preview --config vite.preview.config.mjs`,
   luego `/preview.html?as=coach|athlete|none&route=/dashboard`.
 - **Repaso visual en el repo** (2026-10-29): `npm run repaso` (scripts/repaso-visual,
-  ver su README) — 15 pantallas × móvil/escritorio con datos simulados (incluye
-  análisis a 24 semanas, detalle de actividad y atleta sin Strava); capturas e
+  ver su README) — 19 pantallas × móvil/escritorio con datos simulados (incluye
+  análisis a 24 semanas, detalle de actividad, atleta sin Strava, creador nuevo
+  y con una carrera escrita, feedback de hoy); `expandir: true` despliega el
+  cajón del creador entero en la captura; capturas e
   `informe.json` (errores de consola, scroll horizontal) en `repaso-visual-out/`.
   `OK` = sin errores NI scroll. Pasarlo antes de mergear un lote grande.
   Playwright: usar el global (`NODE_PATH=$(npm root -g) npm run repaso`); un
