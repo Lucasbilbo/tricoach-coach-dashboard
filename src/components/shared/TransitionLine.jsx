@@ -30,6 +30,12 @@ export default function TransitionLine({
   showLegend = true,
   showStatusLabel = true,
   showLabels = true, // etiqueta de columna (día/semana) bajo la barra
+  // Máximo de etiquetas bajo las barras. Con más columnas se pinta una de cada
+  // N, contando desde la última (la semana en curso siempre lleva la suya), y
+  // las horas por semana se ocultan. Antes, con 24 semanas en móvil, las
+  // etiquetas no cabían y empujaban la página a 637 px de ancho; en escritorio
+  // se partían en dos líneas y descuadraban las barras.
+  maxLabels = 12,
   dowFontSize = 11,
   animate = true,
   bare = false, // sin card wrapper (para mini-indicadores dentro de otra card)
@@ -38,6 +44,9 @@ export default function TransitionLine({
   const transitionSeg = animate ? 'height 180ms ease, opacity 180ms ease' : 'none'
   const leyenda = showLegend ? leyendaDe(columns) : []
   const mostrarHeader = !!titulo || leyenda.length > 0
+  const paso = Math.max(1, Math.ceil(columns.length / Math.max(1, maxLabels)))
+  const conEtiqueta = (i) => (columns.length - 1 - i) % paso === 0
+  const conEstado = showStatusLabel && paso === 1
 
   return (
     <div style={bare ? undefined : { ...cardStyleLocal }}>
@@ -76,7 +85,7 @@ export default function TransitionLine({
         aria-label={titulo}
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${columns.length || 1}, 1fr)`,
+          gridTemplateColumns: `repeat(${columns.length || 1}, minmax(0, 1fr))`,
           gap,
           alignItems: 'end',
           height: barsHeight,
@@ -130,13 +139,15 @@ export default function TransitionLine({
                   fontSize: dowFontSize,
                   color: col.isToday ? COLORS.textPrimary : COLORS.textSecondary,
                   textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.3,
                 }}
               >
-                {col.label}
+                {conEtiqueta(i) ? col.label : '\u00a0'}
               </div>
             )}
-            {showStatusLabel && showLabels && (
-              <div style={{ fontSize: 10, color: COLORS.textTertiary, textAlign: 'center', lineHeight: 1.3 }}>
+            {conEstado && showLabels && (
+              <div style={{ fontSize: 10, color: COLORS.textTertiary, textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
                 {col.statusLabel}
               </div>
             )}

@@ -245,6 +245,7 @@ export default function StravaAnalysis({
             barRadius={isMobile ? 4 : 6}
             showLegend
             showStatusLabel={!isMobile}
+            maxLabels={isMobile ? 5 : 12}
             dowFontSize={isMobile ? 10 : 11}
           />
         </div>
