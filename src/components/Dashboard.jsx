@@ -259,7 +259,10 @@ export default function Dashboard() {
               <button
                 key={atleta.athlete_id}
                 onClick={() => navigate(`/athlete/${atleta.athlete_id}`)}
-                style={{ ...cardStyle, textAlign: 'left', cursor: 'pointer', color: COLORS.textPrimary, width: '100%' }}
+                // Columna arriba: un <button> centra su contenido en vertical y, en
+                // una fila con otra tarjeta más alta (con gráfico), el nombre
+                // quedaba flotando a media altura.
+                style={{ ...cardStyle, textAlign: 'left', cursor: 'pointer', color: COLORS.textPrimary, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <div style={{ minWidth: 0 }}>
