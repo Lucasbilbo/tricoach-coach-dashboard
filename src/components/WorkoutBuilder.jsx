@@ -50,6 +50,15 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // Con hora puesta solo se ofrecen las disciplinas que caben a esa hora;
   // "Otra disciplina" las enseña todas (el coach puede forzar).
   const [todasDisciplinas, setTodasDisciplinas] = useState(false)
+  // Bloques desplegados (índices). Todos plegados al abrir, al generar con la
+  // escritura rápida o al cargar una plantilla; el que se añade a mano, abierto.
+  const [abiertos, setAbiertos] = useState(() => new Set())
+  const alternarBloque = (idx) => setAbiertos((prev) => {
+    const s = new Set(prev)
+    if (s.has(idx)) s.delete(idx)
+    else s.add(idx)
+    return s
+  })
   const [ahora] = useState(() => ahoraMadrid())
   // Se calculan al abrir (el creador se monta cada vez), en hora de Madrid
   const DIAS_CHIPS = proximosDias(14, ahora.fecha)
@@ -80,6 +89,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setExitoGarmin(false)
       setMostrarInputHora(false)
       setTodasDisciplinas(false)
+      setAbiertos(new Set())
       setErrorIntervals(false)
       setError(null)
       setAvisoReloj(null)
@@ -152,10 +162,25 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
 
   function removeBloque(idx) {
     setForm((prev) => ({ ...prev, bloques: prev.bloques.filter((_, i) => i !== idx) }))
+    // Los índices abiertos por debajo suben uno
+    setAbiertos((prev) => new Set([...prev].filter((i) => i !== idx).map((i) => (i > idx ? i - 1 : i))))
   }
 
   function moveBloque(idx, dir) {
     const target = idx + dir
+    if (target >= 0 && target < form.bloques.length) {
+      // El estado abierto/plegado viaja con el bloque
+      setAbiertos((prev) => {
+        const s = new Set(prev)
+        const a = s.has(idx)
+        const b = s.has(target)
+        s.delete(idx)
+        s.delete(target)
+        if (a) s.add(target)
+        if (b) s.add(idx)
+        return s
+      })
+    }
     setForm((prev) => {
       if (target < 0 || target >= prev.bloques.length) return prev
       const bloques = [...prev.bloques]
@@ -218,6 +243,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           }
         : { tipo, cantidad: 200, unidad, ...base }
 
+    setAbiertos((prev) => new Set([...prev, form.bloques.length]))
     setForm((prev) => ({ ...prev, bloques: [...prev.bloques, nuevoBloque] }))
   }
 
@@ -500,7 +526,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     disabled={!!bloqueo}
                     title={bloqueo || undefined}
                     aria-pressed={sel}
-                    onClick={() => setForm((prev) => (prev.disciplina === d.value ? prev : { ...prev, disciplina: d.value, bloques: [] }))}
+                    onClick={() => {
+                      if (form.disciplina !== d.value) setAbiertos(new Set())
+                      setForm((prev) => (prev.disciplina === d.value ? prev : { ...prev, disciplina: d.value, bloques: [] }))
+                    }}
                     style={chipDisciplinaStyle(sel, DISCIPLINE_COLORS[d.value], { bloqueado: !!bloqueo })}
                   >
                     {d.label}
@@ -717,9 +746,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             bloques={form.bloques}
             nombre={form.nombre}
             piscina={form.piscina}
-            onBloques={(bloques, nombrePlantilla) =>
+            onBloques={(bloques, nombrePlantilla) => {
+              setAbiertos(new Set())
               setForm((prev) => ({ ...prev, bloques, nombre: prev.nombre?.trim() ? prev.nombre : nombrePlantilla || prev.nombre }))
-            }
+            }}
           />
 
           {/* Separador Bloques */}
@@ -740,6 +770,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 onUpdatePaso={updatePaso}
                 onRemovePaso={removePaso}
                 onAddPaso={addPaso}
+                abierto={abiertos.has(idx)}
+                onToggle={() => alternarBloque(idx)}
               />
             ) : (
               <BloqueSimple
@@ -751,6 +783,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 onUpdate={updateBloque}
                 onRemove={removeBloque}
                 onMove={moveBloque}
+                abierto={abiertos.has(idx)}
+                onToggle={() => alternarBloque(idx)}
               />
             )
           )}
