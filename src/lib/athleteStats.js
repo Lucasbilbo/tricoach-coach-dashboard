@@ -77,6 +77,8 @@ export function computeZonas(actividades) {
 // Ritmo medio PONDERADO por distancia (minutos totales / km totales): antes era
 // la media de los ritmos de cada salida, así que un trote de 3 km pesaba lo
 // mismo que una tirada de 20 km.
+const RANGO_MIN_RITMO = 0.5 // min/km
+
 export function computePaceTrend(actividades, nSemanas = 6) {
   const porSemana = {}
   for (const a of actividades) {
@@ -96,7 +98,9 @@ export function computePaceTrend(actividades, nSemanas = 6) {
   const ritmos = semanas.map((s) => s.ritmo)
   const min = Math.min(...ritmos)
   const max = Math.max(...ritmos)
-  const rango = max - min || 1
+  // Rango mínimo de 30 s/km: antes se normalizaba al min–max y 5 segundos de
+  // diferencia (5:27 vs 5:32) partían la barra por la mitad.
+  const rango = Math.max(max - min, RANGO_MIN_RITMO)
   return semanas.map((s, i) => {
     // ritmo más rápido (menor) → altura mayor; suelo 40% para que se vea la barra
     const heightPct = Math.round(40 + ((max - s.ritmo) / rango) * 60)

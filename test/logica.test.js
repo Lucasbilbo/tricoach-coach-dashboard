@@ -206,6 +206,15 @@ test('ritmo semanal ponderado por distancia (un trote corto no pesa como la tira
   assert.equal(t[0].pace, '5:06') // (12 + 90) / 20 = 5.1 min/km; la media simple daría 5:30
 })
 
+test('ritmo semanal: 5 s/km de diferencia no parten la barra por la mitad', () => {
+  const t = computePaceTrend([
+    { fecha: '2026-10-06', disciplina: 'run', ritmo_min_km: 5 + 27 / 60, distancia_km: 10 },
+    { fecha: '2026-10-13', disciplina: 'run', ritmo_min_km: 5 + 32 / 60, distancia_km: 10 },
+  ])
+  assert.equal(t[1].heightPct, 40)
+  assert.equal(t[0].heightPct, 50) // 5 de 30 s → +10 %
+})
+
 test('Línea de Transición: excluye "other" y la semana vacía sale con —', () => {
   const cols = buildTransitionColumns(
     [act('2026-09-29', 'run'), act('2026-09-30', 'other', { duracion_min: 240 })],
