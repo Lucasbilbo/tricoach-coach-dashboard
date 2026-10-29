@@ -632,7 +632,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   fontFamily: "'Archivo', sans-serif",
                 }}
               >
-                {mostrarInputFecha ? '▲ Ocultar' : '▼ Otra fecha'}
+                <Icon name="chevronDown" size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 4, transform: mostrarInputFecha ? 'rotate(180deg)' : 'none' }} />{mostrarInputFecha ? 'Ocultar' : 'Otra fecha'}
               </button>
               {mostrarInputFecha && (
                 <input
@@ -682,7 +682,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   onClick={() => setMostrarInputHora((v) => !v)}
                   style={{ background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'Archivo', sans-serif" }}
                 >
-                  {mostrarInputHora ? '▲ Ocultar' : '▼ Otra hora'}
+                  <Icon name="chevronDown" size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 4, transform: mostrarInputHora ? 'rotate(180deg)' : 'none' }} />{mostrarInputHora ? 'Ocultar' : 'Otra hora'}
                 </button>
                 {mostrarInputHora && (
                   <input
