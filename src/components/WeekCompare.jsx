@@ -15,7 +15,7 @@ const FILAS = [
   { clave: 'tss_total', label: 'TSS total', neutro: true },
 ]
 
-// 'YYYY-MM-DD' (lunes) → 'Jun 2 – Jun 8'
+// 'YYYY-MM-DD' (lunes) → '2 Jun – 8 Jun'
 function etiquetaSemana(lunes) {
   return `${formatFechaCorta(lunes)} – ${formatFechaCorta(sumarDias(lunes, 6))}`
 }

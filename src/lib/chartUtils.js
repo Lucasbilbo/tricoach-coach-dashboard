@@ -6,15 +6,13 @@ export const MESES_CORTOS = [
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
 ]
 
-// 'YYYY-MM-DD' → 'Jun 2'
+// 'YYYY-MM-DD' → '2 Jun'. Orden día-mes en TODA la app (ejes, tablas y
+// temporada). Antes los ejes decían 'Jun 2' y las tablas '2 Jun'.
 export function formatFechaCorta(fecha) {
-  if (!fecha || typeof fecha !== 'string') return ''
-  const [, m, d] = fecha.split('-').map(Number)
-  if (!m || !d || !MESES_CORTOS[m - 1]) return fecha
-  return `${MESES_CORTOS[m - 1]} ${d}`
+  return formatDiaMes(fecha)
 }
 
-// 'YYYY-MM-DD' → '10 Jun' (orden día-mes, para tablas; los ejes usan formatFechaCorta)
+// 'YYYY-MM-DD' → '10 Jun'
 export function formatDiaMes(fecha) {
   if (!fecha || typeof fecha !== 'string') return ''
   const [, m, d] = fecha.split('-').map(Number)

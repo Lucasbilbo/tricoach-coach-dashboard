@@ -192,7 +192,7 @@ test('ritmos: 4.999 → 5:00 (sin 4:60); "5:14" ⇄ decimal; basura → null/—
   cerca(ritmoToDecimal('5:14'), 5 + 14 / 60)
   assert.equal(ritmoToDecimal('x:y'), null)
   assert.equal(ritmoToDecimal(null), null)
-  assert.equal(formatFechaCorta('2026-10-08'), 'Oct 8')
+  assert.equal(formatFechaCorta('2026-10-08'), '8 Oct')
   assert.equal(formatHorasMin(2.25), '2h 15m')
 })
 
