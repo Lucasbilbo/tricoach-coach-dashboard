@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react'
 import Icon from './ui/Icon'
 import { authHeaders } from '../lib/authHeaders'
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS } from '../lib/theme'
+import { COLORS, DISCIPLINE_LABELS, FONTS, railStyle } from '../lib/theme'
+import { formatDiaMes } from '../lib/chartUtils'
+import { useIsMobile } from '../hooks/useIsMobile'
 import PolylineMap from './PolylineMap'
 
-const COLOR_RAPIDO = [47, 191, 175] // swim teal (rápido)
-const COLOR_LENTO = [232, 93, 93] // run coral (lento)
+// Ritmo de cada split: del más rápido (Ink, #EDEEF2) al más lento (Mist
+// oscuro, #7A808F). Antes iba de teal a coral, que son natación y carrera.
+const COLOR_RAPIDO = [237, 238, 242]
+const COLOR_LENTO = [122, 128, 143]
 
-// t=0 → más rápido (verde), t=1 → más lento (rojo)
+// t=0 → más rápido, t=1 → más lento
 function colorRitmo(t) {
   const rgb = COLOR_RAPIDO.map((c, i) => Math.round(c + (COLOR_LENTO[i] - c) * t))
   return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+}
+
+// '2026-10-29' → '29 Oct 2026'
+function fechaLarga(fecha) {
+  if (!fecha) return ''
+  return `${formatDiaMes(fecha)} ${fecha.slice(0, 4)}`
 }
 
 function formatTiempo(segundos) {
@@ -55,6 +65,7 @@ const tdStyle = {
   color: COLORS.textPrimary,
   borderBottom: `1px solid ${COLORS.cardBorder}`,
   whiteSpace: 'nowrap',
+  fontFamily: FONTS.mono, // números (la columna Nombre lo sobrescribe)
 }
 
 const seccionTituloStyle = {
@@ -68,6 +79,13 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const isMobile = useIsMobile()
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   useEffect(() => {
     let activo = true
@@ -126,6 +144,14 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
       ].filter((m) => m.valor != null)
     : []
 
+  // Columnas de vueltas que no tienen ningún dato (p. ej. potencia sin
+  // potenciómetro) no se pintan: una columna entera de "—" no dice nada.
+  const hayEnVueltas = (campo) => vueltas.some((v) => v[campo] != null)
+  const colFc = hayEnVueltas('fc_media')
+  const colPotencia = hayEnVueltas('potencia_media')
+  const colCadencia = hayEnVueltas('cadencia_media')
+  const colDesnivel = hayEnVueltas('desnivel_m')
+
   // Rango de velocidades de splits para el gradiente de ritmo
   const velocidades = splits.map((s) => s.velocidad_ms).filter((v) => v != null && v > 0)
   const velMin = velocidades.length > 0 ? Math.min(...velocidades) : null
@@ -148,20 +174,25 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 100,
-        padding: 16,
+        padding: isMobile ? 0 : 16,
       }}
     >
+      {/* En móvil, pantalla completa (antes una caja al 90 % con 32 px de
+          margen interior que dejaba media pantalla para el contenido). */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={act?.nombre || 'Detalle de la actividad'}
         onClick={(e) => e.stopPropagation()}
         style={{
           background: COLORS.card,
-          border: `1px solid ${COLORS.cardBorder}`,
-          borderRadius: 12,
-          width: '90vw',
-          height: '90vh',
+          border: isMobile ? 'none' : `1px solid ${COLORS.cardBorder}`,
+          borderRadius: isMobile ? 0 : 12,
+          width: isMobile ? '100%' : 'min(1000px, 92vw)',
+          height: isMobile ? '100%' : '90vh',
           overflowY: 'auto',
-          padding: 32,
-          fontFamily: "'Archivo', sans-serif",
+          padding: isMobile ? '20px 16px 32px' : 32,
+          fontFamily: FONTS.sans,
           position: 'relative',
           boxSizing: 'border-box',
         }}
@@ -193,26 +224,14 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
 
         {!cargando && !error && act && (
           <>
-            <header style={{ marginBottom: 20, paddingRight: 48 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: COLORS.textPrimary }}>
-                  {act.nombre || 'Actividad'}
-                </h2>
-                <span
-                  style={{
-                    background: DISCIPLINE_COLORS[act.disciplina] || DISCIPLINE_COLORS.other,
-                    color: '#FFFFFF',
-                    borderRadius: 4,
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}
-                >
-                  {DISCIPLINE_LABELS[act.disciplina] || act.tipo}
-                </span>
-              </div>
+            <header style={{ marginBottom: 20, paddingRight: 48, paddingLeft: 14, ...railStyle(act.disciplina) }}>
+              <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 700, color: COLORS.textPrimary, lineHeight: 1.25 }}>
+                {act.nombre || 'Actividad'}
+              </h2>
+              {/* Deporte en texto + filo de color (sin pastilla rellena) */}
               <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
-                {act.fecha}
+                {DISCIPLINE_LABELS[act.disciplina] || act.tipo}
+                {act.fecha && <> · <span style={{ fontFamily: FONTS.mono }}>{fechaLarga(act.fecha)}</span></>}
               </p>
               {act.descripcion && (
                 <p style={{ margin: '8px 0 0', fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' }}>
@@ -224,8 +243,9 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: 12,
+                // En móvil 3 por fila: antes salía una tarjeta por fila (11 de alto)
+                gridTemplateColumns: isMobile ? 'repeat(3, minmax(0, 1fr))' : 'repeat(auto-fill, minmax(130px, 1fr))',
+                gap: isMobile ? 8 : 12,
               }}
             >
               {metricas.map((m) => (
@@ -235,10 +255,11 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                     background: COLORS.background,
                     border: `1px solid ${COLORS.cardBorder}`,
                     borderRadius: 8,
-                    padding: 12,
+                    padding: isMobile ? '10px 10px' : 12,
+                    minWidth: 0,
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: COLORS.textPrimary }}>
+                  <p style={{ margin: 0, fontSize: isMobile ? 14 : 17, fontWeight: 600, color: COLORS.textPrimary, fontFamily: FONTS.mono, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {m.valor}
                   </p>
                   <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.textSecondary }}>
@@ -307,17 +328,17 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                         <th style={thStyle}>
                           {act.disciplina === 'run' || act.disciplina === 'swim' ? 'Ritmo' : 'Vel.'}
                         </th>
-                        <th style={thStyle}>FC</th>
-                        <th style={thStyle}>Potencia</th>
-                        <th style={thStyle}>Cadencia</th>
-                        <th style={thStyle}>Desnivel</th>
+                        {colFc && <th style={thStyle}>FC</th>}
+                        {colPotencia && <th style={thStyle}>Potencia</th>}
+                        {colCadencia && <th style={thStyle}>Cadencia</th>}
+                        {colDesnivel && <th style={thStyle}>Desnivel</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {vueltas.map((v) => (
                         <tr key={v.indice}>
                           <td style={tdStyle}>{v.indice}</td>
-                          <td style={tdStyle}>{v.nombre}</td>
+                          <td style={{ ...tdStyle, fontFamily: FONTS.sans }}>{v.nombre}</td>
                           <td style={tdStyle}>{formatDistanciaVuelta(v, act.disciplina)}</td>
                           <td style={tdStyle}>{formatTiempo(v.moving_time_s)}</td>
                           <td style={tdStyle}>
@@ -333,10 +354,10 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                                   ? `${v.velocidad_media_kmh} km/h`
                                   : '—'}
                           </td>
-                          <td style={tdStyle}>{v.fc_media != null ? `${v.fc_media} ppm` : '—'}</td>
-                          <td style={tdStyle}>{v.potencia_media != null ? `${v.potencia_media} W` : '—'}</td>
-                          <td style={tdStyle}>{v.cadencia_media != null ? v.cadencia_media : '—'}</td>
-                          <td style={tdStyle}>{v.desnivel_m != null ? `${v.desnivel_m} m` : '—'}</td>
+                          {colFc && <td style={tdStyle}>{v.fc_media != null ? `${v.fc_media} ppm` : '—'}</td>}
+                          {colPotencia && <td style={tdStyle}>{v.potencia_media != null ? `${v.potencia_media} W` : '—'}</td>}
+                          {colCadencia && <td style={tdStyle}>{v.cadencia_media != null ? v.cadencia_media : '—'}</td>}
+                          {colDesnivel && <td style={tdStyle}>{v.desnivel_m != null ? `${v.desnivel_m} m` : '—'}</td>}
                         </tr>
                       ))}
                     </tbody>
