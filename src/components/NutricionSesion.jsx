@@ -124,9 +124,11 @@ function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, 
 }
 
 // quien: 'coach' | 'atleta'. uid: usuario actual. otroNombre: el de enfrente
-// (para "Editado por Jon").
-export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien, otroNombre }) {
-  const [abierto, setAbierto] = useState(false)
+// (para "Editado por Jon"). soloPanel: sin cabecera plegable, siempre abierto
+// (la tarjeta del coach pone su propio botón en la fila de acciones).
+export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien, otroNombre, soloPanel = false }) {
+  const [abiertoLocal, setAbierto] = useState(false)
+  const abierto = soloPanel || abiertoLocal
   const [plan, setPlan] = useState(() => formPlanDe(inicial))
   const [planSucio, setPlanSucio] = useState(false)
   const [tomado, setTomado] = useState(() => formTomadoDe(inicial))
@@ -223,7 +225,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
 
   return (
     <div style={{ marginTop: 4 }}>
-      <button
+      {!soloPanel && <button
         type="button"
         onClick={() => setAbierto((a) => !a)}
         aria-expanded={abierto}
@@ -239,7 +241,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
             </span>
           )}
         </span>
-      </button>
+      </button>}
 
       {abierto && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0 10px' }}>

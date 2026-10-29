@@ -225,7 +225,7 @@ const PANTALLAS = [
   { quien: 'atleta', nombre: 'home', url: '/home' },
   { quien: 'atleta', nombre: 'home-nutricion', url: '/home', pasos: ['nutricion'] },
   { quien: 'atleta', nombre: 'home-historial', url: '/home', pasos: ['historial'] },
-  { quien: 'atleta', nombre: 'home-disponibilidad', url: '/home', pasos: ['tab:Disponibilidad'] },
+  { quien: 'atleta', nombre: 'home-disponibilidad', url: '/home', pasos: ['tab:Horario'] },
   { quien: 'atleta', nombre: 'home-temporada', url: '/home?tab=temporada' },
   { quien: 'atleta', nombre: 'home-analisis', url: '/home', pasos: ['tab:Análisis'] },
 ]

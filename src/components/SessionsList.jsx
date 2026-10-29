@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
-import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import WorkoutBuilder from './WorkoutBuilder'
@@ -13,11 +13,12 @@ import ActivityDetail from './ActivityDetail'
 import SemanaCalendario from './SemanaCalendario'
 import { semanasFuturas } from '../lib/planificacion'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
-import { formatHora } from '../lib/disponibilidad'
+import { formatHora, minutosPlanificados } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from './NutricionSesion'
+import { avisoTomado, tienePlan, tieneTomado } from '../lib/nutricion'
 import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import Cumplimiento from './Cumplimiento'
@@ -94,10 +95,25 @@ const accionIconoStyle = {
 }
 
 // Ámbar: sesión que aún no está en el reloj.
-const COLOR_PENDIENTE = DISCIPLINE_COLORS.bike
+// Ámbar de aviso (el de la agenda), no el de bici: "sin enviar" no es una disciplina
+const COLOR_PENDIENTE = '#E8B84A'
 
 // "TSS 210 de ~320": real (violeta de carga) frente a lo previsto (estimación,
 // con "~"). Semanas futuras: solo lo previsto.
+// Resumen de una semana plegada: "· 7 sesiones · ~6:30"
+function ResumenSemana({ sesiones }) {
+  if (!sesiones.length) return <span style={{ fontWeight: 400, color: COLORS.textTertiary }}>· sin sesiones</span>
+  const { minutos, estimadas } = minutosPlanificados(sesiones)
+  const h = Math.floor(minutos / 60)
+  const m = String(minutos % 60).padStart(2, '0')
+  return (
+    <span style={{ fontWeight: 400, color: COLORS.textSecondary }}>
+      · {sesiones.length} {sesiones.length === 1 ? 'sesión' : 'sesiones'}
+      {minutos > 0 && <span style={{ fontFamily: FONTS.mono }}> · {estimadas ? '~' : ''}{h}:{m}</span>}
+    </span>
+  )
+}
+
 function CargaSemana({ prevista, real }) {
   if (prevista == null && real == null) return null
   const mono = { fontFamily: FONTS.mono }
@@ -174,6 +190,21 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       return { ...prev, mapa }
     })
   }
+
+  // Semanas futuras plegadas: la actual y la siguiente se ven enteras; las demás
+  // salen como una línea de resumen y se abren al pulsar (la lista medía ~8
+  // pantallas en móvil). Las que el coach abre o añade quedan abiertas.
+  const [semanasAbiertas, setSemanasAbiertas] = useState(() => new Set())
+  const alternarSemana = (lunes) =>
+    setSemanasAbiertas((prev) => {
+      const nuevo = new Set(prev)
+      if (nuevo.has(lunes)) nuevo.delete(lunes)
+      else nuevo.add(lunes)
+      return nuevo
+    })
+
+  // Panel de nutrición abierto (uno a la vez, como "Ver entreno")
+  const [nutriAbiertaId, setNutriAbiertaId] = useState(null)
 
   function toggleExpandida(id) {
     setExpandidaId((prev) => (prev === id ? null : id))
@@ -344,6 +375,14 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     const tieneWorkout = tieneEntreno(sesion.workout_steps)
     const expandida = expandidaId === sesion.id
     const enviada = !!sesion.enviado_a_garmin
+    // Pasada: el reloj ya no importa (ni el aviso naranja ni "Enviar al reloj").
+    // Hoy sí: puede que aún no haya entrenado.
+    const pasada = sesion.fecha < hoy
+    const nutri = nutricion.mapa.get(sesion.id)
+    // Nutrición: en futuras siempre (para planificar); en pasadas solo si hay algo
+    const mostrarNutri = nutricion.disponible && sesion.disciplina !== 'other' && (!pasada || tienePlan(nutri) || tieneTomado(nutri))
+    const avisoNutri = avisoTomado(nutri)
+    const nutriAbierta = nutriAbiertaId === sesion.id
 
     return (
       <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 12px 18px', ...railStyle(sesion.disciplina) }}>
@@ -395,24 +434,15 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             {estado.texto.replace('✓ ', '')}
           </span>
           {completada && <Cumplimiento sesion={sesion} actividad={estado.actividadStrava} />}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
-            <Icon name="watch" size={15} />
-            {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
-          </span>
+          {!pasada && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
+              <Icon name="watch" size={15} />
+              {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
+            </span>
+          )}
           <FeedbackLinea feedback={feedbacks.get(sesion.id)} nombre={atletaNombre} />
         </div>
         <FeedbackTexto feedback={feedbacks.get(sesion.id)} />
-        {nutricion.disponible && (
-          <NutricionSesion
-            key={sesion.id}
-            sesion={sesion}
-            uid={coachId}
-            quien="coach"
-            otroNombre={atletaNombre}
-            inicial={nutricion.mapa.get(sesion.id)}
-            onCambio={actualizarNutricion}
-          />
-        )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -428,8 +458,22 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 Actividad
               </button>
             )}
+            {mostrarNutri && (
+              <button
+                onClick={() => setNutriAbiertaId((prev) => (prev === sesion.id ? null : sesion.id))}
+                style={{ ...textoBtnStyle, color: avisoNutri ? COLORS.error : textoBtnStyle.color }}
+                aria-expanded={nutriAbierta}
+                title={avisoNutri || undefined}
+              >
+                <Icon name={avisoNutri ? 'alert' : 'chevronDown'} size={16} style={{ transform: !avisoNutri && nutriAbierta ? 'rotate(180deg)' : 'none' }} />
+                Nutrición
+                {nutri?.carbohidratos_g_h > 0 && !avisoNutri && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary }}>{nutri.carbohidratos_g_h} g/h</span>
+                )}
+              </button>
+            )}
           </div>
-          {!enviada && tieneWorkout && (
+          {!enviada && !pasada && tieneWorkout && (
             <button
               onClick={() => handleReenviarGarmin(sesion)}
               disabled={reenviando === sesion.id}
@@ -440,6 +484,21 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             </button>
           )}
         </div>
+
+        {nutriAbierta && mostrarNutri && (
+          <div style={{ marginTop: 4, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+            <NutricionSesion
+              key={sesion.id}
+              soloPanel
+              sesion={sesion}
+              uid={coachId}
+              quien="coach"
+              otroNombre={atletaNombre}
+              inicial={nutri}
+              onCambio={actualizarNutricion}
+            />
+          </div>
+        )}
 
         {expandida && tieneWorkout && (
           <div style={{ marginTop: 10 }}>
@@ -483,15 +542,39 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     }
   }
 
-  const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false) => (
-    <div key={lunes}>
-      <div style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <span>{lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}</span>
+  // plegada: la semana sale como una línea (fecha · nº sesiones · tiempo · TSS)
+  // que se abre al pulsar. null = no plegable.
+  const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false, plegada = null) => {
+    const plegable = plegada !== null
+    const cabecera = (
+      <>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {plegable && <Icon name="chevronDown" size={16} style={{ transform: plegada ? 'rotate(-90deg)' : 'none', color: COLORS.textSecondary }} />}
+          {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
+          {plegada && <ResumenSemana sesiones={sesionesGrupo} />}
+        </span>
         {lunes !== 'sin-fecha' && (
           <CargaSemana {...cargaSemana({ lunes, sesiones: sesionesGrupo, actividades: actsParaEstado, calibracion, coberturaDesde: coberturaCarga, hoy })} />
         )}
-      </div>
-      {lunes !== 'sin-fecha' && (
+      </>
+    )
+    return (
+    <div key={lunes}>
+      {plegable ? (
+        <button
+          type="button"
+          onClick={() => alternarSemana(lunes)}
+          aria-expanded={!plegada}
+          style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', width: '100%', background: 'none', border: 'none', padding: plegada ? '10px 0' : 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', ...(plegada ? { margin: 0, borderBottom: `1px solid ${COLORS.cardBorder}` } : {}) }}
+        >
+          {cabecera}
+        </button>
+      ) : (
+        <div style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          {cabecera}
+        </div>
+      )}
+      {!plegada && lunes !== 'sin-fecha' && (
         <SemanaCalendario
           lunes={lunes}
           datos={disponibilidad}
@@ -503,7 +586,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           nombreAtleta={atletaNombre}
         />
       )}
-      {sesionesGrupo.length === 0 && (esActual || planificable) ? (
+      {plegada ? null : sesionesGrupo.length === 0 && (esActual || planificable) ? (
         <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
           {esActual ? 'Sin sesiones esta semana' : 'Sin sesiones'} · pulsa un día para planificar
         </div>
@@ -513,7 +596,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         </div>
       )}
     </div>
-  )
+    )
+  }
 
   // Ancla a la semana actual: actual arriba (siempre), luego futuras
   // ascendentes, y las pasadas colapsadas bajo "Ver histórico" (descendentes).
@@ -548,11 +632,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         {renderSemana(semanaActual, grupoActual ? grupoActual.sesiones : [], true, true)}
 
         {/* Semanas futuras: ascendente (más próxima primero), también vacías */}
-        {futuras.map((g) => renderSemana(g.lunes, g.sesiones, false, true))}
+        {/* La siguiente, entera; de ahí en adelante, plegadas salvo que se abran */}
+        {futuras.map((g, i) => renderSemana(g.lunes, g.sesiones, false, true, i === 0 ? null : !semanasAbiertas.has(g.lunes)))}
 
         <button
           type="button"
-          onClick={() => setSemanasExtra((n) => n + 1)}
+          onClick={() => {
+            // La semana nueva se añade abierta: se ha pedido para planificarla
+            const ultima = futuras.length ? futuras[futuras.length - 1].lunes : semanaActual
+            const nueva = new Date(Date.parse(`${ultima}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10)
+            setSemanasAbiertas((prev) => new Set(prev).add(nueva))
+            setSemanasExtra((n) => n + 1)
+          }}
           style={{ ...ghostButtonStyle, alignSelf: 'flex-start', padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           <Icon name="plus" size={15} strokeWidth={2} />
