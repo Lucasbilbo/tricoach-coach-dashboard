@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { computeCargaDiaria, computeCargaHoy } from '../src/lib/carga.js'
+import { computeCargaDiaria, computeCargaHoy, estadoForma } from '../src/lib/carga.js'
 import { lunesDeSemana, sumarDias, decimalToRitmo, ritmoToDecimal, formatFechaCorta, formatHorasMin, hoyMadrid, diaSemanaISO } from '../src/lib/chartUtils.js'
 import { computePaceTrend, buildTransitionColumns, computeZonas, computeResumenStats } from '../src/lib/athleteStats.js'
 
@@ -273,4 +273,15 @@ test('diaSemanaISO es coherente con lunesDeSemana en un rango largo', () => {
     const dias = Math.round((Date.parse(`${f}T00:00:00Z`) - Date.parse(`${lunesDeSemana(f)}T00:00:00Z`)) / 86400000)
     assert.equal(diaSemanaISO(f), dias + 1, f)
   }
+})
+
+test('estadoForma: bandas del TSB (solo < −30 es aviso)', () => {
+  assert.equal(estadoForma(null), null)
+  assert.equal(estadoForma(6).texto, 'Fresco')
+  assert.equal(estadoForma(5).texto, 'En equilibrio')
+  assert.equal(estadoForma(-10).texto, 'En equilibrio')
+  assert.equal(estadoForma(-11).texto, 'Cargando')
+  assert.equal(estadoForma(-30).aviso, false)
+  assert.equal(estadoForma(-31).texto, 'Fatiga alta')
+  assert.equal(estadoForma(-31).aviso, true)
 })

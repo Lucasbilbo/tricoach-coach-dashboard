@@ -51,3 +51,14 @@ export function computeCargaHoy(actividades, hasta) {
   const atl = Math.round(ult.atl)
   return { ctl, atl, tsb: ctl - atl }
 }
+
+// Lectura del TSB para quien no sabe qué es (bandas habituales, TrainingPeaks):
+// > +5 fresco · −10…+5 en equilibrio · −30…−10 cargando (zona productiva) ·
+// < −30 fatiga alta (el único que es un aviso).
+export function estadoForma(tsb) {
+  if (tsb == null || !Number.isFinite(tsb)) return null
+  if (tsb > 5) return { clave: 'fresco', texto: 'Fresco', aviso: false }
+  if (tsb >= -10) return { clave: 'equilibrio', texto: 'En equilibrio', aviso: false }
+  if (tsb >= -30) return { clave: 'cargando', texto: 'Cargando', aviso: false }
+  return { clave: 'fatiga', texto: 'Fatiga alta', aviso: true }
+}

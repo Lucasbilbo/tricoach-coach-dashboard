@@ -10,7 +10,7 @@ import {
   computePaceTrend,
   buildTransitionColumns,
 } from '../../lib/athleteStats'
-import { computeCargaHoy } from '../../lib/carga'
+import { computeCargaHoy, estadoForma } from '../../lib/carga'
 import { pedirPlanCarga } from '../../lib/planCarga'
 import { proyectar } from '../../lib/proyeccion'
 
@@ -158,18 +158,24 @@ export default function StravaAnalysis({
   const hayPotencia =
     actividades.filter((a) => a.disciplina === 'bike' && a.potencia_media != null).length >= 3
 
-  const tsbColor = carga.tsb == null
-    ? COLORS.textPrimary
-    : carga.tsb >= 5 ? '#4ECBA3'      // forma positiva → verde
-    : carga.tsb <= -20 ? DISCIPLINE_COLORS.run  // fatiga alta → coral
-    : COLORS.textPrimary
+  // TSB con su lectura en palabras. Sin verde/coral (son colores de
+  // disciplina): número en Ink y, solo con fatiga alta, ámbar de aviso.
+  const forma = estadoForma(carga.tsb)
 
+  // Las mismas 4 tarjetas en móvil (2×2) y escritorio: antes el TSB, que es
+  // lo que más mira el coach, desaparecía en móvil. El ritmo de la última
+  // carrera ya está en "Ritmo medio de carrera", más abajo.
   const statCards = [
     { label: 'Volumen', valor: stats.volumen, color: COLORS.textPrimary, nota: `últimas ${weeks} semanas`, hero: true },
-    { label: 'Ritmo running (últ.)', valor: stats.ritmoUltima, color: DISCIPLINE_COLORS.run, nota: 'min/km' },
     { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.load, nota: `últimas ${weeks} semanas` },
-    { label: 'CTL / ATL', valor: `${carga.ctl ?? '—'} / ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: 'carga crónica / aguda' },
-    { label: 'TSB', valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—', color: tsbColor, nota: 'forma actual' },
+    { label: 'CTL · ATL', valor: `${carga.ctl ?? '—'} · ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: 'forma · fatiga' },
+    {
+      label: 'TSB',
+      valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—',
+      color: COLORS.textPrimary,
+      nota: forma ? forma.texto : 'sin datos',
+      notaColor: forma?.aviso ? COLORS.warning : null,
+    },
   ]
 
   function exportarCSV() {
@@ -182,12 +188,12 @@ export default function StravaAnalysis({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))',
           gap: isMobile ? 10 : 16,
           marginBottom: isMobile ? 14 : 24,
         }}
       >
-        {(isMobile ? statCards.slice(0, 4) : statCards).map((s) => (
+        {statCards.map((s) => (
           <div
             key={s.label}
             style={{
@@ -200,13 +206,13 @@ export default function StravaAnalysis({
               gap: isMobile ? 4 : 5,
             }}
           >
-            <span style={{ fontSize: isMobile ? 10.5 : 11, color: COLORS.textSecondary, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{s.label}</span>
+            <span style={{ fontSize: isMobile ? 12 : 12.5, color: COLORS.textSecondary }}>{s.label}</span>
             <span style={{
               ...metricNumberStyle,
               fontSize: isMobile ? (s.hero ? 22 : 18) : (s.hero ? 32 : 22),
               color: s.color,
             }}>{s.valor}</span>
-            {!isMobile && <span style={{ fontSize: 11.5, color: COLORS.textTertiary }}>{s.nota}</span>}
+            <span style={{ fontSize: isMobile ? 11 : 11.5, color: s.notaColor || COLORS.textTertiary }}>{s.nota}</span>
           </div>
         ))}
       </div>
