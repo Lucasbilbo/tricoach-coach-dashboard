@@ -10,6 +10,7 @@ import WorkoutBuilder from './WorkoutBuilder'
 import SessionsList from './SessionsList'
 import WeekCompare from './WeekCompare'
 import StravaAnalysis from './shared/StravaAnalysis'
+import SinStrava from './shared/SinStrava'
 import SeasonPanel from './season/SeasonPanel'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
@@ -21,6 +22,7 @@ export default function AthleteView() {
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [sinStrava, setSinStrava] = useState(false) // 409: Strava sin conectar (estado normal)
   const [coachId, setCoachId] = useState(null)
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(() =>
@@ -39,6 +41,7 @@ export default function AthleteView() {
     async function cargarDatos() {
       setCargando(true)
       setError('')
+      setSinStrava(false)
       try {
         // Lanzar sesión y datos en paralelo: getSession lee de localStorage
         // (sin red en supabase-js v2), así que no hay coste, pero sí había
@@ -60,6 +63,12 @@ export default function AthleteView() {
         const json = res.json
         if (!activo) return
 
+        if (res.status === 409) {
+          // Sin Strava: el resto de la ficha (nombre, Sesiones) sigue funcionando
+          setSinStrava(true)
+          setDatos(json?.atleta ? { atleta: json.atleta, actividades: [], semanas: [] } : null)
+          return
+        }
         if (!res.ok || !json) {
           setError(json?.error || 'No se pudieron cargar los datos del atleta')
           return
@@ -108,7 +117,9 @@ export default function AthleteView() {
           ]}
         />
 
-        {activeTab === 'analisis' && (
+        {activeTab === 'analisis' && sinStrava && !cargando && <SinStrava nombre={datos?.atleta?.nombre} />}
+
+        {activeTab === 'analisis' && !sinStrava && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
             <Segmented
               ariaLabel="Semanas a mostrar"
@@ -158,7 +169,7 @@ export default function AthleteView() {
         )}
         {activeTab === 'analisis' && error && <p style={{ color: COLORS.error }}>{error}</p>}
 
-        {activeTab === 'analisis' && !cargando && !error && (
+        {activeTab === 'analisis' && !cargando && !error && !sinStrava && (
           <StravaAnalysis
             key={id}
             actividades={actividades}
