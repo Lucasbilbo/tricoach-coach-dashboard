@@ -11,7 +11,8 @@ npm run repaso
 
 Deja en `repaso-visual-out/` (gitignoreado) una captura por pantalla y vista y
 `informe.json`, con los errores de consola y si hay scroll horizontal. Al acabar
-imprime una línea por captura; `OK` significa sin errores.
+imprime una línea por captura; `OK` significa sin errores de consola y sin scroll
+horizontal (si no, `SCROLL ancho>viewport` y/o los errores).
 
 ## Cómo funciona
 

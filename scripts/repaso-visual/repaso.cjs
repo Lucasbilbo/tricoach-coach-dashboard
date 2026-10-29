@@ -292,5 +292,9 @@ const PANTALLAS = [
   await browser.close()
   server.close()
   fs.writeFileSync(path.join(OUT, 'informe.json'), JSON.stringify(informe, null, 2))
-  for (const i of informe) console.log(i.archivo, i.scrollHorizontal || '', i.errores.length ? JSON.stringify(i.errores) : 'OK')
+  // OK solo si no hay errores NI scroll horizontal (antes salía "637>375 OK")
+  for (const i of informe) {
+    const problemas = [i.scrollHorizontal && `SCROLL ${i.scrollHorizontal}`, i.errores.length && JSON.stringify(i.errores)].filter(Boolean)
+    console.log(i.archivo, problemas.length ? problemas.join(' ') : 'OK')
+  }
 })()
