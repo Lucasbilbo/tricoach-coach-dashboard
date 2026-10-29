@@ -23,6 +23,7 @@ export const COLORS = {
   load: '#8B7FD1', // Load · Dusk Violet — TSS/carga (no es una disciplina)
   restBorder: '#2A3040', // Borde punteado de días de descanso
   error: '#E85D5D', // Run coral — reutilizado como color de error
+  warning: '#E8B84A', // Ámbar de aviso (NO el de bici, #E8934A)
 }
 
 export const DISCIPLINE_COLORS = {

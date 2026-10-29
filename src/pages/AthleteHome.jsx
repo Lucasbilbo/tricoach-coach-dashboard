@@ -13,6 +13,8 @@ import { PageHeader, Segmented, SectionTitle, Tabs } from '../components/ui/Layo
 import WorkoutDetail from '../components/WorkoutDetail'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
+import SinStrava from '../components/shared/SinStrava'
+import AnalisisCargando from '../components/shared/AnalisisCargando'
 import SeasonPanel from '../components/season/SeasonPanel'
 import DisponibilidadEditor from '../components/DisponibilidadEditor'
 import AgendaAtleta from '../components/AgendaAtleta'
@@ -129,6 +131,7 @@ export default function AthleteHome() {
   const stravaClaveRef = useRef(null)
   const [cargandoStrava, setCargandoStrava] = useState(false)
   const [errorStrava, setErrorStrava] = useState('')
+  const [sinStrava, setSinStrava] = useState(false) // 409: Strava sin conectar (estado normal, no error)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
 
   // Sesiones prescritas
@@ -242,12 +245,17 @@ export default function AthleteHome() {
     async function cargarStrava() {
       setCargandoStrava(true)
       setErrorStrava('')
+      setSinStrava(false)
       try {
         // El atleta pide SUS datos: el backend lo autoriza porque el uid del
         // JWT coincide con athleteId
         const res = await pedirDatosAtleta(userId, weeks)
         const json = res.json
         if (!activo) return
+        if (res.status === 409) {
+          setSinStrava(true)
+          return
+        }
         if (!res.ok || !json) {
           setErrorStrava(json?.error || 'No se pudieron cargar los datos de Strava')
           return
@@ -665,7 +673,10 @@ export default function AthleteHome() {
         )}
 
         {/* ══ TAB: ANÁLISIS STRAVA ═════════════════════════════════════ */}
-        {activeTab === 'analisis' && (
+        {activeTab === 'analisis' && sinStrava && !cargandoStrava && <SinStrava onConectar={conectarStrava} />}
+        {/* Si falla «Conectar Strava» el error se ve aquí también (la otra rama no se pinta) */}
+        {activeTab === 'analisis' && sinStrava && errorStrava && <p style={{ color: COLORS.error, fontSize: 13, marginTop: 10 }}>{errorStrava}</p>}
+        {activeTab === 'analisis' && !sinStrava && (
           <>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
               <Segmented
@@ -679,7 +690,7 @@ export default function AthleteHome() {
               </button>
             </div>
             {cargandoStrava && (
-              <p style={{ color: COLORS.textSecondary }}>Cargando datos de Strava…</p>
+              <AnalisisCargando />
             )}
             {errorStrava && <p style={{ color: COLORS.error }}>{errorStrava}</p>}
 

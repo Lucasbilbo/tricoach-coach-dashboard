@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid, sumarDias } from '../../lib/chartUtils'
 import { pedirDatosAtleta } from '../../lib/athleteData'
 import { useIsMobile } from '../../hooks/useIsMobile'
-import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle, metricNumberStyle } from '../../lib/theme'
+import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle, metricNumberStyle, railStyle } from '../../lib/theme'
 import { FILTROS_DISCIPLINA, descargarCsv } from '../../lib/activityFormat'
 import {
   computeResumenStats,
@@ -10,7 +10,7 @@ import {
   computePaceTrend,
   buildTransitionColumns,
 } from '../../lib/athleteStats'
-import { computeCargaHoy } from '../../lib/carga'
+import { computeCargaHoy, estadoForma } from '../../lib/carga'
 import { pedirPlanCarga } from '../../lib/planCarga'
 import { proyectar } from '../../lib/proyeccion'
 
@@ -158,18 +158,24 @@ export default function StravaAnalysis({
   const hayPotencia =
     actividades.filter((a) => a.disciplina === 'bike' && a.potencia_media != null).length >= 3
 
-  const tsbColor = carga.tsb == null
-    ? COLORS.textPrimary
-    : carga.tsb >= 5 ? '#4ECBA3'      // forma positiva → verde
-    : carga.tsb <= -20 ? DISCIPLINE_COLORS.run  // fatiga alta → coral
-    : COLORS.textPrimary
+  // TSB con su lectura en palabras. Sin verde/coral (son colores de
+  // disciplina): número en Ink y, solo con fatiga alta, ámbar de aviso.
+  const forma = estadoForma(carga.tsb)
 
+  // Las mismas 4 tarjetas en móvil (2×2) y escritorio: antes el TSB, que es
+  // lo que más mira el coach, desaparecía en móvil. El ritmo de la última
+  // carrera ya está en "Ritmo medio de carrera", más abajo.
   const statCards = [
     { label: 'Volumen', valor: stats.volumen, color: COLORS.textPrimary, nota: `últimas ${weeks} semanas`, hero: true },
-    { label: 'Ritmo running (últ.)', valor: stats.ritmoUltima, color: DISCIPLINE_COLORS.run, nota: 'min/km' },
     { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.load, nota: `últimas ${weeks} semanas` },
-    { label: 'CTL / ATL', valor: `${carga.ctl ?? '—'} / ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: 'carga crónica / aguda' },
-    { label: 'TSB', valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—', color: tsbColor, nota: 'forma actual' },
+    { label: 'CTL · ATL', valor: `${carga.ctl ?? '—'} · ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: 'forma · fatiga' },
+    {
+      label: 'TSB',
+      valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—',
+      color: COLORS.textPrimary,
+      nota: forma ? forma.texto : 'sin datos',
+      notaColor: forma?.aviso ? COLORS.warning : null,
+    },
   ]
 
   function exportarCSV() {
@@ -182,12 +188,12 @@ export default function StravaAnalysis({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))',
           gap: isMobile ? 10 : 16,
           marginBottom: isMobile ? 14 : 24,
         }}
       >
-        {(isMobile ? statCards.slice(0, 4) : statCards).map((s) => (
+        {statCards.map((s) => (
           <div
             key={s.label}
             style={{
@@ -200,16 +206,32 @@ export default function StravaAnalysis({
               gap: isMobile ? 4 : 5,
             }}
           >
-            <span style={{ fontSize: isMobile ? 10.5 : 11, color: COLORS.textSecondary, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{s.label}</span>
+            <span style={{ fontSize: isMobile ? 12 : 12.5, color: COLORS.textSecondary }}>{s.label}</span>
             <span style={{
               ...metricNumberStyle,
               fontSize: isMobile ? (s.hero ? 22 : 18) : (s.hero ? 32 : 22),
               color: s.color,
             }}>{s.valor}</span>
-            {!isMobile && <span style={{ fontSize: 11.5, color: COLORS.textTertiary }}>{s.nota}</span>}
+            <span style={{ fontSize: isMobile ? 11 : 11.5, color: s.notaColor || COLORS.textTertiary }}>{s.nota}</span>
           </div>
         ))}
       </div>
+
+      {/* Primero la carga: es la pregunta del coach (¿cómo va de forma y fatiga?) */}
+      {semanas.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 14 : 16, marginBottom: isMobile ? 14 : 24 }}>
+          <ChartCard title="Forma (CTL · ATL)" flush>
+            <Suspense fallback={<HuecoGrafico alto={240} />}>
+              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} proyeccion={proyeccion} />
+            </Suspense>
+          </ChartCard>
+          <ChartCard title="Carga semanal (TSS)" flush>
+            <Suspense fallback={<HuecoGrafico alto={240} />}>
+              <TSSChart semanas={semanas} />
+            </Suspense>
+          </ChartCard>
+        </div>
+      )}
 
       {/* Línea de Transición (volumen semanal segmentado por disciplina) */}
       {columnas.length > 0 && (
@@ -221,20 +243,24 @@ export default function StravaAnalysis({
             gap={isMobile ? 6 : 14}
             maxBarWidth={isMobile ? null : 52}
             barRadius={isMobile ? 4 : 6}
-            showLegend={!isMobile}
+            showLegend
             showStatusLabel={!isMobile}
+            maxLabels={isMobile ? 5 : 12}
             dowFontSize={isMobile ? 10 : 11}
           />
         </div>
       )}
 
-      <PRsBlock records={records} weeks={weeks} />
-
       {/* Fila de 2 gráficos: zonas FC + progresión ritmo */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 14 : 16, marginBottom: isMobile ? 14 : 24 }}>
         {zonas.length > 0 && (
           <div style={cardStyle}>
-            <div style={seccionLabel}>Tiempo en cada zona de pulso</div>
+            <div style={{ ...seccionLabel, marginBottom: 4 }}>Tiempo por zona de pulso</div>
+            {/* Honesto con el dato: no es tiempo en zona segundo a segundo, sino
+                la duración de cada actividad en la zona de su FC media. */}
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.4 }}>
+              Cada actividad cuenta en la zona de su pulso medio
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
               {zonas.map((z) => (
                 <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
@@ -242,8 +268,11 @@ export default function StravaAnalysis({
                   <div style={{ flex: 1, background: COLORS.background, borderRadius: 4, height: isMobile ? 12 : 16, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${z.pct}%`, background: z.color, borderRadius: 4, transition: 'width 180ms ease' }} />
                   </div>
-                  <span style={{ width: isMobile ? 42 : 52, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 13, color: COLORS.textPrimary }}>
+                  <span style={{ width: isMobile ? 64 : 76, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 13, color: z.minutos > 0 ? COLORS.textPrimary : COLORS.textTertiary, whiteSpace: 'nowrap' }}>
                     {z.minutesLabel}
+                  </span>
+                  <span style={{ width: isMobile ? 30 : 36, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 12, color: COLORS.textTertiary }}>
+                    {z.pctTotal} %
                   </span>
                 </div>
               ))}
@@ -283,20 +312,7 @@ export default function StravaAnalysis({
         </ChartCard>
       )}
 
-      {semanas.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 14 }}>
-          <ChartCard title="Carga semanal (TSS)" flush>
-            <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <TSSChart semanas={semanas} />
-            </Suspense>
-          </ChartCard>
-          <ChartCard title="Forma (CTL · ATL)" flush>
-            <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} proyeccion={proyeccion} />
-            </Suspense>
-          </ChartCard>
-        </div>
-      )}
+      <PRsBlock records={records} weeks={weeks} />
 
       {/* Filtros + CSV */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '24px 0 10px' }}>
@@ -433,11 +449,20 @@ export default function StravaAnalysis({
           )}
 
           {actividadesVisibles.map((act, i) => {
-            const color = DISCIPLINE_COLORS[act.disciplina] || COLORS.textSecondary
             return (
               <div
                 key={act.id || `${act.fecha}-${i}`}
                 onClick={() => act.id && setSelectedActivityId(act.id)}
+                // Fila de tabla clicable: también con teclado (antes solo ratón)
+                role={act.id ? 'button' : undefined}
+                tabIndex={act.id ? 0 : undefined}
+                aria-label={act.id ? `Ver detalle: ${act.nombre_actividad || etiquetaActividad(act)}, ${act.fecha ? formatDiaMes(act.fecha) : ''}` : undefined}
+                onKeyDown={(e) => {
+                  if (act.id && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    setSelectedActivityId(act.id)
+                  }
+                }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                 style={{
@@ -448,6 +473,7 @@ export default function StravaAnalysis({
                   alignItems: 'center',
                   borderTop: `1px solid ${COLORS.cardBorder}`,
                   cursor: act.id ? 'pointer' : 'default',
+                  ...railStyle(act.disciplina),
                 }}
               >
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
@@ -473,18 +499,8 @@ export default function StravaAnalysis({
                 >
                   {tssTexto(act)}
                 </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color,
-                    border: `1px solid ${color}`,
-                    borderRadius: 20,
-                    padding: '3px 10px',
-                    textAlign: 'center',
-                    width: 'fit-content',
-                    fontFamily: FONTS.sans,
-                  }}
-                >
+                {/* Deporte en texto: el color ya va en el filo de la fila (sin pastillas) */}
+                <span style={{ fontSize: 13, color: act.disciplina === 'other' ? COLORS.textTertiary : COLORS.textSecondary, fontFamily: FONTS.sans }}>
                   {etiquetaActividad(act)}
                 </span>
               </div>

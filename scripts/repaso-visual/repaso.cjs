@@ -170,6 +170,27 @@ function dashboardData() {
   ]
 }
 
+// Detalle de una carrera con splits y vueltas (sin mapa: no hay tiles offline)
+function detalleActividad(id) {
+  const ritmos = ['5:41', '5:33', '5:26', '5:24', '5:19', '5:30']
+  const vel = (r) => 1000 / (Number(r.split(':')[0]) * 60 + Number(r.split(':')[1]))
+  return {
+    actividad: {
+      id, nombre: 'Rodaje con progresivo', tipo: 'Run', disciplina: 'run', fecha: F.HOY,
+      descripcion: 'Piernas bien, último km fuerte', distancia_km: 6.02, duracion_min: 34.1, duracion_mov_min: 33.2,
+      ritmo_min_km: '5:31', velocidad_media_kmh: 10.9, fc_media: 151, fc_maxima_actividad: 172, cadencia_media: 86,
+      desnivel_pos_m: 42, desnivel_neg_m: 40, calorias: 410, tss_estimado: 46, tss_estimado_sin_fc: false,
+      polyline: null,
+      splits_km: ritmos.map((r, i) => ({ km: i + 1, moving_time_s: Math.round(1000 / vel(r)), ritmo_min_km: r, fc_media: 140 + i * 5, velocidad_ms: vel(r), desnivel_m: [4, -2, 6, -3, 1, -1][i] })),
+    },
+    vueltas: [
+      { indice: 1, nombre: 'Calentamiento', distancia_km: 2, moving_time_s: 674, ritmo_min_km: '5:37', fc_media: 142, cadencia_media: 84, desnivel_m: 6 },
+      { indice: 2, nombre: 'Progresivo', distancia_km: 3, moving_time_s: 969, ritmo_min_km: '5:23', fc_media: 157, cadencia_media: 88, desnivel_m: 30 },
+      { indice: 3, nombre: 'Suave', distancia_km: 1.02, moving_time_s: 337, ritmo_min_km: '5:30', fc_media: 150, cadencia_media: 85, desnivel_m: 6 },
+    ],
+  }
+}
+
 async function funcion(nombre, body, uidActual) {
   if (nombre === 'my-connections') return { strava: true, intervals: true }
   if (nombre === 'coach-dashboard-data') return dashboardData()
@@ -186,6 +207,7 @@ async function funcion(nombre, body, uidActual) {
     Object.assign(s, { fecha: body.fecha, hora_inicio_min: body.hora_inicio_min })
     return { ok: true, sesion: s, reloj: 'actualizado', anterior_retirado: false }
   }
+  if (nombre === 'coach-activity-detail') return detalleActividad(body.activityId)
   if (nombre === 'send-to-intervals') return { ok: true, intervals_event_id: '999', anterior_retirado: true }
   return { ok: true }
 }
@@ -220,6 +242,10 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-sesiones', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones'] },
   { quien: 'coach', nombre: 'atleta-sesion-abierta', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion'] },
   { quien: 'coach', nombre: 'atleta-analisis', url: `/athlete/${F.A}`, pasos: ['tab:Análisis'] },
+  { quien: 'coach', nombre: 'atleta-analisis-24sem', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'semanas:24'] },
+  { quien: 'coach', nombre: 'atleta-comparar', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'comparar'], soloPantalla: true },
+  { quien: 'coach', nombre: 'atleta-actividad', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'actividad'], soloPantalla: true },
+  { quien: 'coach', nombre: 'sin-strava-analisis', url: `/athlete/${F.B}`, pasos: ['tab:Análisis'], esperado: /status of 409/ },
   { quien: 'coach', nombre: 'atleta-temporada', url: `/athlete/${F.A}?tab=temporada` },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'] },
   { quien: 'atleta', nombre: 'home', url: '/home' },
@@ -241,7 +267,8 @@ const PANTALLAS = [
       const page = await context.newPage()
       const errores = []
       page.on('pageerror', (e) => errores.push('pageerror: ' + e.message))
-      page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_FAILED/.test(m.text())) errores.push('console: ' + m.text()) })
+      // esperado: errores de red que la pantalla provoca a propósito (p. ej. el 409 sin Strava)
+      page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_FAILED/.test(m.text()) && !(p.esperado && p.esperado.test(m.text()))) errores.push('console: ' + m.text()) })
       await page.goto(`http://localhost:5299${p.url}`)
       await page.waitForTimeout(2500)
       for (const paso of p.pasos || []) {
@@ -250,12 +277,16 @@ const PANTALLAS = [
           else if (paso === 'nutricion') { const b = page.getByRole('button', { name: /^Nutrición/ }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'historial') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Rodaje largo' }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'editar') await page.getByRole('button', { name: 'Editar sesión' }).first().click()
+          else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()
+          else if (paso === 'comparar') await page.getByRole('button', { name: 'Comparar semanas' }).first().click()
+          else if (paso === 'actividad') { const b = page.getByText(/^Run \d/).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           await page.waitForTimeout(1500)
         } catch (e) { errores.push(`paso ${paso}: ${e.message.split('\n')[0]}`) }
       }
       const ancho = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
       const archivo = `${vista.nombre}-${p.quien}-${p.nombre}.png`
-      await page.screenshot({ path: path.join(OUT, archivo), fullPage: true })
+      // soloPantalla: un modal fijo se ve en el viewport, no en la página entera
+      await page.screenshot({ path: path.join(OUT, archivo), fullPage: !p.soloPantalla })
       informe.push({ archivo, scrollHorizontal: ancho.sw > ancho.cw ? `${ancho.sw}>${ancho.cw}` : null, errores })
       await context.close()
     }
@@ -263,5 +294,9 @@ const PANTALLAS = [
   await browser.close()
   server.close()
   fs.writeFileSync(path.join(OUT, 'informe.json'), JSON.stringify(informe, null, 2))
-  for (const i of informe) console.log(i.archivo, i.scrollHorizontal || '', i.errores.length ? JSON.stringify(i.errores) : 'OK')
+  // OK solo si no hay errores NI scroll horizontal (antes salía "637>375 OK")
+  for (const i of informe) {
+    const problemas = [i.scrollHorizontal && `SCROLL ${i.scrollHorizontal}`, i.errores.length && JSON.stringify(i.errores)].filter(Boolean)
+    console.log(i.archivo, problemas.length ? problemas.join(' ') : 'OK')
+  }
 })()

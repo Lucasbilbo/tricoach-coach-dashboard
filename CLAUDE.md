@@ -291,7 +291,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   AdjuntoEntreno, FeedbackSesion, Cumplimiento, AgendaAtleta,
   DisponibilidadEditor, ActivityDetail, PolylineMap, PRsBlock, WeekCompare;
   `charts/` (ChartCard, FormaChart, PowerChart, TSSChart), `shared/`
-  (StravaAnalysis, TransitionLine), `season/`, `ui/` (primitivas).
+  (StravaAnalysis, TransitionLine, SinStrava, AnalisisCargando), `season/`,
+  `ui/` (primitivas).
 - `src/pages/` — AthleteHome (atleta), IntervalsSetup, JoinPage (invitaciones).
 - `src/lib/` — datos/caché: supabase, authHeaders, connections, athleteData +
   athleteDataCache, panelData, valueCache, clientCache, planCarga, *Api
@@ -457,6 +458,7 @@ Color **por disciplina** sobre fondo oscuro Void. Constantes en `src/lib/theme.j
 | Bike · Asphalt Amber | `#E8934A` | Ciclismo |
 | Run · Exertion Coral | `#E85D5D` | Running · `error` |
 | Load · Dusk Violet | `#8B7FD1` | TSS/carga (`strength` también) |
+| Aviso (warning) | `#E8B84A` | Avisos (`COLORS.warning`); NO es el ámbar de bici |
 
 Tipografía (Google Fonts en `index.html`): **JetBrains Mono** para TODO valor
 numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto.
@@ -483,9 +485,12 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   `npx vite build --config vite.preview.config.mjs && npx vite preview --config vite.preview.config.mjs`,
   luego `/preview.html?as=coach|athlete|none&route=/dashboard`.
 - **Repaso visual en el repo** (2026-10-29): `npm run repaso` (scripts/repaso-visual,
-  ver su README) — 12 pantallas × móvil/escritorio con datos simulados; capturas
-  e `informe.json` (errores de consola, scroll horizontal) en `repaso-visual-out/`.
-  Pasarlo antes de mergear un lote grande.
+  ver su README) — 15 pantallas × móvil/escritorio con datos simulados (incluye
+  análisis a 24 semanas, detalle de actividad y atleta sin Strava); capturas e
+  `informe.json` (errores de consola, scroll horizontal) en `repaso-visual-out/`.
+  `OK` = sin errores NI scroll. Pasarlo antes de mergear un lote grande.
+  Playwright: usar el global (`NODE_PATH=$(npm root -g) npm run repaso`); un
+  `npm i playwright` local trae otra versión que no encuentra el navegador.
 
 ### Gráficos (2026-10)
 - **Nunca colores de disciplina para algo que no es una disciplina**: teal/ámbar/
@@ -501,6 +506,34 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   debajo" frente a la media de SUS 4 semanas completas anteriores (±20 %,
   `lib/cargaRelativa.js`). Nada de semáforo con cortes fijos ni colores de
   disciplina (decidido 2026-10-29).
+
+### Pestaña Análisis (2026-10-29)
+- **Orden**: 4 tarjetas (Volumen · TSS acumulado · CTL · ATL · TSB) → Forma +
+  Carga semanal → Volumen por semana → zonas + ritmo de carrera → potencia →
+  mejores marcas → actividades. Forma/carga arriba: es lo que más se mira.
+- **Tarjetas**: las mismas 4 en móvil (2×2) y escritorio; etiquetas en frase
+  normal. El TSB lleva su lectura (`estadoForma` en `lib/carga.js`: > +5
+  Fresco · −10…+5 En equilibrio · −30…−10 Cargando · < −30 Fatiga alta, solo
+  esta en `COLORS.warning`). Número en Ink, nunca verde/coral.
+- **Zonas de pulso**: rampa del violeta de carga Z1→Z5, horas (`40h 9m`) y % del
+  total. Ojo: cada actividad cuenta ENTERA en la zona de su FC media (no es
+  tiempo en zona segundo a segundo); la nota bajo el título lo dice.
+- **Ritmo medio de carrera**: altura con rango mínimo de 30 s/km
+  (`RANGO_MIN_RITMO`), para que 5 s no parezcan una caída.
+- **Volumen por semana** (`TransitionLine`): leyenda solo con las disciplinas
+  presentes (fuerza incluida, "Carrera" no "Running"), también en móvil;
+  `maxLabels` (5 móvil, 12 escritorio) pinta una etiqueta de cada N desde la
+  semana en curso — con 24 semanas en móvil la página se salía a 637 px.
+- **Actividades**: filo de disciplina también en la tabla de escritorio, deporte
+  en texto (sin pastillas); filas abribles con teclado. **Detalle**
+  (`ActivityDetail`): pantalla completa en móvil, métricas de 3 en 3, valores
+  en mono, splits de Ink (rápido) a gris (lento), columnas vacías de vueltas
+  ocultas, Escape cierra.
+- **Sin Strava**: `coach-athlete-data` responde 409 `code:'SIN_STRAVA'` con el
+  nombre del atleta (nada más); la UI muestra `SinStrava` (neutro; en /home con
+  "Conectar Strava") en vez de un error rojo. Cargando: `AnalisisCargando`.
+- Fechas de ejes en orden día-mes (`formatFechaCorta` = `formatDiaMes`).
+- Comparar semanas: diferencias con flecha y sin color (subir km no es "bueno").
 
 ### Línea de Transición
 Barras apiladas por semana segmentadas por disciplina, con estados por relleno+borde

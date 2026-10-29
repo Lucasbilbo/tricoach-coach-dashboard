@@ -65,7 +65,7 @@ function Leyenda({ ctl, atl, conPrevisto }) {
   )
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12, marginBottom: 10 }}>
-      {item(CTL_COLOR, 'CTL', 'fitness · 42 d', ctl)}
+      {item(CTL_COLOR, 'CTL', 'forma · 42 d', ctl)}
       {item(ATL_COLOR, 'ATL', 'fatiga · 7 d', atl)}
       {conPrevisto && item(COLORS.textSecondary, 'Previsto', 'con lo planificado', null, true)}
     </div>

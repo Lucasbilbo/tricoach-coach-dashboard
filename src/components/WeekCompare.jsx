@@ -1,26 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Icon from './ui/Icon'
-import { COLORS, inputStyle } from '../lib/theme'
-import { formatFechaCorta, sumarDias } from '../lib/chartUtils'
+import { COLORS, FONTS, inputStyle } from '../lib/theme'
+import { formatFechaCorta, formatHorasMin, hoyMadrid, lunesDeSemana, sumarDias } from '../lib/chartUtils'
+import { indicesPorDefecto } from '../lib/compararSemanas'
 
-const VERDE = '#2FBFAF'
-const ROJO = '#E85D5D'
+// Sin verde/rojo: eran el teal de natación y el coral de carrera, y además más
+// km no es "bueno" ni menos "malo" (una semana de descarga baja a propósito).
+// La flecha dice el sentido; el color no juzga.
 
 const FILAS = [
   { clave: 'km_run', label: 'Km carrera' },
   { clave: 'km_bike', label: 'Km bici' },
   { clave: 'km_swim', label: 'Km natación' },
-  { clave: 'horas_totales', label: 'Horas totales' },
+  { clave: 'horas_totales', label: 'Horas totales', horas: true },
   { clave: 'n_sesiones', label: 'Nº sesiones' },
-  { clave: 'tss_total', label: 'TSS total', neutro: true },
+  { clave: 'tss_total', label: 'TSS total' },
 ]
 
-// 'YYYY-MM-DD' (lunes) → 'Jun 2 – Jun 8'
-function etiquetaSemana(lunes) {
-  return `${formatFechaCorta(lunes)} – ${formatFechaCorta(sumarDias(lunes, 6))}`
+// 'YYYY-MM-DD' (lunes) → '2 Jun – 8 Jun' (· en curso)
+function etiquetaSemana(lunes, lunesHoy) {
+  const base = `${formatFechaCorta(lunes)} – ${formatFechaCorta(sumarDias(lunes, 6))}`
+  return lunes === lunesHoy ? `${base} · en curso` : base
 }
 
-function Diferencia({ a, b, neutro }) {
+// Horas en "3h 30m" (antes "3.5"); el resto tal cual
+const valorTexto = (v, fila) => (v == null ? '—' : fila.horas ? formatHorasMin(v) : v)
+
+function Diferencia({ a, b, fila }) {
   if (a == null || b == null) {
     return <span style={{ color: COLORS.textSecondary }}>—</span>
   }
@@ -28,11 +34,10 @@ function Diferencia({ a, b, neutro }) {
   if (delta === 0) {
     return <span style={{ color: COLORS.textSecondary }}>=</span>
   }
-  const color = neutro ? COLORS.textSecondary : delta > 0 ? VERDE : ROJO
   const flecha = delta > 0 ? '▲' : '▼'
   return (
-    <span style={{ color, fontWeight: 600 }}>
-      {flecha} {Math.abs(delta)}
+    <span style={{ color: COLORS.textPrimary, fontWeight: 600, fontFamily: FONTS.mono }}>
+      {flecha} {fila.horas ? formatHorasMin(Math.abs(a - b)) : Math.abs(delta)}
     </span>
   )
 }
@@ -45,8 +50,16 @@ const celdaStyle = {
 
 export default function WeekCompare({ semanas, onClose }) {
   // semanas viene ordenado ascendente: la última es la más reciente
-  const [indiceA, setIndiceA] = useState(semanas.length - 1)
-  const [indiceB, setIndiceB] = useState(Math.max(semanas.length - 2, 0))
+  const hoy = hoyMadrid()
+  const lunesHoy = lunesDeSemana(hoy)
+  const [indiceA, setIndiceA] = useState(() => indicesPorDefecto(semanas, hoy).a)
+  const [indiceB, setIndiceB] = useState(() => indicesPorDefecto(semanas, hoy).b)
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const semanaA = semanas[indiceA]
   const semanaB = semanas[indiceB]
@@ -55,6 +68,8 @@ export default function WeekCompare({ semanas, onClose }) {
 
   return (
     <aside
+      role="dialog"
+      aria-label="Comparar semanas"
       style={{
         position: 'fixed',
         top: 0,
@@ -68,7 +83,7 @@ export default function WeekCompare({ semanas, onClose }) {
         boxSizing: 'border-box',
         overflowY: 'auto',
         zIndex: 90,
-        fontFamily: "'Archivo', sans-serif",
+        fontFamily: FONTS.sans,
         boxShadow: '-8px 0 24px rgba(0,0,0,0.4)',
       }}
     >
@@ -120,7 +135,7 @@ export default function WeekCompare({ semanas, onClose }) {
             >
               {semanas.map((s, i) => (
                 <option key={s.semana} value={i}>
-                  {etiquetaSemana(s.semana)}
+                  {etiquetaSemana(s.semana, lunesHoy)}
                 </option>
               ))}
             </select>
@@ -137,7 +152,7 @@ export default function WeekCompare({ semanas, onClose }) {
             >
               {semanas.map((s, i) => (
                 <option key={s.semana} value={i}>
-                  {etiquetaSemana(s.semana)}
+                  {etiquetaSemana(s.semana, lunesHoy)}
                 </option>
               ))}
             </select>
@@ -165,14 +180,14 @@ export default function WeekCompare({ semanas, onClose }) {
                 return (
                   <tr key={fila.clave}>
                     <td style={{ ...celdaStyle, color: COLORS.textSecondary }}>{fila.label}</td>
-                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary, fontWeight: 600 }}>
-                      {valorA != null ? valorA : '—'}
+                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary, fontWeight: 600, fontFamily: FONTS.mono }}>
+                      {valorTexto(valorA, fila)}
                     </td>
-                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary }}>
-                      {valorB != null ? valorB : '—'}
+                    <td style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textPrimary, fontFamily: FONTS.mono }}>
+                      {valorTexto(valorB, fila)}
                     </td>
                     <td style={{ ...celdaStyle, textAlign: 'right' }}>
-                      <Diferencia a={valorA} b={valorB} neutro={fila.neutro} />
+                      <Diferencia a={valorA} b={valorB} fila={fila} />
                     </td>
                   </tr>
                 )

@@ -276,7 +276,13 @@ exports.handler = async (event) => {
     const perfil = Array.isArray(perfilRes.json) ? perfilRes.json[0] : null
     if (!perfil) return respuesta(404, { error: 'Perfil del atleta no encontrado' })
     if (!perfil.strava_token || !perfil.strava_refresh_token) {
-      return respuesta(409, { error: 'El atleta no tiene Strava conectado' })
+      // Con el nombre (nada más del perfil): sin él la ficha del coach se
+      // titulaba "Atleta" para quien aún no ha conectado Strava.
+      return respuesta(409, {
+        error: 'El atleta no tiene Strava conectado',
+        code: 'SIN_STRAVA',
+        atleta: { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' },
+      })
     }
 
     // 6. Access token válido (refresca+persiste si expira), solo si hay que ir a

@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { computeCargaDiaria, computeCargaHoy } from '../src/lib/carga.js'
+import { computeCargaDiaria, computeCargaHoy, estadoForma } from '../src/lib/carga.js'
 import { lunesDeSemana, sumarDias, decimalToRitmo, ritmoToDecimal, formatFechaCorta, formatHorasMin, hoyMadrid, diaSemanaISO } from '../src/lib/chartUtils.js'
 import { computePaceTrend, buildTransitionColumns, computeZonas, computeResumenStats } from '../src/lib/athleteStats.js'
 
@@ -192,7 +192,7 @@ test('ritmos: 4.999 → 5:00 (sin 4:60); "5:14" ⇄ decimal; basura → null/—
   cerca(ritmoToDecimal('5:14'), 5 + 14 / 60)
   assert.equal(ritmoToDecimal('x:y'), null)
   assert.equal(ritmoToDecimal(null), null)
-  assert.equal(formatFechaCorta('2026-10-08'), 'Oct 8')
+  assert.equal(formatFechaCorta('2026-10-08'), '8 Oct')
   assert.equal(formatHorasMin(2.25), '2h 15m')
 })
 
@@ -204,6 +204,15 @@ test('ritmo semanal ponderado por distancia (un trote corto no pesa como la tira
   ])
   assert.equal(t.length, 1)
   assert.equal(t[0].pace, '5:06') // (12 + 90) / 20 = 5.1 min/km; la media simple daría 5:30
+})
+
+test('ritmo semanal: 5 s/km de diferencia no parten la barra por la mitad', () => {
+  const t = computePaceTrend([
+    { fecha: '2026-10-06', disciplina: 'run', ritmo_min_km: 5 + 27 / 60, distancia_km: 10 },
+    { fecha: '2026-10-13', disciplina: 'run', ritmo_min_km: 5 + 32 / 60, distancia_km: 10 },
+  ])
+  assert.equal(t[1].heightPct, 40)
+  assert.equal(t[0].heightPct, 50) // 5 de 30 s → +10 %
 })
 
 test('Línea de Transición: excluye "other" y la semana vacía sale con —', () => {
@@ -225,6 +234,9 @@ test('zonas FC: minutos por zona relativos a la zona máxima; sin FC → []', ()
   ])
   assert.equal(z.find((x) => x.label === 'Z2').pct, 100)
   assert.equal(z.find((x) => x.label === 'Z4').pct, 33)
+  assert.equal(z.find((x) => x.label === 'Z2').pctTotal, 75)
+  assert.equal(z.find((x) => x.label === 'Z2').minutesLabel, '1h 30m')
+  assert.equal(z.find((x) => x.label === 'Z1').minutesLabel, '—')
   assert.deepEqual(computeZonas([{ zona_fc: null, duracion_min: 60 }]), [])
 })
 
@@ -273,4 +285,24 @@ test('diaSemanaISO es coherente con lunesDeSemana en un rango largo', () => {
     const dias = Math.round((Date.parse(`${f}T00:00:00Z`) - Date.parse(`${lunesDeSemana(f)}T00:00:00Z`)) / 86400000)
     assert.equal(diaSemanaISO(f), dias + 1, f)
   }
+})
+
+test('estadoForma: bandas del TSB (solo < −30 es aviso)', () => {
+  assert.equal(estadoForma(null), null)
+  assert.equal(estadoForma(6).texto, 'Fresco')
+  assert.equal(estadoForma(5).texto, 'En equilibrio')
+  assert.equal(estadoForma(-10).texto, 'En equilibrio')
+  assert.equal(estadoForma(-11).texto, 'Cargando')
+  assert.equal(estadoForma(-30).aviso, false)
+  assert.equal(estadoForma(-31).texto, 'Fatiga alta')
+  assert.equal(estadoForma(-31).aviso, true)
+})
+
+test('comparar semanas: por defecto las dos últimas completas si la actual va a medias', async () => {
+  const { indicesPorDefecto } = await import('../src/lib/compararSemanas.js')
+  const s = ['2026-10-12', '2026-10-19', '2026-10-26'].map((semana) => ({ semana }))
+  assert.deepEqual(indicesPorDefecto(s, '2026-10-29'), { a: 1, b: 0 }) // la del 26 está en curso
+  assert.deepEqual(indicesPorDefecto(s, '2026-11-05'), { a: 2, b: 1 }) // ya no hay semana en curso en la lista
+  assert.deepEqual(indicesPorDefecto(s.slice(1), '2026-10-29'), { a: 1, b: 0 }) // con 2 no hay otra opción
+  assert.deepEqual(indicesPorDefecto([], '2026-10-29'), { a: 0, b: 0 })
 })
