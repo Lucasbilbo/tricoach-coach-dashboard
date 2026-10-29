@@ -39,3 +39,6 @@ dist-preview/
 vite.preview.config.mjs
 preview.html
 src/preview/
+
+# Repaso visual (scripts/repaso-visual): build y capturas
+repaso-visual-out
