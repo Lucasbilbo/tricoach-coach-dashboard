@@ -243,6 +243,7 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-sesion-abierta', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion'] },
   { quien: 'coach', nombre: 'atleta-analisis', url: `/athlete/${F.A}`, pasos: ['tab:Análisis'] },
   { quien: 'coach', nombre: 'atleta-analisis-24sem', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'semanas:24'] },
+  { quien: 'coach', nombre: 'atleta-comparar', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'comparar'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-actividad', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'actividad'], soloPantalla: true },
   { quien: 'coach', nombre: 'sin-strava-analisis', url: `/athlete/${F.B}`, pasos: ['tab:Análisis'], esperado: /status of 409/ },
   { quien: 'coach', nombre: 'atleta-temporada', url: `/athlete/${F.A}?tab=temporada` },
@@ -277,6 +278,7 @@ const PANTALLAS = [
           else if (paso === 'historial') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Rodaje largo' }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'editar') await page.getByRole('button', { name: 'Editar sesión' }).first().click()
           else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()
+          else if (paso === 'comparar') await page.getByRole('button', { name: 'Comparar semanas' }).first().click()
           else if (paso === 'actividad') { const b = page.getByText(/^Run \d/).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           await page.waitForTimeout(1500)
         } catch (e) { errores.push(`paso ${paso}: ${e.message.split('\n')[0]}`) }
