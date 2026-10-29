@@ -443,14 +443,27 @@ export default function AthleteHome() {
 
         {relativo === 'Hoy' && (
           <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
-            <button
-              onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
-              style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
-              aria-expanded={!!feedbackAbierto[sesion.id]}
-            >
-              <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
-              {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
-            </button>
+            {/* Sin feedback aún: botón de verdad (es lo que el atleta tiene que hacer
+                al acabar). Con feedback: una línea que lo resume y lo reabre. */}
+            {feedbacks.has(sesion.id) || feedbackAbierto[sesion.id] ? (
+              <button
+                onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+                style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
+                aria-expanded={!!feedbackAbierto[sesion.id]}
+              >
+                <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
+                {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: true }))}
+                aria-expanded={false}
+                style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 6, padding: '8px 14px', fontSize: 13.5 }}
+              >
+                <Icon name="check" size={15} />
+                ¿Cómo te fue?
+              </button>
+            )}
             {feedbackAbierto[sesion.id] && (
               <div style={{ padding: '4px 0 8px' }}>
                 <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
