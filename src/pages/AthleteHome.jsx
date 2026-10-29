@@ -674,6 +674,8 @@ export default function AthleteHome() {
 
         {/* ══ TAB: ANÁLISIS STRAVA ═════════════════════════════════════ */}
         {activeTab === 'analisis' && sinStrava && !cargandoStrava && <SinStrava onConectar={conectarStrava} />}
+        {/* Si falla «Conectar Strava» el error se ve aquí también (la otra rama no se pinta) */}
+        {activeTab === 'analisis' && sinStrava && errorStrava && <p style={{ color: COLORS.error, fontSize: 13, marginTop: 10 }}>{errorStrava}</p>}
         {activeTab === 'analisis' && !sinStrava && (
           <>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
