@@ -91,7 +91,7 @@ export function Tabs({ tabs, active, onChange }) {
               border: 'none',
               borderBottom: `2px solid ${sel ? COLORS.accent : 'transparent'}`,
               color: sel ? COLORS.textPrimary : COLORS.textSecondary,
-              padding: '13px 12px 11px',
+              padding: '13px 10px 11px',
               fontSize: 15,
               fontWeight: sel ? 600 : 500,
               cursor: 'pointer',

@@ -77,6 +77,8 @@ const textoBtn = {
 }
 
 const PAGINA_PASADAS = 10
+// Ámbar de aviso (el de la agenda), no el ámbar de bici: aquí no hay disciplina
+const AVISO_RELOJ = '#E8B84A'
 // Próximos: con la planificación a 2–3 semanas caben 15–20; se pagina igual
 // (antes .limit(10) sin más: el resto no salía en la lista. Auditoría B3).
 const PAGINA_PROXIMAS = 10
@@ -385,6 +387,101 @@ export default function AthleteHome() {
     navigate('/')
   }
 
+  // Tarjeta de una sesión próxima (hoy o futura)
+  const renderProxima = (sesion) => {
+    const tieneDetalle = tieneEntreno(sesion.workout_steps)
+    const abierta = !!expandidas[sesion.id]
+    const relativo = diaRelativo(sesion.fecha)
+    const enviada = !!sesion.enviado_a_garmin
+    return (
+      <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 10px 18px', ...railStyle(sesion.disciplina) }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
+          {relativo && <span style={{ color: relativo === 'Hoy' ? COLORS.accent : COLORS.textPrimary, fontWeight: 600 }}>{relativo}</span>}
+          <span style={{ fontFamily: FONTS.mono }}>
+            {formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
+          </span>
+          <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
+          <DuracionSesion sesion={sesion} />
+        </div>
+        <h3 style={{ margin: '6px 0 0', fontSize: 17, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
+        {sesion.notas && (
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
+            <Icon name="watch" size={15} />
+            {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
+          </span>
+          {tieneDetalle && (
+            <button onClick={() => toggleDetalle(sesion.id)} style={textoBtn} aria-expanded={abierta}>
+              <Icon name="chevronDown" size={16} style={{ transform: abierta ? 'rotate(180deg)' : 'none' }} />
+              {abierta ? 'Ocultar' : 'Ver entreno'}
+            </button>
+          )}
+        </div>
+
+        {nutricion.disponible && (
+          <NutricionSesion
+            key={sesion.id}
+            sesion={sesion}
+            uid={userId}
+            quien="atleta"
+            inicial={nutricion.mapa.get(sesion.id)}
+            onCambio={actualizarNutricion}
+          />
+        )}
+
+        {relativo === 'Hoy' && (
+          <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
+            <button
+              onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+              style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
+              aria-expanded={!!feedbackAbierto[sesion.id]}
+            >
+              <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
+              {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
+            </button>
+            {feedbackAbierto[sesion.id] && (
+              <div style={{ padding: '4px 0 8px' }}>
+                <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {abierta && tieneDetalle && (
+          <div style={{ marginTop: 6, paddingBottom: 4 }}>
+            <WorkoutDetail sesion={sesion} mostrarNotas={false} />
+            {intervalsOk && !enviada && (
+              <div style={{ marginTop: 10 }}>
+                {erroresGarmin[sesion.id] && (
+                  <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>
+                )}
+                <button
+                  onClick={() => enviarAGarmin(sesion)}
+                  disabled={enviandoGarmin[sesion.id]}
+                  style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: enviandoGarmin[sesion.id] ? 0.6 : 1 }}
+                >
+                  <Icon name="send" size={15} />
+                  {enviandoGarmin[sesion.id] ? 'Enviando…' : 'Enviar a mi reloj'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </article>
+    )
+  }
+
+  // Lo de HOY arriba del todo (o, si hoy no hay nada, la próxima); la agenda de
+  // la semana va debajo y el resto de próximos después (decidido 2026-10-29: la
+  // agenda ocupaba la primera pantalla y lo de hoy quedaba abajo).
+  const hoyStr = hoyMadrid()
+  const deHoy = proximas.filter((s) => s.fecha === hoyStr)
+  const destacadas = deHoy.length ? deHoy : proximas.slice(0, 1)
+  const restoProximas = proximas.filter((s) => !destacadas.includes(s))
+
   return (
     <div style={pageStyle}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -405,17 +502,16 @@ export default function AthleteHome() {
             { clave: 'sesiones', etiqueta: 'Entrenos' },
             { clave: 'analisis', etiqueta: 'Análisis' },
             { clave: 'temporada', etiqueta: 'Temporada' },
-            { clave: 'disponibilidad', etiqueta: 'Disponibilidad' },
+            // 'Horario' (antes 'Disponibilidad'): con 4 pestañas no cabía en 375 px
+            { clave: 'disponibilidad', etiqueta: 'Horario' },
           ]}
         />
 
         {/* ══ TAB: ENTRENOS ══════════════════════════════════════════════ */}
         {activeTab === 'sesiones' && (
           <>
-            <AgendaAtleta userId={userId} onCambio={() => setRecargaSesiones((n) => n + 1)} />
-
-            <section style={{ marginBottom: 32 }}>
-              <SectionTitle>Próximos</SectionTitle>
+            <section style={{ marginBottom: 28 }}>
+              <SectionTitle>{deHoy.length ? 'Hoy' : 'Tu próximo entreno'}</SectionTitle>
 
               {cargandoSesiones ? (
                 <p style={{ color: COLORS.textSecondary }}>Cargando…</p>
@@ -434,99 +530,26 @@ export default function AthleteHome() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {proximas.map((sesion) => {
-                    const tieneDetalle = tieneEntreno(sesion.workout_steps)
-                    const abierta = !!expandidas[sesion.id]
-                    const relativo = diaRelativo(sesion.fecha)
-                    const enviada = !!sesion.enviado_a_garmin
-                    return (
-                      <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 10px 18px', ...railStyle(sesion.disciplina) }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
-                          {relativo && <span style={{ color: relativo === 'Hoy' ? COLORS.accent : COLORS.textPrimary, fontWeight: 600 }}>{relativo}</span>}
-                          <span style={{ fontFamily: FONTS.mono }}>
-                            {formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
-                          </span>
-                          <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
-                          <DuracionSesion sesion={sesion} />
-                        </div>
-                        <h3 style={{ margin: '6px 0 0', fontSize: 17, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
-                        {sesion.notas && (
-                          <p style={{ margin: '6px 0 0', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>
-                        )}
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : DISCIPLINE_COLORS.bike }}>
-                            <Icon name="watch" size={15} />
-                            {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
-                          </span>
-                          {tieneDetalle && (
-                            <button onClick={() => toggleDetalle(sesion.id)} style={textoBtn} aria-expanded={abierta}>
-                              <Icon name="chevronDown" size={16} style={{ transform: abierta ? 'rotate(180deg)' : 'none' }} />
-                              {abierta ? 'Ocultar' : 'Ver entreno'}
-                            </button>
-                          )}
-                        </div>
-
-                        {nutricion.disponible && (
-                          <NutricionSesion
-                            key={sesion.id}
-                            sesion={sesion}
-                            uid={userId}
-                            quien="atleta"
-                            inicial={nutricion.mapa.get(sesion.id)}
-                            onCambio={actualizarNutricion}
-                          />
-                        )}
-
-                        {relativo === 'Hoy' && (
-                          <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
-                            <button
-                              onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
-                              style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
-                              aria-expanded={!!feedbackAbierto[sesion.id]}
-                            >
-                              <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
-                              {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
-                            </button>
-                            {feedbackAbierto[sesion.id] && (
-                              <div style={{ padding: '4px 0 8px' }}>
-                                <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {abierta && tieneDetalle && (
-                          <div style={{ marginTop: 6, paddingBottom: 4 }}>
-                            <WorkoutDetail sesion={sesion} mostrarNotas={false} />
-                            {intervalsOk && !enviada && (
-                              <div style={{ marginTop: 10 }}>
-                                {erroresGarmin[sesion.id] && (
-                                  <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>
-                                )}
-                                <button
-                                  onClick={() => enviarAGarmin(sesion)}
-                                  disabled={enviandoGarmin[sesion.id]}
-                                  style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: enviandoGarmin[sesion.id] ? 0.6 : 1 }}
-                                >
-                                  <Icon name="send" size={15} />
-                                  {enviandoGarmin[sesion.id] ? 'Enviando…' : 'Enviar a mi reloj'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </article>
-                    )
-                  })}
+                  {destacadas.map(renderProxima)}
                 </div>
               )}
-              {hayMasProximas && !errorSesiones && (
+            </section>
+
+            <AgendaAtleta userId={userId} onCambio={() => setRecargaSesiones((n) => n + 1)} />
+
+            {!cargandoSesiones && !errorSesiones && (restoProximas.length > 0 || hayMasProximas) && (
+            <section style={{ marginBottom: 32 }}>
+              <SectionTitle>Próximos</SectionTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {restoProximas.map(renderProxima)}
+              </div>
+              {hayMasProximas && (
                 <button onClick={cargarMasProximas} disabled={cargandoMas} style={{ ...ghostButtonStyle, width: '100%', marginTop: 10, color: COLORS.textSecondary }}>
                   {cargandoMas ? 'Cargando…' : 'Ver más entrenos'}
                 </button>
               )}
             </section>
+            )}
 
             <section>
               <SectionTitle>Hechos y pendientes</SectionTitle>
