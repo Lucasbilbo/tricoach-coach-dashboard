@@ -297,3 +297,12 @@ test('estadoForma: bandas del TSB (solo < −30 es aviso)', () => {
   assert.equal(estadoForma(-31).texto, 'Fatiga alta')
   assert.equal(estadoForma(-31).aviso, true)
 })
+
+test('comparar semanas: por defecto las dos últimas completas si la actual va a medias', async () => {
+  const { indicesPorDefecto } = await import('../src/lib/compararSemanas.js')
+  const s = ['2026-10-12', '2026-10-19', '2026-10-26'].map((semana) => ({ semana }))
+  assert.deepEqual(indicesPorDefecto(s, '2026-10-29'), { a: 1, b: 0 }) // la del 26 está en curso
+  assert.deepEqual(indicesPorDefecto(s, '2026-11-05'), { a: 2, b: 1 }) // ya no hay semana en curso en la lista
+  assert.deepEqual(indicesPorDefecto(s.slice(1), '2026-10-29'), { a: 1, b: 0 }) // con 2 no hay otra opción
+  assert.deepEqual(indicesPorDefecto([], '2026-10-29'), { a: 0, b: 0 })
+})
