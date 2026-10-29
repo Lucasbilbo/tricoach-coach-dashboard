@@ -337,7 +337,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 
 ## Disponibilidad y planificación semanal (2026-10)
 
-- **Atleta** (pestaña "Disponibilidad" en `/home`, `DisponibilidadEditor`): marca
+- **Atleta** (pestaña "Horario" en `/home` —antes "Disponibilidad", no cabía en
+  móvil—, `DisponibilidadEditor`): marca
   TRAMOS HORARIOS por día de la semana y disciplina en bloques de 30 min ("nado
   7:00–8:00, bici 18:00–20:00") y excepciones por fecha que sustituyen ese día:
   `no_disponible` o `limitada` (sus tramos). Solo el atleta escribe; su coach lee.
@@ -413,7 +414,17 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   aunque estén vacías (`src/lib/planificacion.js`, `semanasFuturas`), sin huecos
   hasta la última con sesiones; "Planificar otra semana" añade más. Los días de
   hoy en adelante del calendario son botones → `WorkoutBuilder` con la fecha
-  puesta.
+  puesta. La actual y la siguiente se ven enteras; las posteriores salen
+  PLEGADAS en una línea ("Semana del 9 Nov · 7 sesiones · ~6:30 · TSS ~320") y
+  se abren al pulsar (2026-10-29: la lista medía ~8 pantallas en móvil).
+- **Orden y limpieza (2026-10-29)**: `/athlete/:id` abre en **Sesiones**
+  (pestañas Sesiones · Análisis · Temporada). En la tarjeta de sesión del coach,
+  las PASADAS no muestran estado del reloj ni "Enviar al reloj"; Nutrición va en
+  la fila de acciones (g/h del plan o aviso rojo) y abre el panel debajo
+  (`NutricionSesion soloPanel`); en pasadas solo si hay datos. En `/home` del
+  atleta: "Hoy" (o "Tu próximo entreno") arriba, luego Mi semana, Próximos y
+  Hechos. "Sin enviar / Aún no está en tu reloj" en el ámbar de aviso `#E8B84A`,
+  nunca en el de bici.
 - Pendiente (decidido no hacer aún): copiar semana entera, avisar al coach
   cuando el atleta cambia su disponibilidad.
 
