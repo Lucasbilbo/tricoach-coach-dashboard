@@ -24,7 +24,9 @@ export default function AthleteView() {
   const [coachId, setCoachId] = useState(null)
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(() =>
-    ['analisis', 'sesiones', 'temporada'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'analisis'
+    // Por defecto Sesiones: lo que Jon hace casi siempre al abrir un atleta es
+    // planificar su semana (decidido con Lucas 2026-10-29). ?tab= sigue mandando.
+    ['analisis', 'sesiones', 'temporada'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'sesiones'
   )
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionesVersion, setSesionesVersion] = useState(0)
@@ -100,8 +102,8 @@ export default function AthleteView() {
           active={activeTab}
           onChange={setActiveTab}
           tabs={[
-            { clave: 'analisis', etiqueta: 'Análisis' },
             { clave: 'sesiones', etiqueta: 'Sesiones' },
+            { clave: 'analisis', etiqueta: 'Análisis' },
             { clave: 'temporada', etiqueta: 'Temporada' },
           ]}
         />
