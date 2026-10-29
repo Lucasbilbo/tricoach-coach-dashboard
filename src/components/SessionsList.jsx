@@ -13,7 +13,7 @@ import ActivityDetail from './ActivityDetail'
 import SemanaCalendario from './SemanaCalendario'
 import { semanasFuturas } from '../lib/planificacion'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
-import { formatHora } from '../lib/disponibilidad'
+import { formatHora, minutosPlanificados } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
@@ -99,6 +99,20 @@ const COLOR_PENDIENTE = DISCIPLINE_COLORS.bike
 
 // "TSS 210 de ~320": real (violeta de carga) frente a lo previsto (estimación,
 // con "~"). Semanas futuras: solo lo previsto.
+// Resumen de una semana plegada: "· 7 sesiones · ~6:30"
+function ResumenSemana({ sesiones }) {
+  if (!sesiones.length) return <span style={{ fontWeight: 400, color: COLORS.textTertiary }}>· sin sesiones</span>
+  const { minutos, estimadas } = minutosPlanificados(sesiones)
+  const h = Math.floor(minutos / 60)
+  const m = String(minutos % 60).padStart(2, '0')
+  return (
+    <span style={{ fontWeight: 400, color: COLORS.textSecondary }}>
+      · {sesiones.length} {sesiones.length === 1 ? 'sesión' : 'sesiones'}
+      {minutos > 0 && <span style={{ fontFamily: FONTS.mono }}> · {estimadas ? '~' : ''}{h}:{m}</span>}
+    </span>
+  )
+}
+
 function CargaSemana({ prevista, real }) {
   if (prevista == null && real == null) return null
   const mono = { fontFamily: FONTS.mono }
@@ -175,6 +189,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       return { ...prev, mapa }
     })
   }
+
+  // Semanas futuras plegadas: la actual y la siguiente se ven enteras; las demás
+  // salen como una línea de resumen y se abren al pulsar (la lista medía ~8
+  // pantallas en móvil). Las que el coach abre o añade quedan abiertas.
+  const [semanasAbiertas, setSemanasAbiertas] = useState(() => new Set())
+  const alternarSemana = (lunes) =>
+    setSemanasAbiertas((prev) => {
+      const nuevo = new Set(prev)
+      if (nuevo.has(lunes)) nuevo.delete(lunes)
+      else nuevo.add(lunes)
+      return nuevo
+    })
 
   // Panel de nutrición abierto (uno a la vez, como "Ver entreno")
   const [nutriAbiertaId, setNutriAbiertaId] = useState(null)
@@ -515,15 +541,39 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     }
   }
 
-  const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false) => (
-    <div key={lunes}>
-      <div style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <span>{lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}</span>
+  // plegada: la semana sale como una línea (fecha · nº sesiones · tiempo · TSS)
+  // que se abre al pulsar. null = no plegable.
+  const renderSemana = (lunes, sesionesGrupo, esActual, planificable = false, plegada = null) => {
+    const plegable = plegada !== null
+    const cabecera = (
+      <>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {plegable && <Icon name="chevronDown" size={16} style={{ transform: plegada ? 'rotate(-90deg)' : 'none', color: COLORS.textSecondary }} />}
+          {lunes === 'sin-fecha' ? 'Sin fecha' : `Semana del ${formatDiaMes(lunes)}`}
+          {plegada && <ResumenSemana sesiones={sesionesGrupo} />}
+        </span>
         {lunes !== 'sin-fecha' && (
           <CargaSemana {...cargaSemana({ lunes, sesiones: sesionesGrupo, actividades: actsParaEstado, calibracion, coberturaDesde: coberturaCarga, hoy })} />
         )}
-      </div>
-      {lunes !== 'sin-fecha' && (
+      </>
+    )
+    return (
+    <div key={lunes}>
+      {plegable ? (
+        <button
+          type="button"
+          onClick={() => alternarSemana(lunes)}
+          aria-expanded={!plegada}
+          style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', width: '100%', background: 'none', border: 'none', padding: plegada ? '10px 0' : 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', ...(plegada ? { margin: 0, borderBottom: `1px solid ${COLORS.cardBorder}` } : {}) }}
+        >
+          {cabecera}
+        </button>
+      ) : (
+        <div style={{ ...cabeceraSemanaStyle, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          {cabecera}
+        </div>
+      )}
+      {!plegada && lunes !== 'sin-fecha' && (
         <SemanaCalendario
           lunes={lunes}
           datos={disponibilidad}
@@ -535,7 +585,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           nombreAtleta={atletaNombre}
         />
       )}
-      {sesionesGrupo.length === 0 && (esActual || planificable) ? (
+      {plegada ? null : sesionesGrupo.length === 0 && (esActual || planificable) ? (
         <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
           {esActual ? 'Sin sesiones esta semana' : 'Sin sesiones'} · pulsa un día para planificar
         </div>
@@ -545,7 +595,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         </div>
       )}
     </div>
-  )
+    )
+  }
 
   // Ancla a la semana actual: actual arriba (siempre), luego futuras
   // ascendentes, y las pasadas colapsadas bajo "Ver histórico" (descendentes).
@@ -580,11 +631,18 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         {renderSemana(semanaActual, grupoActual ? grupoActual.sesiones : [], true, true)}
 
         {/* Semanas futuras: ascendente (más próxima primero), también vacías */}
-        {futuras.map((g) => renderSemana(g.lunes, g.sesiones, false, true))}
+        {/* La siguiente, entera; de ahí en adelante, plegadas salvo que se abran */}
+        {futuras.map((g, i) => renderSemana(g.lunes, g.sesiones, false, true, i === 0 ? null : !semanasAbiertas.has(g.lunes)))}
 
         <button
           type="button"
-          onClick={() => setSemanasExtra((n) => n + 1)}
+          onClick={() => {
+            // La semana nueva se añade abierta: se ha pedido para planificarla
+            const ultima = futuras.length ? futuras[futuras.length - 1].lunes : semanaActual
+            const nueva = new Date(Date.parse(`${ultima}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10)
+            setSemanasAbiertas((prev) => new Set(prev).add(nueva))
+            setSemanasExtra((n) => n + 1)
+          }}
           style={{ ...ghostButtonStyle, alignSelf: 'flex-start', padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           <Icon name="plus" size={15} strokeWidth={2} />
