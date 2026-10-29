@@ -3,19 +3,31 @@ import SeasonOverview from './season/SeasonOverview'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { datosDashboard } from '../lib/panelData'
-import { COLORS, DISCIPLINE_COLORS, cardStyle, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle, inputStyle } from '../lib/theme'
+import { COLORS, cardStyle, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle, inputStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { Metric, PageHeader, SectionTitle } from './ui/Layout'
+import { TEXTO_NIVEL, cargaRelativa } from '../lib/cargaRelativa'
 
-const TSS_BAJO = DISCIPLINE_COLORS.swim // teal
-const TSS_MEDIO = DISCIPLINE_COLORS.bike // amber
-const TSS_ALTO = DISCIPLINE_COLORS.run // coral
+// TSS de 7 días en el violeta de carga, con una etiqueta relativa a lo
+// habitual del atleta (lib/cargaRelativa). Antes: semáforo con cortes fijos y
+// colores de disciplina (teal/ámbar/coral), que aquí significan deporte.
+const AVISO = '#E8B84A' // mismo ámbar de aviso que la agenda (no el de bici)
 
-function colorTss(tss) {
-  if (tss == null) return COLORS.textSecondary
-  if (tss < 300) return TSS_BAJO
-  if (tss <= 450) return TSS_MEDIO
-  return TSS_ALTO
+function TssRelativo({ tss, semanas }) {
+  const rel = cargaRelativa(tss, semanas)
+  return (
+    <div style={{ minWidth: 0 }}>
+      <Metric value={tss} label="TSS" color={tss != null ? COLORS.load : undefined} />
+      {rel && (
+        <div
+          title={`Su media de las 4 semanas anteriores: ${rel.media} TSS`}
+          style={{ fontSize: 12, marginTop: 2, color: rel.nivel === 'alta' ? AVISO : COLORS.textTertiary, whiteSpace: 'nowrap' }}
+        >
+          {TEXTO_NIVEL[rel.nivel]}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function textoUltimaActividad(dias) {
@@ -261,7 +273,7 @@ export default function Dashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 20 }}>
                   <Metric value={atleta.km_semana} unit="km" label="Distancia" />
                   <Metric value={atleta.horas_semana} unit="h" label="Tiempo" />
-                  <Metric value={atleta.tss_semana} label="TSS" color={colorTss(atleta.tss_semana)} />
+                  <TssRelativo tss={atleta.tss_semana} semanas={atleta.semanas_recientes} />
                 </div>
                 <CargaSemanas semanas={atleta.semanas_recientes} />
               </button>

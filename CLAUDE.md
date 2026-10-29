@@ -482,6 +482,10 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   de 26 semanas; valores de hoy en la leyenda, TSB en el tooltip).
 - Leyenda en cuanto hay ≥2 series; números de los ejes en JetBrains Mono;
   marcas del eje Y redondas y equiespaciadas.
+- **TSS del panel del coach**: violeta de carga + "Por encima / En su línea / Por
+  debajo" frente a la media de SUS 4 semanas completas anteriores (±20 %,
+  `lib/cargaRelativa.js`). Nada de semáforo con cortes fijos ni colores de
+  disciplina (decidido 2026-10-29).
 
 ### Línea de Transición
 Barras apiladas por semana segmentadas por disciplina, con estados por relleno+borde
