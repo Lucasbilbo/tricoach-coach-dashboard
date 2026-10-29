@@ -7,7 +7,8 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   // dist-preview: bundle minificado de harnesses de screenshot temporales; lintearlo
   // mete miles de falsos problemas que enmascaran errores reales del código fuente.
-  globalIgnores(['dist', 'dist-preview']),
+  // repaso-visual-out: capturas y build del repaso visual (scripts/repaso-visual).
+  globalIgnores(['dist', 'dist-preview', 'repaso-visual-out']),
   {
     files: ['netlify/functions/**/*.js'],
     extends: [js.configs.recommended],

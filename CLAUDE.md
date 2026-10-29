@@ -471,6 +471,10 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   `src/preview/` con Supabase y functions simulados →
   `npx vite build --config vite.preview.config.mjs && npx vite preview --config vite.preview.config.mjs`,
   luego `/preview.html?as=coach|athlete|none&route=/dashboard`.
+- **Repaso visual en el repo** (2026-10-29): `npm run repaso` (scripts/repaso-visual,
+  ver su README) — 12 pantallas × móvil/escritorio con datos simulados; capturas
+  e `informe.json` (errores de consola, scroll horizontal) en `repaso-visual-out/`.
+  Pasarlo antes de mergear un lote grande.
 
 ### Gráficos (2026-10)
 - **Nunca colores de disciplina para algo que no es una disciplina**: teal/ámbar/
