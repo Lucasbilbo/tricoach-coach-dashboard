@@ -14,6 +14,7 @@ import WorkoutDetail from '../components/WorkoutDetail'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
 import SinStrava from '../components/shared/SinStrava'
+import AnalisisCargando from '../components/shared/AnalisisCargando'
 import SeasonPanel from '../components/season/SeasonPanel'
 import DisponibilidadEditor from '../components/DisponibilidadEditor'
 import AgendaAtleta from '../components/AgendaAtleta'
@@ -687,7 +688,7 @@ export default function AthleteHome() {
               </button>
             </div>
             {cargandoStrava && (
-              <p style={{ color: COLORS.textSecondary }}>Cargando datos de Strava…</p>
+              <AnalisisCargando />
             )}
             {errorStrava && <p style={{ color: COLORS.error }}>{errorStrava}</p>}
 

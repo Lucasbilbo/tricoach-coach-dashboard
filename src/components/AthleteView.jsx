@@ -11,6 +11,7 @@ import SessionsList from './SessionsList'
 import WeekCompare from './WeekCompare'
 import StravaAnalysis from './shared/StravaAnalysis'
 import SinStrava from './shared/SinStrava'
+import AnalisisCargando from './shared/AnalisisCargando'
 import SeasonPanel from './season/SeasonPanel'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
@@ -165,7 +166,7 @@ export default function AthleteView() {
         )}
 
         {activeTab === 'analisis' && cargando && (
-          <p style={{ color: COLORS.textSecondary }}>Cargando datos del atleta…</p>
+          <AnalisisCargando />
         )}
         {activeTab === 'analisis' && error && <p style={{ color: COLORS.error }}>{error}</p>}
 
