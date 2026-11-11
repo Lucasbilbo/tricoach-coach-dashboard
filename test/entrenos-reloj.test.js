@@ -219,3 +219,43 @@ test('el panel suma a la natación del día los metros de técnica de la sesión
   assert.equal(acts[0].metros_tecnica, 200)
   assert.equal(acts[1].metros_tecnica, undefined)
 })
+
+// ── Entreno incompleto: nada de "- 0mtr" ni "Serie 0x" al reloj ────────────────
+const { problemaEntreno } = require('../netlify/functions/lib/intervals-text.cjs')
+
+test('problemaEntreno: entreno completo → null', () => {
+  assert.equal(problemaEntreno({ bloques: [
+    { tipo: 'warmup', ...paso(10, 'min') },
+    { tipo: 'repeat', repeticiones: 4, pasos: [paso(100, 'mtr'), paso(30, 's', null, null, 'Descanso')] },
+  ] }), null)
+})
+
+test('problemaEntreno: sin bloques o sin workout_steps → null (lo decide quien envía)', () => {
+  assert.equal(problemaEntreno(null), null)
+  assert.equal(problemaEntreno({ bloques: [] }), null)
+})
+
+test('problemaEntreno: cantidad vacía o 0 en un paso suelto', () => {
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'step', ...paso(0, 'mtr') }] }), /cantidad en el bloque 1/)
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'step', ...paso(null, 'mtr') }] }), /cantidad/)
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'step', ...paso('', 'mtr') }] }), /cantidad/)
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'step', ...paso(-5, 'min') }] }), /cantidad/)
+})
+
+test('problemaEntreno: serie sin repeticiones o sin pasos', () => {
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'repeat', repeticiones: 0, pasos: [paso(100, 'mtr')] }] }), /repeticiones/)
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'repeat', repeticiones: 2.5, pasos: [paso(100, 'mtr')] }] }), /repeticiones/)
+  assert.match(problemaEntreno({ bloques: [{ tipo: 'repeat', repeticiones: 4, pasos: [] }] }), /no tiene pasos/)
+})
+
+test('problemaEntreno: cantidad vacía dentro de una serie indica el paso', () => {
+  const p = problemaEntreno({ bloques: [
+    { tipo: 'step', ...paso(200, 'mtr') },
+    { tipo: 'repeat', repeticiones: 4, pasos: [paso(100, 'mtr'), paso(0, 's', null, null, 'Descanso')] },
+  ] })
+  assert.match(p, /paso 2 de la serie \(bloque 2\)/)
+})
+
+test('problemaEntreno: las pausas de natación no cuentan como pasos incompletos', () => {
+  assert.equal(problemaEntreno({ bloques: [{ tipo: 'step', ...paso(200, 'mtr') }, { tipo: 'pausa' }] }), null)
+})

@@ -205,7 +205,7 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
               min="1"
               inputMode="numeric"
               aria-label="Repeticiones"
-              value={bloque.repeticiones || 4}
+              value={bloque.repeticiones || ''}
               onChange={(e) => onUpdate(idx, { repeticiones: Number(e.target.value) })}
               style={{ ...inputStyle, width: 56, padding: '7px 8px', fontFamily: FONTS.mono, textAlign: 'center' }}
             />

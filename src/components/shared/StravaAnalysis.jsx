@@ -13,6 +13,7 @@ import {
 import { computeCargaHoy, estadoForma } from '../../lib/carga'
 import { pedirPlanCarga } from '../../lib/planCarga'
 import { proyectar } from '../../lib/proyeccion'
+import AvisoFcMax from '../AvisoFcMax'
 
 // Semanas de histórico para CALENTAR la EWMA de ATL/CTL. La carga se calcula
 // SIEMPRE sobre esta ventana (independiente del selector, que solo recorta lo
@@ -87,6 +88,9 @@ export default function StravaAnalysis({
   athleteId,
   buildCsvName,
   accionesFiltro = null,
+  atleta = null,
+  esCoach = false,
+  onFcMaxGuardada = null,
 }) {
   const [filtroDisciplina, setFiltroDisciplina] = useState('todos')
   const [visibles, setVisibles] = useState(PAGINA_ACTIVIDADES)
@@ -184,6 +188,14 @@ export default function StravaAnalysis({
 
   return (
     <>
+      <AvisoFcMax
+        athleteId={athleteId}
+        fcMaxima={atleta?.fc_maxima}
+        porDefecto={atleta?.fc_maxima_por_defecto === true}
+        nombre={atleta?.nombre}
+        esCoach={esCoach}
+        onGuardada={onFcMaxGuardada}
+      />
       {/* Fila de stats — desktop: 5 en fila; móvil: 2×2 con los 4 principales */}
       <div
         style={{

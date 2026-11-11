@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { invalidarDatosAtleta } from '../lib/athleteData'
 import { COLORS, DISCIPLINE_COLORS, FONTS, inputStyle } from '../lib/theme'
-import { buildIntervalsText } from '../lib/intervalsText'
+import { buildIntervalsText, problemaEntreno } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle, chipStyle, chipDisciplinaStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
@@ -334,10 +334,17 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     }
   }
 
-  function validar() {
+  // paraEnviar: además exige que haya algo que mandar al reloj (bloques, un
+  // entreno adjunto o una duración); guardar sin enviar sí admite una sesión vacía.
+  function validar({ paraEnviar = false } = {}) {
     if (!form.fecha) return 'Elige el día'
+    const incompleto = problemaEntreno({ bloques: form.bloques })
+    if (incompleto) return incompleto
     const malos = ritmosInvalidos(form.bloques)
     if (malos.length) return `Ritmo mal escrito: ${malos.join(', ')}. Usa 5:00 o un rango 4:50-5:10`
+    if (paraEnviar && form.bloques.length === 0 && !adjunto && !duracionFinal) {
+      return 'Añade el entreno antes de enviarlo al reloj'
+    }
     return null
   }
 
@@ -400,7 +407,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   async function handleEnviarGarmin() {
-    const invalido = validar()
+    const invalido = validar({ paraEnviar: true })
     if (invalido) {
       setError(invalido)
       return

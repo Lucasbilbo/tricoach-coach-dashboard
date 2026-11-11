@@ -260,6 +260,33 @@ function lineaPausa(p, disciplina) {
   return `- ${cueSeguro(textoPausa(p), disciplina)} ${SEG_PAUSA}s press lap intensity=rest`
 }
 
+// Pasos que Intervals/Garmin no pueden ejecutar y que, sin esta comprobación,
+// acaban en el reloj como basura: una cantidad vacía o 0 ("- 0mtr"), una serie
+// sin repeticiones ("Serie 0x") o una serie sin pasos. Devuelve el PRIMER
+// problema como texto para el coach, o null si todo está bien. Fuente única:
+// la usan el creador (al guardar/enviar) y las funciones que envían al reloj.
+function problemaEntreno(workoutSteps) {
+  const bloques = (workoutSteps && workoutSteps.bloques) || []
+  const cantidadOk = (p) => Number.isFinite(Number(p && p.cantidad)) && Number(p.cantidad) > 0
+  for (let i = 0; i < bloques.length; i++) {
+    const b = bloques[i]
+    if (!b || b.tipo === 'pausa') continue
+    const donde = `bloque ${i + 1}`
+    if (b.tipo === 'repeat') {
+      const reps = Number(b.repeticiones)
+      if (!Number.isInteger(reps) || reps < 1) return `Falta el nº de repeticiones en la serie (${donde})`
+      const pasos = (b.pasos || []).filter((p) => p && p.tipo !== 'pausa')
+      if (pasos.length === 0) return `La serie del ${donde} no tiene pasos`
+      for (let j = 0; j < pasos.length; j++) {
+        if (!cantidadOk(pasos[j])) return `Falta la cantidad en el paso ${j + 1} de la serie (${donde})`
+      }
+    } else if (!cantidadOk(b)) {
+      return `Falta la cantidad en el ${donde}`
+    }
+  }
+  return null
+}
+
 // Construye el texto de un entrenamiento. Los bloques se separan con \n\n para
 // que Intervals los parsee como pasos independientes; los pasos internos de un
 // repeat van con \n simple.
@@ -317,4 +344,4 @@ function buildIntervalsText(session, options = {}) {
   return sintaxis
 }
 
-module.exports = { buildIntervalsText, cueSeguro, conPausas, conPausasMaterial, textoPausa, esTecnica, metrosTecnica }
+module.exports = { buildIntervalsText, cueSeguro, conPausas, conPausasMaterial, textoPausa, esTecnica, metrosTecnica, problemaEntreno }

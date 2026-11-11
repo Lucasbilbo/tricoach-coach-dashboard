@@ -8,6 +8,7 @@
 const https = require('https')
 const { verifyAuth, canCoachSession } = require('./lib/auth')
 const { construirEvento } = require('./lib/intervals-evento')
+const { problemaEntreno } = require('./lib/intervals-text.cjs')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 
@@ -164,6 +165,17 @@ exports.handler = async (event) => {
         statusCode: 400,
         headers: CORS,
         body: JSON.stringify({ error: 'El atleta no tiene Intervals.icu configurado', code: 'NO_INTERVALS' }),
+      }
+    }
+
+    // Un paso sin cantidad o una serie sin repeticiones acabaría en el reloj
+    // como "- 0mtr" / "Serie 0x": se rechaza antes de tocar Intervals.
+    const problema = problemaEntreno(session.workout_steps)
+    if (problema) {
+      return {
+        statusCode: 400,
+        headers: CORS,
+        body: JSON.stringify({ error: `${problema}. Corrígelo antes de enviarlo al reloj`, code: 'ENTRENO_INVALIDO' }),
       }
     }
 
