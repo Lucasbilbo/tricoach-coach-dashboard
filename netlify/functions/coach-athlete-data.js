@@ -316,7 +316,14 @@ exports.handler = async (event) => {
     // Todas las semanas del rango hasta hoy, también las vacías (lesión, vacaciones).
     const semanas = agruparSemanas(actividades, { desde, hasta: fechaMadrid(new Date()) })
 
-    const atleta = { id: perfil.id, nombre: perfil.nombre || perfil.email || 'Atleta' }
+    // fc_maxima_por_defecto: sin FC máxima en el perfil, TSS/zonas/CTL salen con el
+    // 185 genérico; la UI lo avisa y deja ponerla (set-fc-max).
+    const atleta = {
+      id: perfil.id,
+      nombre: perfil.nombre || perfil.email || 'Atleta',
+      fc_maxima: fcMax,
+      fc_maxima_por_defecto: !perfil.fc_maxima,
+    }
     if (!conRecords) return respuesta(200, { atleta, actividades, semanas }, medidor)
 
     // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)

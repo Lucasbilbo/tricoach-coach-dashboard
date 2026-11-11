@@ -178,6 +178,9 @@ export default function AthleteView() {
             records={datos?.records}
             weeks={weeks}
             athleteId={id}
+            atleta={datos?.atleta}
+            esCoach
+            onFcMaxGuardada={() => setRefrescos((r) => r + 1)}
             buildCsvName={(filtro) => {
               const nombreAtleta = (datos?.atleta?.nombre || 'atleta').replace(/[^\p{L}\p{N}]+/gu, '_')
               return `${nombreAtleta}_${weeks}sem_${filtro}_${hoyMadrid()}.csv`

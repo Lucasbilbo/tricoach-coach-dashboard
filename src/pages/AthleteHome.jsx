@@ -127,6 +127,7 @@ export default function AthleteHome() {
 
   // Strava data
   const [weeks, setWeeks] = useState(8)
+  const [refrescoStrava, setRefrescoStrava] = useState(0) // recarga el análisis tras cambiar la FC máx
   const [datos, setDatos] = useState(null)
   // userId:weeks de lo que hay en `datos` (evita volver a pedir al cambiar de pestaña)
   const stravaClaveRef = useRef(null)
@@ -272,7 +273,7 @@ export default function AthleteHome() {
 
     cargarStrava()
     return () => { activo = false }
-  }, [userId, weeks, activeTab])
+  }, [userId, weeks, activeTab, refrescoStrava])
 
   async function cargarMasProximas() {
     if (!userId || cargandoMas) return
@@ -790,6 +791,8 @@ export default function AthleteHome() {
                 records={datos?.records}
                 weeks={weeks}
                 athleteId={userId}
+                atleta={datos?.atleta}
+                onFcMaxGuardada={() => { stravaClaveRef.current = null; setRefrescoStrava((r) => r + 1) }}
                 buildCsvName={() => `mis_actividades_${weeks}sem_${hoyMadrid()}.csv`}
               />
             )}
