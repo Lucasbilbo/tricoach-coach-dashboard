@@ -165,9 +165,13 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - **Natación: pausa "pulsar vuelta" entre bloques** (`conPausas`): entre cada
   bloque y el siguiente, `- Siguiente: 300 metros Progresivo · palas, aletas 15s
   press lap intensity=rest` (con `Quita el material ·` delante si toca quitarlo).
-  Dice qué viene (≤60 caracteres, Garmin corta). Se omite si ya hay descanso ahí
-  (serie que acaba en descanso o bloque descanso), salvo cambio de material.
-  Dentro de una serie solo si cambia el material sin descanso de por medio. Se
+  Dice qué viene (≤60 caracteres, Garmin corta). **Siempre hay pausa tras un
+  bloque, también si acaba en descanso** (2026-11-13: pasados los 20" hay que
+  poder beber o cambiar de material antes de arrancar); va DESPUÉS del descanso.
+  Un descanso suelto entre bloques no lleva pausa propia. El cambio de material
+  se compara entre pasos que se nadan (los descansos no cuentan: con aletas
+  puestas el descanso no las quita). Dentro de una serie solo si cambia el
+  material (la pausa va justo tras el paso con material, antes de su descanso). Se
   calcula al generar (no se guarda); `WorkoutDetail` la pinta como "Pulsa
   vuelta · …". Intervals no tiene campo de equipo ni de técnica (drill) en
   natación (petición abierta 2026-08): el material solo llega como texto.

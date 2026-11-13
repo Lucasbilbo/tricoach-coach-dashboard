@@ -142,12 +142,15 @@ test('natación: pausa "Siguiente" entre bloques aunque no cambie el material', 
   assert.match(buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques } }), /- Siguiente: 200 metros 15s press lap intensity=rest/)
 })
 
-test('natación: sin pausa extra si ya hay descanso (serie que acaba en descanso), salvo cambio de material', () => {
+test('natación: una serie que acaba en descanso lleva pausa tras el descanso (con aviso si cambia el material)', () => {
   const serie = { tipo: 'repeat', repeticiones: 4, pasos: [{ cantidad: 100, unidad: 'mtr', material: [] }, { nombre: 'Descanso', cantidad: 20, unidad: 's', material: [] }] }
   const sinCambio = conPausas([serie, { tipo: 'step', cantidad: 200, unidad: 'mtr', material: [] }], 'swim')
-  assert.deepEqual(sinCambio.map((b) => b.tipo), ['repeat', 'step'])
+  assert.deepEqual(sinCambio.map((b) => b.tipo), ['repeat', 'pausa', 'step'])
+  assert.equal(sinCambio[1].cambiaMaterial, false)
+  assert.match(sinCambio[1].siguiente, /200m/)
   const conCambio = conPausas([serie, { tipo: 'step', cantidad: 200, unidad: 'mtr', material: ['aletas'] }], 'swim')
   assert.deepEqual(conCambio.map((b) => b.tipo), ['repeat', 'pausa', 'step'])
+  assert.equal(conCambio[1].cambiaMaterial, true)
   // dentro de la serie no se añade nada: ya tiene su descanso
   assert.equal(sinCambio[0].pasos.length, 2)
   // entrar en una serie desde un paso sin descanso sí lleva pausa
@@ -269,14 +272,16 @@ test('natación: pausa para quitar el material aunque haya descanso por medio', 
   const a = conPausas([{ tipo: 'repeat', repeticiones: 4, pasos: [st('Z3', 100, ['aletas']), rec] }, st('Soltar', 200)], 'swim')
   assert.deepEqual(a.map((b) => b.tipo), ['repeat', 'pausa', 'step'])
   assert.equal(a[1].cambiaMaterial, true)
-  // Paso suelto con aletas + descanso + siguiente sin material: pausa ANTES del descanso.
+  // Paso suelto con aletas + descanso + siguiente sin material: pausa tras el descanso.
   const b = conPausas([st('Z3', 100, ['aletas']), rec, st('Soltar', 200)], 'swim')
-  assert.deepEqual(b.map((x) => x.tipo), ['step', 'pausa', 'step', 'step'])
-  assert.match(b[1].siguiente, /200m Soltar/)
+  assert.deepEqual(b.map((x) => x.tipo), ['step', 'step', 'pausa', 'step'])
+  assert.equal(b[2].cambiaMaterial, true)
+  assert.match(b[2].siguiente, /200m Soltar/)
   // Dentro de la serie: aletas + descanso y la repetición siguiente sin material.
   const c = conPausas([{ tipo: 'repeat', repeticiones: 4, pasos: [st('Z3', 100), st('Z4', 100, ['aletas']), rec] }], 'swim')
   assert.equal(c[0].pasos[0].tipo, 'pausa')
-  // Mismo material a ambos lados del descanso: sin pausa de más.
+  // Mismo material a ambos lados del descanso: pausa para marcar, sin "quita material".
   const d = conPausas([st('Z3', 100, ['aletas']), rec, st('Z3', 100, ['aletas'])], 'swim')
-  assert.deepEqual(d.map((x) => x.tipo), ['step', 'step', 'step'])
+  assert.deepEqual(d.map((x) => x.tipo), ['step', 'step', 'pausa', 'step'])
+  assert.equal(d[2].cambiaMaterial, false)
 })

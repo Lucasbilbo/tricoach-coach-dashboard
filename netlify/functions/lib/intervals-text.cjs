@@ -239,19 +239,17 @@ function conPausas(bloques, disciplina) {
       bloque = { ...b, pasos: r.pasos }
     }
     const prev = validos[i - 1]
-    if (prev && !pausaDentro) {
-      const anterior = ultimoActivoDe(prev)
-      // Entrada = primer paso activo de este bloque o, si es un descanso, del
-      // siguiente bloque con algo que nadar.
-      let entrada = null
-      let bloqueEntrada = b
-      for (let j = i; j < validos.length && !entrada; j++) {
-        entrada = primeroActivoDe(validos[j])
-        if (entrada) bloqueEntrada = validos[j]
-      }
+    const esBloqueDescanso = b.tipo !== 'repeat' && esDescanso(b)
+    // Tras CADA bloque hay una pausa "pulsar vuelta" aunque acabe en descanso:
+    // pasados los 20" el nadador necesita poder beber, ponerse o quitarse
+    // material o recuperar antes de arrancar (2026-11-13). Un bloque que es un
+    // descanso suelto no lleva pausa propia: va en el siguiente bloque a nadar.
+    if (prev && !pausaDentro && !esBloqueDescanso) {
+      let anterior = null
+      for (let j = i - 1; j >= 0 && !anterior; j--) anterior = ultimoActivoDe(validos[j])
+      const entrada = primeroActivoDe(b)
       const cambia = !!anterior && !!entrada && claveMaterial(anterior) !== claveMaterial(entrada)
-      const hayDescanso = esDescanso(ultimoDe(prev)) || esDescanso(primeroDe(b))
-      if (cambia || !hayDescanso) out.push(pausa(entrada || primeroDe(b), cambia, cambia ? bloqueEntrada : b))
+      out.push(pausa(entrada || primeroDe(b), cambia, b))
     }
     out.push(bloque)
   })
