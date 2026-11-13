@@ -259,3 +259,24 @@ test('problemaEntreno: cantidad vacía dentro de una serie indica el paso', () =
 test('problemaEntreno: las pausas de natación no cuentan como pasos incompletos', () => {
   assert.equal(problemaEntreno({ bloques: [{ tipo: 'step', ...paso(200, 'mtr') }, { tipo: 'pausa' }] }), null)
 })
+
+// Regresión 2026-11-13: tras un paso con material, un descanso (sin material)
+// ocultaba el cambio y el reloj arrancaba solo con las aletas aún puestas.
+test('natación: pausa para quitar el material aunque haya descanso por medio', () => {
+  const st = (n, c, material = []) => ({ tipo: 'step', nombre: n, cantidad: c, unidad: 'mtr', material })
+  const rec = { tipo: 'step', nombre: 'descanso', cantidad: 20, unidad: 's', material: [] }
+  // Serie que acaba en aletas + descanso, y luego un bloque sin material.
+  const a = conPausas([{ tipo: 'repeat', repeticiones: 4, pasos: [st('Z3', 100, ['aletas']), rec] }, st('Soltar', 200)], 'swim')
+  assert.deepEqual(a.map((b) => b.tipo), ['repeat', 'pausa', 'step'])
+  assert.equal(a[1].cambiaMaterial, true)
+  // Paso suelto con aletas + descanso + siguiente sin material: pausa ANTES del descanso.
+  const b = conPausas([st('Z3', 100, ['aletas']), rec, st('Soltar', 200)], 'swim')
+  assert.deepEqual(b.map((x) => x.tipo), ['step', 'pausa', 'step', 'step'])
+  assert.match(b[1].siguiente, /200m Soltar/)
+  // Dentro de la serie: aletas + descanso y la repetición siguiente sin material.
+  const c = conPausas([{ tipo: 'repeat', repeticiones: 4, pasos: [st('Z3', 100), st('Z4', 100, ['aletas']), rec] }], 'swim')
+  assert.equal(c[0].pasos[0].tipo, 'pausa')
+  // Mismo material a ambos lados del descanso: sin pausa de más.
+  const d = conPausas([st('Z3', 100, ['aletas']), rec, st('Z3', 100, ['aletas'])], 'swim')
+  assert.deepEqual(d.map((x) => x.tipo), ['step', 'step', 'step'])
+})

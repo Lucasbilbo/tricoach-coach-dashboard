@@ -196,19 +196,28 @@ function pausa(siguiente, cambiaMaterial, bloqueSiguiente) {
 const primeroDe = (b) => (b.tipo === 'repeat' ? b.pasos[0] : b)
 const ultimoDe = (b) => (b.tipo === 'repeat' ? b.pasos[b.pasos.length - 1] : b)
 
+// El material "efectivo" de un punto del entreno es el del último/primer paso
+// que NO es un descanso: un descanso no lleva material, pero el nadador sigue
+// con las aletas puestas durante él. Sin esto, "100 aletas + 20" + 200 sin
+// material" no veía ningún cambio y el reloj seguía solo (2026-11-13).
+const pasosDe = (b) => (b.tipo === 'repeat' ? b.pasos : [b])
+const primeroActivoDe = (b) => pasosDe(b).find((p) => !esDescanso(p))
+const ultimoActivoDe = (b) => [...pasosDe(b)].reverse().find((p) => !esDescanso(p))
+
 function pasosConPausas(pasos) {
   const out = []
   pasos.forEach((p, i) => {
-    const prev = pasos[i - 1]
-    if (prev && claveMaterial(p) !== claveMaterial(prev) && !esDescanso(p) && !esDescanso(prev)) {
-      out.push(pausa(p, true))
-    }
     out.push(p)
+    if (esDescanso(p)) return
+    // Siguiente paso activo (saltando descansos): si cambia el material, la
+    // pausa va JUSTO tras este paso, antes del descanso, para quitárselo ya.
+    const sig = pasos.slice(i + 1).find((q) => !esDescanso(q))
+    if (sig && claveMaterial(sig) !== claveMaterial(p)) out.push(pausa(sig, true))
   })
-  // Vuelta de la serie: del último paso al primero de la siguiente repetición.
-  const primero = pasos[0]
-  const ultimo = pasos[pasos.length - 1]
-  const vueltaCambia = pasos.length > 1 && claveMaterial(primero) !== claveMaterial(ultimo)
+  // Vuelta de la serie: del último paso activo al primero de la siguiente repetición.
+  const primero = pasos.find((p) => !esDescanso(p))
+  const ultimo = [...pasos].reverse().find((p) => !esDescanso(p))
+  const vueltaCambia = !!primero && !!ultimo && primero !== ultimo && claveMaterial(primero) !== claveMaterial(ultimo)
   return { pasos: out, vueltaCambia, primero, ultimo }
 }
 
@@ -223,7 +232,7 @@ function conPausas(bloques, disciplina) {
       const r = pasosConPausas(b.pasos)
       // Si la serie cambia de material al dar la vuelta, la pausa va al inicio
       // de cada repetición (cubre también la entrada a la serie).
-      if (r.vueltaCambia && !esDescanso(r.primero) && !esDescanso(r.ultimo)) {
+      if (r.vueltaCambia) {
         r.pasos.unshift(pausa(r.primero, true))
         pausaDentro = true
       }
@@ -231,10 +240,18 @@ function conPausas(bloques, disciplina) {
     }
     const prev = validos[i - 1]
     if (prev && !pausaDentro) {
-      const entrada = primeroDe(b)
-      const cambia = claveMaterial(ultimoDe(prev)) !== claveMaterial(entrada)
-      const hayDescanso = esDescanso(ultimoDe(prev)) || esDescanso(entrada)
-      if (cambia || !hayDescanso) out.push(pausa(entrada, cambia, b))
+      const anterior = ultimoActivoDe(prev)
+      // Entrada = primer paso activo de este bloque o, si es un descanso, del
+      // siguiente bloque con algo que nadar.
+      let entrada = null
+      let bloqueEntrada = b
+      for (let j = i; j < validos.length && !entrada; j++) {
+        entrada = primeroActivoDe(validos[j])
+        if (entrada) bloqueEntrada = validos[j]
+      }
+      const cambia = !!anterior && !!entrada && claveMaterial(anterior) !== claveMaterial(entrada)
+      const hayDescanso = esDescanso(ultimoDe(prev)) || esDescanso(primeroDe(b))
+      if (cambia || !hayDescanso) out.push(pausa(entrada || primeroDe(b), cambia, cambia ? bloqueEntrada : b))
     }
     out.push(bloque)
   })
