@@ -5,7 +5,8 @@ import { pedirDatosAtleta, forzarDatosAtleta } from '../lib/athleteData'
 import { hoyMadrid } from '../lib/chartUtils'
 import { COLORS, pageStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
 import Icon from './ui/Icon'
-import { PageHeader, Segmented, Tabs } from './ui/Layout'
+import { PageHeader, Tabs } from './ui/Layout'
+import SelectorPeriodo from './ui/SelectorPeriodo'
 import WorkoutBuilder from './WorkoutBuilder'
 import SessionsList from './SessionsList'
 import WeekCompare from './WeekCompare'
@@ -13,14 +14,17 @@ import StravaAnalysis from './shared/StravaAnalysis'
 import SinStrava from './shared/SinStrava'
 import AnalisisCargando from './shared/AnalisisCargando'
 import SeasonPanel from './season/SeasonPanel'
-import { periodoSemanas, claveArchivo } from '../lib/periodo'
-
-const RANGOS_SEMANAS = [4, 8, 12, 24]
+import { SEMANAS_BASE, claveArchivo, esPreset, periodoInicial } from '../lib/periodo'
+import { useDatosRango } from '../hooks/useDatosRango'
 
 export default function AthleteView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [weeks, setWeeks] = useState(8)
+  // Periodo del Análisis: últimas N semanas, una semana o un rango de fechas.
+  // `weeks` (datos de base: Sesiones, comparar semanas) solo sigue a los presets;
+  // con una semana o un rango el análisis pide su tramo aparte (useDatosRango).
+  const [periodo, setPeriodo] = useState(periodoInicial)
+  const weeks = esPreset(periodo) ? periodo.semanas : SEMANAS_BASE
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -93,6 +97,12 @@ export default function AthleteView() {
   const actividades = datos?.actividades || []
   const semanas = datos?.semanas || []
 
+  // Lo que dibuja el Análisis: los datos de base con un preset, el tramo con lo demás
+  const rangoDatos = useDatosRango(id, periodo, refrescos)
+  const datosAnalisis = rangoDatos.activo ? rangoDatos.datos : datos
+  const cargandoAnalisis = rangoDatos.activo ? rangoDatos.cargando : cargando
+  const errorAnalisis = rangoDatos.activo ? rangoDatos.error : error
+
 
   return (
     <div style={pageStyle}>
@@ -123,12 +133,7 @@ export default function AthleteView() {
 
         {activeTab === 'analisis' && !sinStrava && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
-            <Segmented
-              ariaLabel="Semanas a mostrar"
-              value={weeks}
-              onChange={setWeeks}
-              options={RANGOS_SEMANAS.map((r) => ({ value: r, label: `${r} sem` }))}
-            />
+            <SelectorPeriodo periodo={periodo} onChange={setPeriodo} />
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {/* Los datos de Strava se reutilizan 5 min; esto fuerza una lectura nueva */}
               <button
@@ -136,9 +141,9 @@ export default function AthleteView() {
                   forzarDatosAtleta(id)
                   setRefrescos((v) => v + 1)
                 }}
-                disabled={cargando}
+                disabled={cargandoAnalisis}
                 aria-label="Actualizar datos de Strava"
-                style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: cargando ? 0.5 : 1 }}
+                style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: cargandoAnalisis ? 0.5 : 1 }}
               >
                 <Icon name="refresh" size={15} strokeWidth={2} />
                 Actualizar
@@ -166,25 +171,25 @@ export default function AthleteView() {
           <SeasonPanel athleteId={id} atletaNombre={datos?.atleta?.nombre} esCoach />
         )}
 
-        {activeTab === 'analisis' && cargando && (
+        {activeTab === 'analisis' && cargandoAnalisis && (
           <AnalisisCargando />
         )}
-        {activeTab === 'analisis' && error && <p style={{ color: COLORS.error }}>{error}</p>}
+        {activeTab === 'analisis' && errorAnalisis && <p style={{ color: COLORS.error }}>{errorAnalisis}</p>}
 
-        {activeTab === 'analisis' && !cargando && !error && !sinStrava && (
+        {activeTab === 'analisis' && !cargandoAnalisis && !errorAnalisis && !sinStrava && (
           <StravaAnalysis
             key={id}
-            actividades={actividades}
-            semanas={semanas}
-            records={datos?.records}
-            periodo={periodoSemanas(weeks)}
+            actividades={datosAnalisis?.actividades || []}
+            semanas={datosAnalisis?.semanas || []}
+            records={datosAnalisis?.records}
+            periodo={periodo}
             athleteId={id}
             atleta={datos?.atleta}
             esCoach
             onFcMaxGuardada={() => setRefrescos((r) => r + 1)}
             buildCsvName={(filtro) => {
               const nombreAtleta = (datos?.atleta?.nombre || 'atleta').replace(/[^\p{L}\p{N}]+/gu, '_')
-              return `${nombreAtleta}_${claveArchivo(periodoSemanas(weeks))}_${filtro}_${hoyMadrid()}.csv`
+              return `${nombreAtleta}_${claveArchivo(periodo)}_${filtro}_${hoyMadrid()}.csv`
             }}
           />
         )}
