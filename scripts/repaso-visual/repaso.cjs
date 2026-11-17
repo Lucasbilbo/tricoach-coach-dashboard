@@ -252,6 +252,7 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-temporada', url: `/athlete/${F.A}?tab=temporada` },
   { quien: 'coach', nombre: 'creador-nuevo', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo'], expandir: true },
   { quien: 'coach', nombre: 'creador-carrera', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`], expandir: true },
+  { quien: 'coach', nombre: 'creador-natacion', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Natación', `rapida:400 cal + 8x100m 1:45 rec 20" + 200 pull`], expandir: true },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
   { quien: 'atleta', nombre: 'home-nutricion', url: '/home', pasos: ['nutricion'] },

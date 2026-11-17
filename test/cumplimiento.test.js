@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { NIVEL, cumplimiento, metrosPrescritos, nivelDe } from '../src/lib/cumplimiento.js'
+import { NIVEL, cumplimiento, metrosDeBloques, metrosPrescritos, nivelDe } from '../src/lib/cumplimiento.js'
 
 test('bandas de TrainingPeaks, bordes incluidos', () => {
   assert.equal(nivelDe(80), NIVEL.ok)
@@ -58,4 +58,29 @@ test('sin base comparable no se inventa nada', () => {
   assert.equal(cumplimiento({ duracion_min: null, workout_steps: mezcla }, { duracion_min: 30, distancia_km: 1 }), null)
   assert.equal(cumplimiento({ duracion_min: null, workout_steps: { adjunto: { texto: 'Hyrox' } } }, { duracion_min: 50 }), null)
   assert.equal(cumplimiento({ duracion_min: 60 }, null), null)
+})
+
+// ── Total de metros del creador de natación ──
+
+const paso = (cantidad, unidad, extra = {}) => ({ tipo: 'step', cantidad, unidad, ...extra })
+
+test('metrosDeBloques: suma series × repeticiones y convierte km; los descansos no cuentan', () => {
+  const bloques = [
+    paso(400, 'mtr', { nombre: 'Calentamiento' }),
+    { tipo: 'repeat', repeticiones: 8, pasos: [paso(100, 'mtr'), paso(20, 's', { nombre: 'descanso' })] },
+    { tipo: 'repeat', repeticiones: 4, pasos: [paso(50, 'mtr'), paso(15, 's')] }, // 15″ sin nombre ni objetivo = descanso
+    paso(0.2, 'km'),
+  ]
+  assert.deepEqual(metrosDeBloques(bloques), { metros: 400 + 800 + 200 + 200, parcial: false, pasos: 4 })
+})
+
+test('metrosDeBloques: un paso por tiempo no suma y marca el total como parcial', () => {
+  const r = metrosDeBloques([paso(200, 'mtr'), paso(5, 'min', { nombre: 'Suave' })])
+  assert.deepEqual(r, { metros: 200, parcial: true, pasos: 1 })
+})
+
+test('metrosDeBloques: sin bloques o con la cantidad a medio escribir', () => {
+  assert.deepEqual(metrosDeBloques([]), { metros: 0, parcial: false, pasos: 0 })
+  assert.deepEqual(metrosDeBloques(undefined), { metros: 0, parcial: false, pasos: 0 })
+  assert.equal(metrosDeBloques([paso('', 'mtr')]).metros, 0)
 })

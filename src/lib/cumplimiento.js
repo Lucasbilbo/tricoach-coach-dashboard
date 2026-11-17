@@ -23,24 +23,37 @@ function esDescanso(paso) {
   return paso.unidad === 's' && !paso.objetivo_tipo && !(paso.nombre && String(paso.nombre).trim())
 }
 
-// Metros totales de la sesión si todos sus pasos (salvo los descansos) van por
-// distancia; si no, null.
-export function metrosPrescritos(workoutSteps) {
+// Metros de una lista de bloques (series × repeticiones), sin contar los
+// descansos. `parcial` = hay algún paso (no descanso) que no va por distancia y
+// por tanto no suma; `pasos` = pasos que sí cuentan. Es lo que enseña el creador
+// de natación mientras se escribe el entreno.
+export function metrosDeBloques(bloques) {
   let total = 0
   let pasos = 0
-  for (const b of workoutSteps?.bloques || []) {
+  let parcial = false
+  for (const b of bloques || []) {
     const lista = b.tipo === 'repeat' ? b.pasos || [] : [b]
     const veces = b.tipo === 'repeat' ? Number(b.repeticiones) || 0 : 1
     for (const p of lista) {
       if (esDescanso(p)) continue
       const factor = METROS_POR_UNIDAD[p.unidad]
       const cantidad = Number(p.cantidad)
-      if (!factor || !Number.isFinite(cantidad)) return null
+      if (!factor || !Number.isFinite(cantidad)) {
+        parcial = true
+        continue
+      }
       total += cantidad * factor * veces
       pasos++
     }
   }
-  return pasos > 0 && total > 0 ? Math.round(total) : null
+  return { metros: Math.round(total), parcial, pasos }
+}
+
+// Metros totales de la sesión si todos sus pasos (salvo los descansos) van por
+// distancia; si no, null.
+export function metrosPrescritos(workoutSteps) {
+  const { metros, parcial, pasos } = metrosDeBloques(workoutSteps?.bloques)
+  return !parcial && pasos > 0 && metros > 0 ? metros : null
 }
 
 export function nivelDe(pct) {
