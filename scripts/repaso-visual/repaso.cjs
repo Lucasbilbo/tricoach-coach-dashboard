@@ -243,6 +243,9 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-sesion-abierta', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion'] },
   { quien: 'coach', nombre: 'atleta-analisis', url: `/athlete/${F.A}`, pasos: ['tab:Análisis'] },
   { quien: 'coach', nombre: 'atleta-analisis-24sem', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'semanas:24'] },
+  { quien: 'coach', nombre: 'atleta-analisis-semana', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'periodo:semana'] },
+  { quien: 'coach', nombre: 'atleta-analisis-semana-anterior', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'periodo:semana', 'periodo:anterior'] },
+  { quien: 'coach', nombre: 'atleta-analisis-fechas', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'periodo:fechas'] },
   { quien: 'coach', nombre: 'atleta-comparar', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'comparar'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-actividad', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'actividad'], soloPantalla: true },
   { quien: 'coach', nombre: 'sin-strava-analisis', url: `/athlete/${F.B}`, pasos: ['tab:Análisis'], esperado: /status of 409/ },
@@ -257,6 +260,7 @@ const PANTALLAS = [
   { quien: 'atleta', nombre: 'home-disponibilidad', url: '/home', pasos: ['tab:Horario'] },
   { quien: 'atleta', nombre: 'home-temporada', url: '/home?tab=temporada' },
   { quien: 'atleta', nombre: 'home-analisis', url: '/home', pasos: ['tab:Análisis'] },
+  { quien: 'atleta', nombre: 'home-analisis-semana', url: '/home', pasos: ['tab:Análisis', 'periodo:semana'] },
 ]
 
 ;(async () => {
@@ -281,6 +285,9 @@ const PANTALLAS = [
           else if (paso === 'historial') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Rodaje largo' }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'editar') await page.getByRole('button', { name: 'Editar sesión' }).first().click()
           else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()
+          else if (paso === 'periodo:semana') await page.getByRole('radio', { name: 'Semana', exact: true }).first().click()
+          else if (paso === 'periodo:fechas') await page.getByRole('radio', { name: 'Fechas', exact: true }).first().click()
+          else if (paso === 'periodo:anterior') await page.getByRole('button', { name: 'Semana anterior' }).first().click()
           else if (paso === 'nuevo') await page.getByRole('button', { name: 'Prescribir entreno' }).first().click()
           else if (paso.startsWith('disciplina:')) await page.getByRole('button', { name: paso.slice(11), exact: true }).last().click()
           else if (paso.startsWith('rapida:')) { await page.getByPlaceholder(/Z1 \+|cal 400/).first().fill(paso.slice(7)); await page.getByRole('button', { name: 'Generar' }).first().click() }
