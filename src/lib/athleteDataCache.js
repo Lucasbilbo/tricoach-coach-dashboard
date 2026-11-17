@@ -10,7 +10,8 @@
 //  - se invalida por atleta cuando cambian sus sesiones (la distancia de natación
 //    suma los metros de técnica de coach_sessions).
 // La clave incluye `records`: con records:true el backend hace llamadas extra a
-// Strava (splits), así que no se mezcla con la variante ligera.
+// Strava (splits), así que no se mezcla con la variante ligera. Y, si hay, el
+// rango { desde, hasta }: un tramo concreto no se mezcla con "las últimas N semanas".
 
 export const TTL_MS = 5 * 60 * 1000
 
@@ -18,12 +19,13 @@ export function createAthleteDataCache({ request, now = Date.now, ttl = TTL_MS }
   const guardado = new Map() // clave → { t, resultado }
   const enVuelo = new Map() // clave → Promise<resultado>
 
-  const clave = (athleteId, weeks, records) => `${athleteId}|${weeks}|${records ? 1 : 0}`
+  const clave = (athleteId, weeks, records, rango) =>
+    `${athleteId}|${weeks}|${records ? 1 : 0}${rango ? `|${rango.desde}|${rango.hasta}` : ''}`
 
   // Devuelve { ok, status, json }. Lanza si la red falla (como fetch).
   // `force` salta la caché (botón de refrescar / reintento explícito).
-  function get(athleteId, weeks, { records = true, force = false } = {}) {
-    const k = clave(athleteId, weeks, records)
+  function get(athleteId, weeks, { records = true, force = false, rango = null } = {}) {
+    const k = clave(athleteId, weeks, records, rango)
 
     if (!force) {
       const hit = guardado.get(k)
@@ -32,7 +34,7 @@ export function createAthleteDataCache({ request, now = Date.now, ttl = TTL_MS }
       if (pendiente) return pendiente
     }
 
-    const promesa = request(athleteId, weeks, records)
+    const promesa = request(athleteId, weeks, records, rango)
       .then((resultado) => {
         // Si se invalidó el atleta mientras volaba, no guardar un dato posiblemente viejo
         if (resultado.ok && enVuelo.get(k) === promesa) guardado.set(k, { t: now(), resultado })

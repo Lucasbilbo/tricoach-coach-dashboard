@@ -12,13 +12,19 @@ import { invalidarPlanCarga } from './planCarga'
 const FORZAR_MS = 15000
 const forzados = new Map() // athleteId → hasta (ms)
 
-async function request(athleteId, weeks, records) {
+async function request(athleteId, weeks, records, rango) {
   const force = (forzados.get(athleteId) || 0) > Date.now()
   const res = await fetch('/.netlify/functions/coach-athlete-data', {
     method: 'POST',
     headers: await authHeaders(),
     // records:false y force solo se envían cuando hacen falta
-    body: JSON.stringify({ athleteId, weeks, ...(records ? {} : { records: false }), ...(force ? { force: true } : {}) }),
+    // Con rango (desde/hasta) el backend ignora `weeks`
+    body: JSON.stringify({
+      athleteId,
+      ...(rango ? { desde: rango.desde, hasta: rango.hasta } : { weeks }),
+      ...(records ? {} : { records: false }),
+      ...(force ? { force: true } : {}),
+    }),
   })
   const json = await res.json().catch(() => null)
   return { ok: res.ok, status: res.status, json }

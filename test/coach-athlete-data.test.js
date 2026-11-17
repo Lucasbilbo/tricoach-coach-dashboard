@@ -144,3 +144,33 @@ test('la respuesta lleva Server-Timing con las llamadas a Strava y los aciertos 
   assert.match(r2.headers['Server-Timing'], /splits-cache;desc="\d+"/)
   assert.doesNotMatch(r2.headers['Server-Timing'], /strava-splits/)
 })
+
+test('con desde/hasta: solo ese tramo, semanas del tramo y marcas solo de él', async () => {
+  const { fechaMadrid } = require('../netlify/functions/lib/metrics')
+  const dia = (n) => fechaMadrid(new Date(Date.now() - n * 86400e3))
+
+  // Las 30 actividades son de hace 1–2 días: un tramo que las incluye las devuelve todas…
+  let r = cargarHandler({ paginas: [acts(30, 1)] })
+  let res = await r.handler(evento({ athleteId: ATHLETE, desde: dia(5), hasta: dia(0) }))
+  assert.equal(res.statusCode, 200)
+  let body = JSON.parse(res.body)
+  assert.equal(body.actividades.length, 30)
+  assert.ok(body.actividades.every((a) => a.fecha >= dia(5) && a.fecha <= dia(0)))
+
+  // …y uno anterior no devuelve ninguna (ni marcas) aunque Strava las traiga
+  r = cargarHandler({ paginas: [acts(30, 1)] })
+  res = await r.handler(evento({ athleteId: ATHLETE, desde: dia(12), hasta: dia(9) }))
+  body = JSON.parse(res.body)
+  assert.equal(body.actividades.length, 0)
+  assert.ok(body.semanas.length >= 1) // las semanas del tramo salen, vacías
+  assert.equal(body.records.running['5km'], null)
+})
+
+test('desde/hasta mal formados → 400 y Strava sin tocar', async () => {
+  const r = cargarHandler({ paginas: [acts(3, 1)] })
+  for (const cuerpo of [{ desde: '2026-10-01' }, { desde: '2026-10-05', hasta: '2026-10-01' }, { desde: '2020-01-01', hasta: '2020-01-31' }]) {
+    const res = await r.handler(evento({ athleteId: ATHLETE, ...cuerpo }))
+    assert.equal(res.statusCode, 400)
+  }
+  assert.equal(r.llamadas.length, 0)
+})
