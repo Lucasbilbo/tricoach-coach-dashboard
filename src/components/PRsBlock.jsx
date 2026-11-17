@@ -42,7 +42,7 @@ const SECCIONES = [
   },
 ]
 
-export default function PRsBlock({ records, weeks }) {
+export default function PRsBlock({ records, etiqueta }) {
   if (!records) return null
 
   return (
@@ -56,7 +56,7 @@ export default function PRsBlock({ records, weeks }) {
           fontWeight: 600,
         }}
       >
-        Mejores marcas · últimas {weeks} semanas
+        Mejores marcas · {etiqueta}
       </p>
 
       <div style={{ display: 'flex', gap: '18px 32px', flexWrap: 'wrap' }}>

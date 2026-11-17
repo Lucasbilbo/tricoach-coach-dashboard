@@ -13,22 +13,25 @@ function TSSTooltip({ active, payload }) {
   return (
     <div style={tooltipBoxStyle}>
       <p style={{ margin: '0 0 4px', fontWeight: 600 }}>
-        Semana del {p.label}
-        {p.enCurso && <span style={{ color: COLORS.textSecondary, fontWeight: 400 }}> · en curso</span>}
+        {p.porDia ? p.label : `Semana del ${p.label}`}
+        {p.enCurso && <span style={{ color: COLORS.textSecondary, fontWeight: 400 }}> · {p.porDia ? 'hoy' : 'en curso'}</span>}
       </p>
       <p style={{ margin: 0, fontFamily: FONTS.mono }}>TSS {Math.round(p.tss_total)}</p>
     </div>
   )
 }
 
-export default function TSSChart({ semanas }) {
+// `porDia`: en rangos cortos cada barra es un día (s.semana lleva la fecha del día)
+export default function TSSChart({ semanas, porDia = false }) {
   if (!semanas || semanas.length === 0) return null
-  const lunesHoy = lunesDeSemana(hoyMadrid())
+  const hoy = hoyMadrid()
+  const marcaEnCurso = porDia ? hoy : lunesDeSemana(hoy)
 
   const data = semanas.map((s) => ({
     label: formatFechaCorta(s.semana),
     tss_total: s.tss_total || 0,
-    enCurso: s.semana === lunesHoy,
+    enCurso: s.semana === marcaEnCurso,
+    porDia,
   }))
 
   return (
@@ -39,7 +42,7 @@ export default function TSSChart({ semanas }) {
           <XAxis dataKey="label" tick={tickStyle} axisLine={{ stroke: COLORS.cardBorder }} tickLine={false} minTickGap={8} />
           <YAxis tick={{ ...tickStyle, fontFamily: FONTS.mono }} axisLine={false} tickLine={false} width={36} />
           <Tooltip content={<TSSTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-          <Bar dataKey="tss_total" name="TSS semanal" radius={[4, 4, 0, 0]} maxBarSize={36}>
+          <Bar dataKey="tss_total" name={porDia ? 'TSS diario' : 'TSS semanal'} radius={[4, 4, 0, 0]} maxBarSize={36}>
             {data.map((d) => (
               // La semana en curso aún no ha terminado: más tenue para que no se
               // lea como una caída de carga.
@@ -50,7 +53,7 @@ export default function TSSChart({ semanas }) {
       </ResponsiveContainer>
       {data.some((d) => d.enCurso) && (
         <p style={{ margin: '6px 0 0', fontSize: 11, color: COLORS.textTertiary }}>
-          La barra tenue es la semana en curso.
+          {porDia ? 'La barra tenue es hoy, aún sin terminar.' : 'La barra tenue es la semana en curso.'}
         </p>
       )}
     </div>

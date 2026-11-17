@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { decimalToRitmo, formatDiaMes, hoyMadrid, sumarDias } from '../../lib/chartUtils'
+import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../../lib/chartUtils'
 import { pedirDatosAtleta } from '../../lib/athleteData'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { COLORS, FONTS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, ghostButtonStyle, metricNumberStyle, railStyle } from '../../lib/theme'
@@ -9,16 +9,20 @@ import {
   computeZonas,
   computePaceTrend,
   buildTransitionColumns,
+  buildTransitionColumnsDiarias,
+  tssPorDiaDelTramo,
 } from '../../lib/athleteStats'
+import { SEMANAS_CARGA, esPreset, esVistaDiaria, etiquetaPeriodo, rangoDe, semanasCarga, terminaHoy } from '../../lib/periodo'
 import { computeCargaHoy, estadoForma } from '../../lib/carga'
 import { pedirPlanCarga } from '../../lib/planCarga'
 import { proyectar } from '../../lib/proyeccion'
 import AvisoFcMax from '../AvisoFcMax'
 
-// Semanas de histórico para CALENTAR la EWMA de ATL/CTL. La carga se calcula
-// SIEMPRE sobre esta ventana (independiente del selector, que solo recorta lo
-// que se dibuja), para que el valor de hoy no cambie con 4/8/12/24 semanas.
-const SEMANAS_CARGA = 26
+// La EWMA de ATL/CTL se CALENTA con una ventana larga de histórico (26 semanas,
+// ver lib/periodo.js), independiente del periodo elegido, que solo recorta lo
+// que se dibuja y la fecha a la que se lee el valor: así la CTL de hoy no cambia
+// con 4/8/12/24 semanas. En un periodo pasado se lee a su último día y la ventana
+// se alarga para tener también el calentamiento anterior a ese tramo.
 import TransitionLine from './TransitionLine'
 import PRsBlock from '../PRsBlock'
 import ChartCard from '../charts/ChartCard'
@@ -84,7 +88,7 @@ export default function StravaAnalysis({
   actividades = [],
   semanas = [],
   records,
-  weeks,
+  periodo,
   athleteId,
   buildCsvName,
   accionesFiltro = null,
@@ -95,35 +99,41 @@ export default function StravaAnalysis({
   const [filtroDisciplina, setFiltroDisciplina] = useState('todos')
   const [visibles, setVisibles] = useState(PAGINA_ACTIVIDADES)
   const [selectedActivityId, setSelectedActivityId] = useState(null)
-  // Serie de 26 semanas SOLO para calentar la carga (ATL/CTL/TSB). Cacheada por
-  // atleta. Si aún no llegó o falla, se usa `actividades` (comportamiento previo).
-  const [actividadesCarga, setActividadesCarga] = useState(null)
+  // Serie larga SOLO para calentar la carga (ATL/CTL/TSB). Cacheada por atleta y
+  // longitud. Si aún no llegó o falla, se usa `actividades` (comportamiento previo).
+  const hoy = hoyMadrid()
+  const rango = rangoDe(periodo, hoy)
+  const nSemanasCarga = semanasCarga(periodo, hoy)
+  const [serieCarga, setSerieCarga] = useState(null) // { clave, actividades }
   const cargaRef = useRef(null)
   const isMobile = useIsMobile()
+  const claveCarga = `${athleteId}|${nSemanasCarga}`
 
   useEffect(() => {
-    if (!athleteId || cargaRef.current === athleteId) return
-    // Si el selector ya cubre la ventana de carga, `actividades` basta: no se
+    if (!athleteId || cargaRef.current === claveCarga) return
+    // Si el periodo ya cubre la ventana de carga, `actividades` basta: no se
     // pide a Strava lo mismo dos veces.
-    if (weeks >= SEMANAS_CARGA) return
+    if (esPreset(periodo) && periodo.semanas >= SEMANAS_CARGA) return
     let activo = true
     async function cargarSerie() {
       try {
-        const res = await pedirDatosAtleta(athleteId, SEMANAS_CARGA, { records: false })
+        const res = await pedirDatosAtleta(athleteId, nSemanasCarga, { records: false })
         const json = res.json
         if (!res.ok) return
         if (activo && json?.actividades) {
-          cargaRef.current = athleteId
-          setActividadesCarga(json.actividades)
+          cargaRef.current = claveCarga
+          setSerieCarga({ clave: claveCarga, actividades: json.actividades })
         }
       } catch {
-        /* silencioso: cae en `actividades` del rango del selector */
+        /* silencioso: cae en `actividades` del periodo elegido */
       }
     }
     cargarSerie()
     return () => { activo = false }
-  }, [athleteId, weeks])
+  }, [athleteId, claveCarga, periodo, nSemanasCarga])
 
+  // Una serie de otro atleta o de otra longitud no se usa mientras llega la buena
+  const actividadesCarga = serieCarga?.clave === claveCarga ? serieCarga.actividades : null
   const actsCarga = actividadesCarga || actividades
 
   // Sesiones prescritas + temporada → proyección de la forma con lo planificado.
@@ -140,8 +150,10 @@ export default function StravaAnalysis({
   const proyeccion = useMemo(() => {
     // Sin la serie de 26 semanas la calibración y el arranque saldrían cortos
     if (!plan || !actividadesCarga) return null
-    return proyectar({ actividades: actividadesCarga, sesiones: plan.sesiones, eventos: plan.eventos, hoy: hoyMadrid() })
-  }, [plan, actividadesCarga])
+    // Un periodo pasado no se proyecta: la previsión sale de hoy
+    if (!terminaHoy(periodo, hoy)) return null
+    return proyectar({ actividades: actividadesCarga, sesiones: plan.sesiones, eventos: plan.eventos, hoy })
+  }, [plan, actividadesCarga, periodo, hoy])
 
   const actividadesFiltradas =
     filtroDisciplina === 'todos'
@@ -150,14 +162,26 @@ export default function StravaAnalysis({
   const actividadesVisibles = actividadesFiltradas.slice(0, visibles)
 
   const stats = computeResumenStats(actividades)
-  // CTL/ATL/TSB de hoy sobre la serie de 26 semanas (no sobre el rango dibujado).
-  // Memoizada: la serie de 26 semanas no cambia con filtros, paginación ni
-  // selección de actividad, y la EWMA recorre ~180 días.
-  const carga = useMemo(() => computeCargaHoy(actsCarga, hoyMadrid()), [actsCarga])
+  // CTL/ATL/TSB al último día del periodo (hoy en los presets) sobre la serie
+  // larga, no sobre el rango dibujado. Memoizada: la serie no cambia con filtros,
+  // paginación ni selección de actividad, y la EWMA recorre ~180 días.
+  const carga = useMemo(() => computeCargaHoy(actsCarga, rango.hasta), [actsCarga, rango.hasta])
+  const etiqueta = etiquetaPeriodo(periodo, hoy)
+  const alFinal = rango.hasta === hoy ? null : `al ${formatDiaMes(rango.hasta)}`
+  const vistaDiaria = esVistaDiaria(periodo, hoy)
   const zonas = computeZonas(actividades)
   const paceTrend = computePaceTrend(actividades)
   // Memoizada: paginar, filtrar por disciplina o abrir el detalle no la recalculan
-  const columnas = useMemo(() => buildTransitionColumns(actividades, semanas), [actividades, semanas])
+  const columnas = useMemo(
+    () => (vistaDiaria
+      ? buildTransitionColumnsDiarias(actividades, rango.desde, rango.hasta, hoy)
+      : buildTransitionColumns(actividades, semanas)),
+    [actividades, semanas, vistaDiaria, rango.desde, rango.hasta, hoy]
+  )
+  const tssSerie = useMemo(
+    () => (vistaDiaria ? tssPorDiaDelTramo(actividades, rango.desde, rango.hasta) : semanas),
+    [actividades, semanas, vistaDiaria, rango.desde, rango.hasta]
+  )
 
   const hayPotencia =
     actividades.filter((a) => a.disciplina === 'bike' && a.potencia_media != null).length >= 3
@@ -170,14 +194,14 @@ export default function StravaAnalysis({
   // lo que más mira el coach, desaparecía en móvil. El ritmo de la última
   // carrera ya está en "Ritmo medio de carrera", más abajo.
   const statCards = [
-    { label: 'Volumen', valor: stats.volumen, color: COLORS.textPrimary, nota: `últimas ${weeks} semanas`, hero: true },
-    { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.load, nota: `últimas ${weeks} semanas` },
-    { label: 'CTL · ATL', valor: `${carga.ctl ?? '—'} · ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: 'forma · fatiga' },
+    { label: 'Volumen', valor: stats.volumen, color: COLORS.textPrimary, nota: etiqueta, hero: true },
+    { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.load, nota: etiqueta },
+    { label: 'CTL · ATL', valor: `${carga.ctl ?? '—'} · ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: alFinal ? `forma · fatiga · ${alFinal}` : 'forma · fatiga' },
     {
       label: 'TSB',
       valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—',
       color: COLORS.textPrimary,
-      nota: forma ? forma.texto : 'sin datos',
+      nota: forma ? (alFinal ? `${forma.texto} · ${alFinal}` : forma.texto) : 'sin datos',
       notaColor: forma?.aviso ? COLORS.warning : null,
     },
   ]
@@ -229,17 +253,23 @@ export default function StravaAnalysis({
         ))}
       </div>
 
+      {actividades.length === 0 && (
+        <div style={{ ...cardStyle, marginBottom: isMobile ? 14 : 24, color: COLORS.textSecondary, fontSize: 14 }}>
+          Sin actividades en este periodo ({etiqueta}).
+        </div>
+      )}
+
       {/* Primero la carga: es la pregunta del coach (¿cómo va de forma y fatiga?) */}
       {semanas.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 14 : 16, marginBottom: isMobile ? 14 : 24 }}>
           <ChartCard title="Forma (CTL · ATL)" flush>
             <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <FormaChart actividadesCarga={actsCarga} desde={sumarDias(hoyMadrid(), -weeks * 7)} proyeccion={proyeccion} />
+              <FormaChart actividadesCarga={actsCarga} desde={rango.desde} hasta={rango.hasta} proyeccion={proyeccion} />
             </Suspense>
           </ChartCard>
-          <ChartCard title="Carga semanal (TSS)" flush>
+          <ChartCard title={vistaDiaria ? 'Carga diaria (TSS)' : 'Carga semanal (TSS)'} flush>
             <Suspense fallback={<HuecoGrafico alto={240} />}>
-              <TSSChart semanas={semanas} />
+              <TSSChart semanas={tssSerie} porDia={vistaDiaria} />
             </Suspense>
           </ChartCard>
         </div>
@@ -250,14 +280,16 @@ export default function StravaAnalysis({
         <div style={{ marginBottom: isMobile ? 14 : 24 }}>
           <TransitionLine
             columns={columnas}
-            titulo={isMobile ? 'Volumen por semana' : 'Volumen por semana y disciplina'}
+            titulo={vistaDiaria
+              ? (isMobile ? 'Volumen por día' : 'Volumen por día y disciplina')
+              : (isMobile ? 'Volumen por semana' : 'Volumen por semana y disciplina')}
             barsHeight={isMobile ? 110 : 180}
             gap={isMobile ? 6 : 14}
             maxBarWidth={isMobile ? null : 52}
             barRadius={isMobile ? 4 : 6}
             showLegend
             showStatusLabel={!isMobile}
-            maxLabels={isMobile ? 5 : 12}
+            maxLabels={vistaDiaria ? (isMobile ? 7 : 14) : (isMobile ? 5 : 12)}
             dowFontSize={isMobile ? 10 : 11}
           />
         </div>
@@ -294,7 +326,9 @@ export default function StravaAnalysis({
 
         {paceTrend.length > 0 && (
           <div style={cardStyle}>
-            <div style={seccionLabel}>Ritmo medio de carrera, últimas {paceTrend.length} semanas</div>
+            <div style={seccionLabel}>
+              {esPreset(periodo) ? `Ritmo medio de carrera, últimas ${paceTrend.length} semanas` : 'Ritmo medio de carrera por semana'}
+            </div>
             <div
               style={{
                 display: 'grid',
@@ -324,7 +358,7 @@ export default function StravaAnalysis({
         </ChartCard>
       )}
 
-      <PRsBlock records={records} weeks={weeks} />
+      <PRsBlock records={records} etiqueta={etiqueta} />
 
       {/* Filtros + CSV */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '24px 0 10px' }}>
