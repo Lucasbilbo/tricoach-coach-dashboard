@@ -18,6 +18,7 @@ const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 const { agruparSemanas } = require('./lib/semanas')
+const { leerRango, afterUnixDesde } = require('./lib/rango')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -255,6 +256,10 @@ exports.handler = async (event) => {
   if (!UUID_REGEX.test(athleteId || '')) {
     return respuesta(400, { error: 'athleteId debe ser un UUID válido' })
   }
+  // `desde`/`hasta` (opcionales) sustituyen a `weeks`: todo sale de ese tramo
+  const lectura = leerRango(parsed.desde, parsed.hasta, fechaMadrid(new Date()), WEEKS_MAX)
+  if (!lectura.ok) return respuesta(400, { error: lectura.error })
+  const rango = lectura.rango
 
   try {
     // 4. Autorización: el propio atleta o un coach con relación en coach_athletes
@@ -293,7 +298,7 @@ exports.handler = async (event) => {
 
     // 7. Actividades desde el inicio del rango: copia en Supabase + lo nuevo de
     // Strava (lib/actividades-store.js). `force` (botón Actualizar) resincroniza.
-    const after = Math.floor(Date.now() / 1000) - weeks * 7 * 86400
+    const after = rango ? afterUnixDesde(rango.desde) : Math.floor(Date.now() / 1000) - weeks * 7 * 86400
     const store = crearStore({
       db: dbSupabase({ supabaseHost, SERVICE_KEY, rest: supabaseRest }),
       listar: (token, desde) => actividadesDesde(token, desde, medidor),
@@ -307,14 +312,18 @@ exports.handler = async (event) => {
 
     // 8. Transformar y agrupar
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
-    const actividades = actRes.actividades
+    let actividades = actRes.actividades
       .map((a) => transformarActividad(a, fcMax))
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
+    // Con rango, se pidió a Strava desde un día antes por el margen horario: se
+    // recorta al tramo exacto (y las mejores marcas salen solo de él).
+    if (rango) actividades = actividades.filter((a) => a.fecha >= rango.desde && a.fecha <= rango.hasta)
     // Metros de técnica/pies que el reloj no cuenta (de la sesión prescrita).
-    const desde = fechaMadrid(new Date(after * 1000))
+    const desde = rango ? rango.desde : fechaMadrid(new Date(after * 1000))
+    const hasta = rango ? rango.hasta : fechaMadrid(new Date())
     sumarTecnica(actividades, await sesionesNatacion(supabaseGet, supabaseHost, SERVICE_KEY, athleteId, desde))
     // Todas las semanas del rango hasta hoy, también las vacías (lesión, vacaciones).
-    const semanas = agruparSemanas(actividades, { desde, hasta: fechaMadrid(new Date()) })
+    const semanas = agruparSemanas(actividades, { desde, hasta })
 
     // fc_maxima_por_defecto: sin FC máxima en el perfil, TSS/zonas/CTL salen con el
     // 185 genérico; la UI lo avisa y deja ponerla (set-fc-max).

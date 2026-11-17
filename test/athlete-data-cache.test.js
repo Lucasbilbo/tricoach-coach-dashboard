@@ -92,3 +92,25 @@ test('force salta la caché', async () => {
   await cache.get('x', 8, { force: true })
   assert.equal(llamadas.length, 2)
 })
+
+test('un rango no se mezcla con las últimas N semanas ni con otro rango, y se pasa a request', async () => {
+  const pedidos = []
+  const cache = createAthleteDataCache({
+    request: async (athleteId, weeks, records, rango) => {
+      pedidos.push([athleteId, weeks, records, rango])
+      return { ok: true, status: 200, json: {} }
+    },
+  })
+  const r1 = { desde: '2026-10-12', hasta: '2026-10-18' }
+  const r2 = { desde: '2026-10-19', hasta: '2026-10-25' }
+  await cache.get('x', 8)
+  await cache.get('x', 8, { rango: r1 })
+  await cache.get('x', 8, { rango: r1 }) // caché
+  await cache.get('x', 8, { rango: r2 })
+  assert.equal(pedidos.length, 3)
+  assert.deepEqual(pedidos[1][3], r1)
+  assert.equal(pedidos[0][3], null)
+  cache.invalidate('x') // invalida también los rangos del atleta
+  await cache.get('x', 8, { rango: r1 })
+  assert.equal(pedidos.length, 4)
+})
