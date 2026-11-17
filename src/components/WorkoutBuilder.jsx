@@ -10,7 +10,8 @@ import { buildIntervalsText, problemaEntreno } from '../lib/intervalsText'
 import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle, chipStyle, chipDisciplinaStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
-import { nombrePorDefecto } from './workout/resumen'
+import { metrosTexto, nombrePorDefecto } from './workout/resumen'
+import { metrosDeBloques } from '../lib/cumplimiento'
 import { Perfil } from './WorkoutDetail'
 import AtajosBuilder from './workout/AtajosBuilder'
 import { AdjuntoEditor } from './AdjuntoEntreno'
@@ -262,6 +263,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // Solo fuerza admite el entreno "tal cual" (captura / texto, p. ej. Hyrox)
   const conAdjunto = form.disciplina === 'strength'
   const adjunto = conAdjunto ? adjuntoDe({ adjunto: form.adjunto }) : null
+  // Natación: total de metros de los bloques (series × repeticiones, sin descansos)
+  const metrosNatacion = form.disciplina === 'swim' ? metrosDeBloques(form.bloques) : null
   const duracionBloques = duracionTotalMin(form.bloques)
   const duracionFinal = duracionBloques ?? (form.bloques.length === 0 && Number(form.duracionManual) > 0 ? Math.round(Number(form.duracionManual)) : null)
 
@@ -921,6 +924,16 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             del contenido y había que bajar todo el formulario para guardar. */}
         {form.disciplina && (
           <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, padding: '12px 24px calc(12px + env(safe-area-inset-bottom))', background: COLORS.card, maxHeight: '45dvh', overflowY: 'auto' }}>
+          {/* Natación: total de metros siempre a la vista mientras se escribe el entreno */}
+            {metrosNatacion && metrosNatacion.metros > 0 && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 13, color: COLORS.textSecondary }}>Total</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 18, fontWeight: 600, color: COLORS.textPrimary }}>{metrosTexto(metrosNatacion.metros)}</span>
+                {metrosNatacion.parcial && (
+                  <span style={{ fontSize: 12, color: COLORS.textTertiary }}>sin contar los pasos por tiempo</span>
+                )}
+              </div>
+            )}
           {/* Mensajes de estado */}
             {exitoGarmin && (
               <div

@@ -13,6 +13,11 @@ export function cantidadTexto(cantidad, unidad) {
   return `${cantidad} ${unidad || ''}`.trim()
 }
 
+// 2400 → "2400 m"; 10000 → "10.000 m" (agrupación de miles del español: solo desde 5 cifras)
+export function metrosTexto(metros) {
+  return `${Number(metros).toLocaleString('es-ES')} m`
+}
+
 export function objetivoTexto(tipo, valor) {
   if (!tipo || !valor) return ''
   if (tipo === 'fc') return `${valor}% FC`
