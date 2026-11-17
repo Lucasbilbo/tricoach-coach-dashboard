@@ -3,7 +3,7 @@
 // distribución de zonas FC, la progresión de ritmo y las columnas de la Línea
 // de Transición, a partir de las `actividades`/`semanas` que ya devuelve
 // coach-athlete-data. No toca endpoints ni añade datos nuevos.
-import { decimalToRitmo, formatHorasMin, formatFechaCorta, lunesDeSemana, hoyMadrid } from './chartUtils'
+import { decimalToRitmo, formatHorasMin, formatFechaCorta, lunesDeSemana, hoyMadrid, sumarDias, diaSemanaISO } from './chartUtils'
 import { computeCargaHoy } from './carga'
 import { DISCIPLINE_COLORS } from './theme'
 
@@ -156,4 +156,68 @@ export function buildTransitionColumns(actividades, semanas) {
       segments: segments.length > 0 ? segments : [{ color: DISCIPLINE_COLORS.other, pct: 100 }],
     }
   })
+}
+
+// ── Vista diaria (rangos cortos) ─────────────────────────────────────────
+// Con una semana o un rango de ≤14 días, una barra por semana no dice nada: el
+// volumen y el TSS se dibujan por día. Misma regla que las semanales ('other'
+// no cuenta en el volumen) y los días sin actividad salen igualmente, a cero.
+const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+function fechasEntre(desde, hasta) {
+  const fechas = []
+  for (let f = desde; f <= hasta; f = sumarDias(f, 1)) fechas.push(f)
+  return fechas
+}
+
+// "Lun 12": día de la semana + número, que es lo que se busca en una semana
+function etiquetaDia(fecha) {
+  return `${DIAS_CORTOS[diaSemanaISO(fecha) - 1]} ${Number(fecha.slice(8, 10))}`
+}
+
+export function buildTransitionColumnsDiarias(actividades, desde, hasta, hoy = hoyMadrid()) {
+  const fechas = fechasEntre(desde, hasta)
+  if (fechas.length === 0) return []
+
+  const horas = {}
+  for (const a of actividades) {
+    if (!a.fecha || !a.duracion_min || a.fecha < desde || a.fecha > hasta) continue
+    if (!DISCIPLINAS_ORDEN.includes(a.disciplina)) continue
+    if (!horas[a.fecha]) horas[a.fecha] = {}
+    horas[a.fecha][a.disciplina] = (horas[a.fecha][a.disciplina] || 0) + a.duracion_min / 60
+  }
+
+  const totales = fechas.map((f) => DISCIPLINAS_ORDEN.reduce((acc, d) => acc + (horas[f]?.[d] || 0), 0))
+  const maxHoras = Math.max(...totales, 0.0001)
+
+  return fechas.map((f, i) => {
+    const h = horas[f] || {}
+    const total = totales[i]
+    const segments = DISCIPLINAS_ORDEN.filter((d) => (h[d] || 0) > 0).map((d) => ({
+      disciplina: d,
+      color: DISCIPLINE_COLORS[d],
+      pct: total > 0 ? Math.round(((h[d] || 0) / total) * 100) : 0,
+    }))
+    return {
+      label: etiquetaDia(f),
+      isToday: f === hoy,
+      statusLabel: total > 0 ? formatHorasMin(total) : '—',
+      heightPct: Math.max(Math.round((total / maxHoras) * 100), total > 0 ? 6 : 2),
+      borderStyle: 'solid',
+      borderWidth: '0px',
+      borderColor: 'transparent',
+      segments: segments.length > 0 ? segments : [{ color: DISCIPLINE_COLORS.other, pct: 100 }],
+    }
+  })
+}
+
+// TSS por día del tramo, con la forma de `semanas` ({ semana, tss_total }) que
+// espera TSSChart: la clave `semana` lleva aquí la fecha del día.
+export function tssPorDiaDelTramo(actividades, desde, hasta) {
+  const porDia = {}
+  for (const a of actividades) {
+    if (!a.fecha || a.tss_estimado == null || a.fecha < desde || a.fecha > hasta) continue
+    porDia[a.fecha] = (porDia[a.fecha] || 0) + a.tss_estimado
+  }
+  return fechasEntre(desde, hasta).map((f) => ({ semana: f, tss_total: porDia[f] || 0 }))
 }

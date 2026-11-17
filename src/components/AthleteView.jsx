@@ -13,6 +13,7 @@ import StravaAnalysis from './shared/StravaAnalysis'
 import SinStrava from './shared/SinStrava'
 import AnalisisCargando from './shared/AnalisisCargando'
 import SeasonPanel from './season/SeasonPanel'
+import { periodoSemanas, claveArchivo } from '../lib/periodo'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -176,14 +177,14 @@ export default function AthleteView() {
             actividades={actividades}
             semanas={semanas}
             records={datos?.records}
-            weeks={weeks}
+            periodo={periodoSemanas(weeks)}
             athleteId={id}
             atleta={datos?.atleta}
             esCoach
             onFcMaxGuardada={() => setRefrescos((r) => r + 1)}
             buildCsvName={(filtro) => {
               const nombreAtleta = (datos?.atleta?.nombre || 'atleta').replace(/[^\p{L}\p{N}]+/gu, '_')
-              return `${nombreAtleta}_${weeks}sem_${filtro}_${hoyMadrid()}.csv`
+              return `${nombreAtleta}_${claveArchivo(periodoSemanas(weeks))}_${filtro}_${hoyMadrid()}.csv`
             }}
           />
         )}

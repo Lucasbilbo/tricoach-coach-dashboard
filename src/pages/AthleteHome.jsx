@@ -27,6 +27,7 @@ import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
 import DuracionSesion from '../components/DuracionSesion'
 import { duracionPrevista } from '../lib/tssPrevisto'
+import { periodoSemanas, claveArchivo } from '../lib/periodo'
 
 const RANGOS_SEMANAS = [4, 8, 12, 24]
 
@@ -789,11 +790,11 @@ export default function AthleteHome() {
                 actividades={actividades}
                 semanas={semanas}
                 records={datos?.records}
-                weeks={weeks}
+                periodo={periodoSemanas(weeks)}
                 athleteId={userId}
                 atleta={datos?.atleta}
                 onFcMaxGuardada={() => { stravaClaveRef.current = null; setRefrescoStrava((r) => r + 1) }}
-                buildCsvName={() => `mis_actividades_${weeks}sem_${hoyMadrid()}.csv`}
+                buildCsvName={() => `mis_actividades_${claveArchivo(periodoSemanas(weeks))}_${hoyMadrid()}.csv`}
               />
             )}
           </>

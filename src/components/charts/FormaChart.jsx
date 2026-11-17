@@ -103,10 +103,13 @@ function ResumenPrevisto({ proyeccion }) {
   return <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.5 }}>{texto}</p>
 }
 
-export default function FormaChart({ actividadesCarga, desde, proyeccion }) {
+// `hasta`: último día que se calcula y dibuja (por defecto hoy). En un periodo
+// pasado la curva acaba ahí y no hay proyección.
+export default function FormaChart({ actividadesCarga, desde, hasta, proyeccion }) {
   const hoy = hoyMadrid()
+  const fin = hasta || hoy
   const data = useMemo(() => {
-    const dias = computeCargaDiaria(actividadesCarga || [], hoy)
+    const dias = computeCargaDiaria(actividadesCarga || [], fin)
     const reales = dias
       .filter((d) => !desde || d.fecha >= desde)
       .map((d) => ({ ...d, label: formatFechaCorta(d.fecha) }))
@@ -119,7 +122,7 @@ export default function FormaChart({ actividadesCarga, desde, proyeccion }) {
       .filter((d) => d.fecha > ult.fecha)
       .map((d) => ({ fecha: d.fecha, label: formatFechaCorta(d.fecha), ctl: null, atl: null, ctlP: d.ctl, atlP: d.atl }))
     return [...reales, ...futuros]
-  }, [actividadesCarga, desde, proyeccion, hoy])
+  }, [actividadesCarga, desde, proyeccion, fin])
 
   if (data.length < 2) return null
   const hoyPunto = [...data].reverse().find((d) => d.ctl != null)
