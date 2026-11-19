@@ -62,7 +62,7 @@ function estadoSesion(sesion, actividad, coberturaDesde) {
   if (estado === ESTADO.completada) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: actividad }
   if (estado === ESTADO.programada) return { texto: 'Programada', color: COLORS.textSecondary, actividadStrava: null }
   if (estado === ESTADO.sinDatos) return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
-  return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
+  return { texto: 'Sin hacer', color: COLORS.textSecondary, actividadStrava: null }
 }
 
 function tituloSesion(sesion) {
@@ -172,7 +172,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
   const [historicoAbierto, setHistoricoAbierto] = useState(false)
-  // Actividades para calcular Completada/Pendiente, y el inicio de su cobertura.
+  // Actividades para calcular Completada/Sin hacer, y el inicio de su cobertura.
   // El estado NO depende del selector de semanas del análisis (A1). Cacheadas.
   const [actividadesEstado, setActividadesEstado] = useState(null)
   const [coberturaDesde, setCoberturaDesde] = useState(null)
@@ -239,7 +239,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       const lista = data || []
       setSesiones(lista)
 
-      // Estado Completada/Pendiente: solo las sesiones PASADAS definen la ventana
+      // Estado Completada/Sin hacer: solo las sesiones PASADAS definen la ventana
       // de actividades que necesitamos.
       const hoy = hoyMadrid()
       const fechasPasadas = lista.map((s) => s.fecha).filter((f) => f && f <= hoy)
