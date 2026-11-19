@@ -246,7 +246,7 @@ import { tonicidadBidon } from '../src/lib/productosNutricion.js'
 
 test('tonicidadBidon: tus recetas por concentración de hidratos', () => {
   const b = (ml, m, f) => ({ tipo: 'bidon', volumen_ml: ml, carbohidratos_g: Math.round(m * 0.95 + f), receta: { maltodextrina_g: m, fructosa_g: f, sales_g: 0 } })
-  assert.equal(tonicidadBidon(b(500, 13.5, 6.5)).texto, '3,9 % · hipotónico')
+  assert.equal(tonicidadBidon(b(500, 13.5, 6.5)).texto, '3,9 % · isotónico')
   assert.equal(tonicidadBidon(b(800, 32, 16)).texto, '5,8 % · isotónico')
   assert.equal(tonicidadBidon(b(800, 40, 20)).texto, '7,3 % · isotónico')
   assert.equal(tonicidadBidon(b(800, 50, 25)).texto, '9,1 % · hipertónico')

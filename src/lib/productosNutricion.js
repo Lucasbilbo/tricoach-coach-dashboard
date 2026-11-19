@@ -177,10 +177,11 @@ export function resumenTotales(t) {
 }
 
 // ── Tonicidad de un bidón ───────────────────────────────────────────────────
-// Se clasifica por la concentración de hidratos (g por 100 ml): hipotónico
-// < 4 %, isotónico 4–8 %, hipertónico > 8 %. Aproximación solo por hidratos (la
+// Se clasifica por la concentración de hidratos (g por 100 ml): isotónico hasta
+// el 8 %, hipertónico por encima. Sin "hipotónico" (decidido 2026-11-20: la
+// natación de 3,9 % cuenta como isotónica). Aproximación solo por hidratos (la
 // osmolaridad real también depende de las sales). Se calcula, no se guarda.
-export const TONICIDAD = { isotonicoDesde: 4, hipertonicoDesde: 8 }
+export const TONICIDAD = { hipertonicoDesde: 8 }
 
 // → { pct, tipo, texto: "7,3 % · isotónico" } o null (agua, no es bidón, sin ml)
 export function tonicidadBidon(it) {
@@ -191,7 +192,7 @@ export function tonicidadBidon(it) {
   const hidratos = r ? r.maltodextrina_g * HIDRATOS_POR_G.maltodextrina + r.fructosa_g * HIDRATOS_POR_G.fructosa : Number(it.carbohidratos_g) || 0
   if (hidratos <= 0 || ml <= 0) return null
   const pct = Math.round((hidratos / ml) * 1000) / 10
-  const tipo = pct < TONICIDAD.isotonicoDesde ? 'hipotónico' : pct <= TONICIDAD.hipertonicoDesde ? 'isotónico' : 'hipertónico'
+  const tipo = pct <= TONICIDAD.hipertonicoDesde ? 'isotónico' : 'hipertónico'
   return { pct, tipo, texto: `${pct.toLocaleString('es-ES', { maximumFractionDigits: 1 })} % · ${tipo}` }
 }
 
