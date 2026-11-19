@@ -483,7 +483,7 @@ export default function AthleteHome() {
 
         {abierta && tieneDetalle && (
           <div style={{ marginTop: 6, paddingBottom: 4 }}>
-            <WorkoutDetail sesion={sesion} mostrarNotas={false} />
+            <WorkoutDetail sesion={sesion} mostrarNotas={false} copiarStrava />
             {intervalsOk && !enviada && (
               <div style={{ marginTop: 10 }}>
                 {erroresGarmin[sesion.id] && (
@@ -566,7 +566,7 @@ export default function AthleteHome() {
             )}
             {tieneDetalle && (
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
-                <WorkoutDetail sesion={sesion} mostrarNotas={false} />
+                <WorkoutDetail sesion={sesion} mostrarNotas={false} copiarStrava />
               </div>
             )}
             {nutricion.disponible && (
@@ -712,7 +712,7 @@ export default function AthleteHome() {
                             )}
                             {tieneDetalle && (
                               <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
-                                <WorkoutDetail sesion={sesion} mostrarNotas={true} />
+                                <WorkoutDetail sesion={sesion} mostrarNotas={true} copiarStrava />
                               </div>
                             )}
                           </div>
