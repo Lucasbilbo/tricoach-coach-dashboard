@@ -96,6 +96,24 @@ const accionIconoStyle = {
   color: COLORS.textTertiary,
 }
 
+// Opción del menú «⋯» de la tarjeta (área táctil de 44 px)
+const itemMenuStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  width: '100%',
+  minHeight: 44,
+  padding: '0 12px',
+  background: 'transparent',
+  border: 'none',
+  borderRadius: 8,
+  color: COLORS.textPrimary,
+  fontSize: 14,
+  fontFamily: 'inherit',
+  textAlign: 'left',
+  cursor: 'pointer',
+}
+
 // Ámbar: sesión que aún no está en el reloj.
 // Ámbar de aviso (el de la agenda), no el de bici: "sin enviar" no es una disciplina
 const COLOR_PENDIENTE = '#E8B84A'
@@ -172,6 +190,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
   const [historicoAbierto, setHistoricoAbierto] = useState(false)
+  const [menuId, setMenuId] = useState(null) // sesión con el menú ⋯ abierto
   // Actividades para calcular Completada/Sin hacer, y el inicio de su cobertura.
   // El estado NO depende del selector de semanas del análisis (A1). Cacheadas.
   const [actividadesEstado, setActividadesEstado] = useState(null)
@@ -412,25 +431,50 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             </div>
             <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
           </div>
-          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0, position: 'relative' }}>
             <button onClick={() => setSesionEditando(sesion)} style={accionIconoStyle} aria-label="Editar sesión" title="Editar">
               <Icon name="edit" size={16} />
             </button>
+            {/* Duplicar y eliminar van en «⋯»: con el pulgar en móvil era fácil
+                borrar sin querer. */}
             <button
-              onClick={() =>
-                // Copia sin id ni envío: el builder la trata como sesión nueva y
-                // solo falta elegir el día.
-                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false, _nutricionDe: sesion.id })
-              }
+              onClick={() => setMenuId((prev) => (prev === sesion.id ? null : sesion.id))}
               style={accionIconoStyle}
-              aria-label="Duplicar sesión"
-              title="Duplicar a otro día"
+              aria-label="Más acciones"
+              aria-haspopup="menu"
+              aria-expanded={menuId === sesion.id}
+              title="Más"
             >
-              <Icon name="copy" size={16} />
+              <Icon name="more" size={18} strokeWidth={2.6} />
             </button>
-            <button onClick={() => handleEliminar(sesion)} style={accionIconoStyle} aria-label="Eliminar sesión" title="Eliminar">
-              <Icon name="trash" size={16} />
-            </button>
+            {menuId === sesion.id && (
+              <>
+                <div onClick={() => setMenuId(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
+                <div role="menu" style={{ position: 'absolute', top: 40, right: 0, zIndex: 21, minWidth: 190, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 10, padding: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuId(null)
+                      // Copia sin id ni envío: el builder la trata como sesión nueva y
+                      // solo falta elegir el día.
+                      setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false, _nutricionDe: sesion.id })
+                    }}
+                    style={itemMenuStyle}
+                  >
+                    <Icon name="copy" size={16} />
+                    Duplicar a otro día
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuId(null); handleEliminar(sesion) }}
+                    style={{ ...itemMenuStyle, color: COLORS.error }}
+                  >
+                    <Icon name="trash" size={16} />
+                    Eliminar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
