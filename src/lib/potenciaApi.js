@@ -1,4 +1,4 @@
-// Acceso a atleta_potencia (migración 019): potenciómetro y FTP de bici de cada
+// Acceso a atleta_potencia (migración 021): potenciómetro y FTP de bici de cada
 // atleta. Lo editan el atleta y su coach vinculado (RLS). Caché en memoria 5 min
 // por atleta (se invalida al guardar y al cambiar de usuario). Si la tabla falla
 // (p. ej. aún no existe) → disponible:false y la bici sigue por pulso.

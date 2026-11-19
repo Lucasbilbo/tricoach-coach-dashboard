@@ -1,5 +1,5 @@
--- 019_atleta_potencia.sql — potenciómetro y FTP por atleta (2026-11)
--- PENDIENTE de aplicar. Aditiva y reversible.
+-- 021_atleta_potencia.sql — potenciómetro y FTP por atleta (2026-11)
+-- Aplicada 2026-11-20. Aditiva y reversible.
 --
 -- Tabla `atleta_potencia` (una fila por atleta):
 --   potenciometro  true = la bici de este atleta se prescribe y se mide por POTENCIA

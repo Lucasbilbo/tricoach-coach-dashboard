@@ -1,4 +1,4 @@
-// lib/potencia.js — FTP de bici del atleta (tabla atleta_potencia, migración 019).
+// lib/potencia.js — FTP de bici del atleta (tabla atleta_potencia, migración 021).
 // Devuelve los vatios SOLO si el atleta tiene el potenciómetro activado y un FTP
 // guardado; si no (o si la tabla aún no existe / falla) → null y la carga sigue
 // calculándose por pulso. Nunca lanza.

@@ -68,7 +68,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // Se calculan al abrir (el creador se monta cada vez), en hora de Madrid
   const DIAS_CHIPS = proximosDias(14, ahora.fecha)
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
-  // Atleta con potenciómetro (migración 019): la bici se prescribe por potencia
+  // Atleta con potenciómetro (migración 021): la bici se prescribe por potencia
   const bikePotencia = usePotencia(athleteId, coachId, isOpen).potenciometro === true
   // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
   // sesión (necesita su id). Solo si la tabla existe (migración 017).

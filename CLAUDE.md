@@ -370,11 +370,11 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   (misma regla que las notas del entrenador).
 - Tests: `test/nutricion.test.js`.
 
-## Potenciómetro por atleta (2026-11-20, migración 019)
+## Potenciómetro por atleta (2026-11-20, migración 021)
 
 - Tabla `atleta_potencia` (PK `athlete_id`): `potenciometro` bool, `ftp_w` (50–700),
   `ftp_fecha`. La editan atleta y coach vinculado (RLS, `actualizado_por`).
-  **Migración 019 PENDIENTE de aplicar** (aditiva; deshacer: `DROP TABLE public.atleta_potencia;`).
+  **Migración 021 aplicada 2026-11-20** (aditiva; deshacer: `DROP TABLE public.atleta_potencia;`).
   Sin tabla: todo sigue por pulso. UI: `PotenciaAjustes.jsx` (Sesiones del coach y
   /home del atleta, plegable), `usePotencia`, `potenciaApi.js` (caché 5 min).
 - Con interruptor ON: el creador ofrece en bici «Zona potencia» (`zona_potencia`,
@@ -415,7 +415,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
 - `supabase/migrations/` — 001–020 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 aplicada 2026-11-20; 020 aplicada 2026-11-20.
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 aplicada 2026-11-20; 020 aplicada 2026-11-20; 021 (atleta_potencia) aplicada 2026-11-20.
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).
