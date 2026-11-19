@@ -71,9 +71,9 @@ const productos = [
 Object.assign(nutricion[1], {
   carbohidratos_g_h: null, liquido_ml_h: null, sodio_mg_h: null,
   productos: [
-    { producto_id: productos[2].id, nombre: 'Gel 45 g', tipo: 'gel', cantidad: 3, carbohidratos_g: 45, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0 },
-    { producto_id: productos[4].id, nombre: 'Gel 45 g · cafeína 130 mg', tipo: 'gel', cantidad: 1, carbohidratos_g: 45, cafeina_mg: 130, sodio_mg: 0, volumen_ml: 0 },
-    { producto_id: productos[7].id, nombre: 'Bidón 800', tipo: 'bidon', cantidad: 2, carbohidratos_g: 40, cafeina_mg: 0, sodio_mg: 600, volumen_ml: 800 },
+    { producto_id: productos[2].id, nombre: 'Gel 45 g', tipo: 'gel', cantidad: 3, minutos: [30, 60], carbohidratos_g: 45, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0 },
+    { producto_id: productos[4].id, nombre: 'Gel 45 g · cafeína 130 mg', tipo: 'gel', cantidad: 1, minutos: [75], carbohidratos_g: 45, cafeina_mg: 130, sodio_mg: 0, volumen_ml: 0 },
+    { producto_id: productos[7].id, nombre: 'Bidón 800', tipo: 'bidon', cantidad: 2, minutos: [0, 60], carbohidratos_g: 40, cafeina_mg: 0, sodio_mg: 600, volumen_ml: 800 },
   ],
 })
 

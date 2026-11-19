@@ -255,6 +255,8 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'creador-natacion', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Natación', `rapida:400 cal + 8x100m 1:45 rec 20" + 200 pull`], expandir: true },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
+  { quien: 'coach', nombre: 'atleta-nutricion-plan', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion-plan'] },
+  { quien: 'atleta', nombre: 'home-nutricion-plan', url: '/home', pasos: ['proximo-tirada'] },
   { quien: 'atleta', nombre: 'home-nutricion', url: '/home', pasos: ['nutricion'] },
   { quien: 'atleta', nombre: 'home-feedback', url: '/home', pasos: ['feedback'] },
   { quien: 'atleta', nombre: 'home-historial', url: '/home', pasos: ['historial'] },
@@ -283,6 +285,8 @@ const PANTALLAS = [
         try {
           if (paso.startsWith('tab:')) await page.getByRole('tab', { name: paso.slice(4) }).first().click()
           else if (paso === 'nutricion') { const b = page.getByRole('button', { name: /^Nutrición/ }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
+          else if (paso === 'nutricion-plan') { const b = page.getByRole('button', { name: /^Nutrición.*g\/h/ }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
+          else if (paso === 'proximo-tirada') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Tirada 21 km' }).first(); await b.scrollIntoViewIfNeeded(); await b.click(); await page.waitForTimeout(300); const n = page.getByRole('button', { name: /^Nutrición/ }).last(); await n.scrollIntoViewIfNeeded(); await n.click() }
           else if (paso === 'historial') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Rodaje largo' }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'editar') await page.getByRole('button', { name: 'Editar sesión' }).first().click()
           else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()

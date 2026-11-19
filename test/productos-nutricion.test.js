@@ -119,3 +119,38 @@ test('receta de bidón: solo sodio, solo hidratos, agua sola y no bidones', () =
   assert.equal(recetaBidon({ ...itemDeProducto(gel45, 1), carbohidratos_g: 45 }), null)
   assert.equal(recetaBidon(null), null)
 })
+
+// ── Minutos por unidad ──
+import { lineaTiempo, minutoComoHora, repartirMinutos } from '../src/lib/productosNutricion.js'
+
+test('normalizarItems: minutos recortados a la cantidad, sin null finales', () => {
+  const base = { nombre: 'Gel 45 g', tipo: 'gel', carbohidratos_g: 45 }
+  const [a] = normalizarItems([{ ...base, cantidad: 2, minutos: ['30', '', 90, 120] }])
+  assert.deepEqual(a.minutos, [30])
+  const [m] = normalizarItems([{ ...base, cantidad: 3, minutos: ['', 40] }])
+  assert.deepEqual(m.minutos, [null, 40])
+  const [b] = normalizarItems([{ ...base, cantidad: 2, minutos: ['', null] }])
+  assert.equal('minutos' in b, false)
+  const [c] = normalizarItems([{ ...base, cantidad: 1, minutos: [-5] }])
+  assert.equal('minutos' in c, false)
+  const [d] = normalizarItems([{ ...base, cantidad: 1, minutos: [99999] }])
+  assert.deepEqual(d.minutos, [720])
+})
+
+test('repartirMinutos: geles entre inicio y final; bidones desde el 0', () => {
+  assert.deepEqual(repartirMinutos(3, 120, 'gel'), [30, 60, 90])
+  assert.deepEqual(repartirMinutos(2, 180, 'bidon'), [0, 90])
+  assert.deepEqual(repartirMinutos(2, 0, 'gel'), [])
+})
+
+test('lineaTiempo: ordena por minuto, aparta sin hora y marca los que pasan del final', () => {
+  const items = [
+    { nombre: 'Gel', tipo: 'gel', cantidad: 3, minutos: [60, null, 30] },
+    { nombre: 'Bidón 800', tipo: 'bidon', cantidad: 1, minutos: [150] },
+  ]
+  const { eventos, sinHora } = lineaTiempo(items, 120)
+  assert.deepEqual(eventos.map((e) => e.min), [30, 60, 150])
+  assert.deepEqual(eventos.map((e) => e.pasa), [false, false, true])
+  assert.deepEqual(sinHora, [{ nombre: 'Gel', cantidad: 1 }])
+  assert.equal(minutoComoHora(75), '1:15')
+})

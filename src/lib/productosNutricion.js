@@ -18,6 +18,7 @@ export const TIPOS = [
 export const LIMITES_PRODUCTO = { carbohidratos_g: 200, cafeina_mg: 400, sodio_mg: 3000, volumen_ml: 2000 }
 export const MAX_CANTIDAD = 20
 export const MAX_ITEMS = 30
+export const MAX_MINUTO = 720
 
 const entero = (v, max) => {
   if (v === '' || v == null) return 0
@@ -54,6 +55,19 @@ export const itemDeProducto = (p, cantidad = 1) => ({
   volumen_ml: p.volumen_ml || 0,
 })
 
+// Minutos en que se toma cada unidad: array de como mucho `cantidad` valores
+// (null = sin hora). Se recorta a la cantidad y se quitan los null del final.
+function minutosDe(it, cantidad) {
+  if (!Array.isArray(it?.minutos)) return null
+  const lista = it.minutos.slice(0, cantidad).map((v) => {
+    if (v === '' || v == null) return null
+    const n = Math.round(Number(v))
+    return Number.isFinite(n) && n >= 0 ? Math.min(n, MAX_MINUTO) : null
+  })
+  while (lista.length && lista[lista.length - 1] === null) lista.pop()
+  return lista.length ? lista : null
+}
+
 // Items sueltos (del formulario o de la BD) → lista limpia, o null si no queda
 // ninguno con cantidad. Nunca se fía de lo que llega: recorta y redondea.
 export function normalizarItems(items) {
@@ -63,7 +77,9 @@ export function normalizarItems(items) {
     const cantidad = entero(it?.cantidad, MAX_CANTIDAD)
     const nombre = typeof it?.nombre === 'string' ? it.nombre.trim().slice(0, 60) : ''
     if (!cantidad || !nombre) continue
+    const minutos = minutosDe(it, cantidad)
     limpios.push({
+      ...(minutos ? { minutos } : {}),
       producto_id: typeof it.producto_id === 'string' ? it.producto_id : null,
       nombre,
       tipo: TIPOS.some((t) => t.value === it.tipo) ? it.tipo : 'gel',
@@ -184,3 +200,43 @@ export function textoReceta(item) {
   if (r.sales_g > 0) partes.push(`${fmtG(r.sales_g)} g sales`)
   return partes.join(' · ')
 }
+
+
+// ── Cuándo se toma cada unidad ──────────────────────────────────────────────
+// Jon pone un minuto a cada unidad (gel, guayaba, bidón: el minuto en que se
+// EMPIEZA). Es opcional: lo que no tiene minuto sale aparte ("sin hora").
+
+// Reparto parejo como PUNTO DE PARTIDA que Jon puede cambiar (nunca se aplica
+// solo): geles y sólidos entre el inicio y el final; bidones desde el minuto 0.
+// Redondeado a 5 min. Sin duración → [].
+export function repartirMinutos(cantidad, duracionMin, tipo) {
+  const n = Math.round(Number(cantidad)) || 0
+  if (!(duracionMin > 0) || n < 1) return []
+  const r5 = (x) => Math.min(Math.round(duracionMin), Math.round(x / 5) * 5)
+  return Array.from({ length: n }, (_, i) => r5(tipo === 'bidon' ? (i * duracionMin) / n : ((i + 1) * duracionMin) / (n + 1)))
+}
+
+// Items → { eventos: [{min, nombre, tipo, pasa}] ordenados por minuto,
+// sinHora: [{nombre, cantidad}] }. `pasa`: el minuto cae después del final.
+export function lineaTiempo(items, duracionMin) {
+  const eventos = []
+  const sinHora = []
+  for (const it of items || []) {
+    const n = it.cantidad || 0
+    let libres = 0
+    for (let i = 0; i < n; i++) {
+      const m = it.minutos?.[i]
+      const v = m === '' || m == null ? NaN : Number(m)
+      if (Number.isFinite(v) && v >= 0) {
+        const min = Math.round(v)
+        eventos.push({ min, nombre: it.nombre, tipo: it.tipo, pasa: duracionMin > 0 && min > duracionMin })
+      } else libres++
+    }
+    if (libres) sinHora.push({ nombre: it.nombre, cantidad: libres })
+  }
+  eventos.sort((a, b) => a.min - b.min)
+  return { eventos, sinHora }
+}
+
+// 75 → "1:15" (para leerlo como hora de carrera)
+export const minutoComoHora = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`
