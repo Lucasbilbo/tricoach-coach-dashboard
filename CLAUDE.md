@@ -305,7 +305,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   UI en `PlanProductos.jsx` (+/− por producto, totales, gestor de productos);
   datos en `productosApi.js` (caché 5 min) y `hooks/useProductosNutricion.js`.
   **Bidones con receta propia** (2026-11-20, migración 020 `receta` jsonb en
-  `atleta_productos_nutricion`; ⚠️ PENDIENTE de aplicar: `productosApi` selecciona
+  `atleta_productos_nutricion`; aplicada en producción; `productosApi` selecciona
   la columna y sin ella la despensa no carga): un bidón puede llevar sus GRAMOS
   a pesar `{maltodextrina_g, fructosa_g, sales_g}` (un decimal). Es una OPCIÓN
   con nombre ("Bidón rodillo", "Bidón natación"…) que Jon elige con el +, sin
@@ -395,7 +395,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
 - `supabase/migrations/` — 001–020 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 aplicada 2026-11-20; 020 PENDIENTE de aplicar.
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 aplicada 2026-11-20; 020 aplicada 2026-11-20.
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).
