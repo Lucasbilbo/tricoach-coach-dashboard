@@ -27,7 +27,7 @@ const textoBtn = {
   minHeight: 36, fontSize: 13, fontWeight: 500, cursor: 'pointer', color: COLORS.textSecondary,
 }
 
-const FORM_VACIO = { nombre: '', tipo: 'gel', carbohidratos_g: '', cafeina_mg: '', sodio_mg: '', volumen_ml: '' }
+const FORM_VACIO = { nombre: '', tipo: 'gel', carbohidratos_g: '', cafeina_mg: '', sodio_mg: '', volumen_ml: '', maltodextrina_g: '', fructosa_g: '', sales_g: '' }
 
 function Stepper({ cantidad, onMenos, onMas, nombre }) {
   return (
@@ -44,6 +44,14 @@ function Stepper({ cantidad, onMenos, onMas, nombre }) {
 }
 
 function Mezcla({ item, onCambiar }) {
+  // Bidón con receta propia: se da tal cual, sin cifras que escribir
+  if (item.receta) {
+    return (
+      <p style={{ margin: 0, padding: '0 0 10px 12px', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+        Receta: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoReceta(item)}</span>
+      </p>
+    )
+  }
   const campo = (clave, label, unidad, max) => (
     <label style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
       <span style={{ ...etiqueta, margin: '0 0 4px', fontWeight: 500 }}>{label} <span>{unidad}</span></span>
@@ -150,7 +158,11 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
 
   const abrir = (p) => {
     setEditando(p ? p.id : 'nuevo')
-    setPform(p ? { nombre: p.nombre, tipo: p.tipo, carbohidratos_g: p.carbohidratos_g || '', cafeina_mg: p.cafeina_mg || '', sodio_mg: p.sodio_mg || '', volumen_ml: p.volumen_ml || '' } : FORM_VACIO)
+    const r = p?.receta || {}
+    setPform(p ? {
+      nombre: p.nombre, tipo: p.tipo, carbohidratos_g: p.carbohidratos_g || '', cafeina_mg: p.cafeina_mg || '', sodio_mg: p.sodio_mg || '', volumen_ml: p.volumen_ml || '',
+      maltodextrina_g: r.maltodextrina_g || '', fructosa_g: r.fructosa_g || '', sales_g: r.sales_g || '',
+    } : FORM_VACIO)
     setError('')
   }
   const cambiar = (campo, valor) => setPform((f) => ({ ...f, [campo]: valor }))
@@ -184,6 +196,13 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
     <label style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       <span style={etiqueta}>{label} <span style={{ fontWeight: 500 }}>{unidad}</span></span>
       <input type="number" inputMode="numeric" min={0} max={max} value={pform[campo]} placeholder="0" onChange={(e) => cambiar(campo, e.target.value)} style={{ ...inputStyle, fontFamily: FONTS.mono }} />
+    </label>
+  )
+
+  const gr = (campo, label) => (
+    <label style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <span style={etiqueta}>{label} <span style={{ fontWeight: 500 }}>g</span></span>
+      <input type="number" inputMode="decimal" min={0} step={0.5} value={pform[campo]} placeholder="0" onChange={(e) => cambiar(campo, e.target.value)} style={{ ...inputStyle, fontFamily: FONTS.mono }} />
     </label>
   )
 
@@ -243,16 +262,26 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
               )
             })}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: pform.tipo === 'bidon' ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-            {pform.tipo === 'bidon' && num('volumen_ml', 'Tamaño', 'ml', LIMITES_PRODUCTO.volumen_ml)}
-            {num('carbohidratos_g', 'Hidratos', 'g', LIMITES_PRODUCTO.carbohidratos_g)}
-            {num('cafeina_mg', 'Cafeína', 'mg', LIMITES_PRODUCTO.cafeina_mg)}
-            {num('sodio_mg', 'Sodio', 'mg', LIMITES_PRODUCTO.sodio_mg)}
-          </div>
-          {pform.tipo === 'bidon' && (
-            <p style={{ margin: 0, fontSize: 12, color: COLORS.textTertiary }}>
-              En un bidón déjalo en 0: los hidratos y el sodio de la mezcla se ponen en cada sesión.
-            </p>
+          {pform.tipo === 'bidon' ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                {num('volumen_ml', 'Tamaño', 'ml', LIMITES_PRODUCTO.volumen_ml)}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                {gr('maltodextrina_g', 'Malto')}
+                {gr('fructosa_g', 'Fructosa')}
+                {gr('sales_g', 'Sales')}
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.45 }}>
+                La receta del bidón en gramos; de ella salen sus hidratos y su sodio. Déjalo en blanco para un bidón a medida: sus hidratos y sodio se ponen en cada sesión.
+              </p>
+            </>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {num('carbohidratos_g', 'Hidratos', 'g', LIMITES_PRODUCTO.carbohidratos_g)}
+              {num('cafeina_mg', 'Cafeína', 'mg', LIMITES_PRODUCTO.cafeina_mg)}
+              {num('sodio_mg', 'Sodio', 'mg', LIMITES_PRODUCTO.sodio_mg)}
+            </div>
           )}
           {error && <p style={{ margin: 0, fontSize: 13, color: COLORS.error }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>

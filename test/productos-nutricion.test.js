@@ -14,7 +14,7 @@ test('normalizarProducto: exige nombre y tipo; solo los bidones llevan ml', () =
   assert.equal(normalizarProducto({ nombre: '  ', tipo: 'gel' }), null)
   assert.equal(normalizarProducto({ nombre: 'Gel', tipo: 'otro' }), null)
   assert.deepEqual(normalizarProducto({ nombre: ' Gel 30 g ', tipo: 'gel', carbohidratos_g: '30', volumen_ml: 500 }), {
-    nombre: 'Gel 30 g', tipo: 'gel', carbohidratos_g: 30, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0,
+    nombre: 'Gel 30 g', tipo: 'gel', carbohidratos_g: 30, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0, receta: null,
   })
   assert.equal(normalizarProducto({ nombre: 'Bidón 750', tipo: 'bidon', volumen_ml: '750' }).volumen_ml, 750)
   assert.equal(normalizarProducto({ nombre: 'x', tipo: 'gel', carbohidratos_g: 9999 }).carbohidratos_g, 200)
@@ -204,4 +204,39 @@ test('avisoTomado funciona con lo marcado (< 70 % de lo previsto)', () => {
 test('normalizarTomado: solo marcas ya es una fila válida', () => {
   assert.deepEqual(normalizarTomado({ tomado_items: ['g45#0'] }).tomado_items, ['g45#0'])
   assert.equal(normalizarTomado({ tomado_items: [] }), null)
+})
+
+// ── Recetas de bidón con gramos propios ──
+import { aportesReceta, normalizarReceta } from '../src/lib/productosNutricion.js'
+
+test('normalizarReceta: gramos con un decimal; vacío → null', () => {
+  assert.deepEqual(normalizarReceta({ maltodextrina_g: '13,5', fructosa_g: 6.54, sales_g: '' }), { maltodextrina_g: 13.5, fructosa_g: 6.5, sales_g: 0 })
+  assert.equal(normalizarReceta({ maltodextrina_g: 0, fructosa_g: '' }), null)
+  assert.equal(normalizarReceta(null), null)
+})
+
+test('aportesReceta: tus recetas dan sus hidratos y sodio', () => {
+  assert.deepEqual(aportesReceta({ maltodextrina_g: 13.5, fructosa_g: 6.5, sales_g: 0 }), { carbohidratos_g: 19, sodio_mg: 0 })
+  assert.deepEqual(aportesReceta({ maltodextrina_g: 32, fructosa_g: 16, sales_g: 2.5 }), { carbohidratos_g: 46, sodio_mg: 356 })
+  assert.deepEqual(aportesReceta({ maltodextrina_g: 40, fructosa_g: 20, sales_g: 2.5 }), { carbohidratos_g: 58, sodio_mg: 356 })
+  assert.deepEqual(aportesReceta({ maltodextrina_g: 50, fructosa_g: 25, sales_g: 2.5 }), { carbohidratos_g: 73, sodio_mg: 356 })
+})
+
+test('normalizarProducto: un bidón con receta calcula hidratos y sodio; sin receta queda a medida', () => {
+  const con = normalizarProducto({ nombre: 'Bidón rodillo', tipo: 'bidon', volumen_ml: 800, maltodextrina_g: '32', fructosa_g: '16', sales_g: '2.5' })
+  assert.equal(con.carbohidratos_g, 46)
+  assert.equal(con.sodio_mg, 356)
+  assert.deepEqual(con.receta, { maltodextrina_g: 32, fructosa_g: 16, sales_g: 2.5 })
+  const sin = normalizarProducto({ nombre: 'Bidón 750', tipo: 'bidon', volumen_ml: 750 })
+  assert.equal(sin.receta, null)
+  assert.equal(normalizarProducto({ nombre: 'Gel', tipo: 'gel', carbohidratos_g: 30 }).receta, null)
+})
+
+test('item con receta propia: se copia del producto y se da con los gramos exactos', () => {
+  const p = { id: 'p1', nombre: 'Bidón natación', tipo: 'bidon', carbohidratos_g: 19, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 500, receta: { maltodextrina_g: 13.5, fructosa_g: 6.5, sales_g: 0 } }
+  const [it] = normalizarItems([itemDeProducto(p, 1)])
+  assert.deepEqual(it.receta, p.receta)
+  assert.equal(textoReceta(it), '13,5 g maltodextrina · 6,5 g fructosa')
+  // sin receta propia sigue el cálculo 2:1 de siempre
+  assert.equal(textoReceta({ tipo: 'bidon', carbohidratos_g: 60, sodio_mg: 600 }), '42 g maltodextrina · 20 g fructosa · 4,2 g sales')
 })

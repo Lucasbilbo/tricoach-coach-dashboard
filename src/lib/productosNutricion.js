@@ -28,18 +28,45 @@ const entero = (v, max) => {
 
 export const etiquetaTipo = (t) => TIPOS.find((x) => x.value === t)?.label || ''
 
-// Formulario del catálogo → fila a guardar, o null si no vale (sin nombre / tipo)
+// Gramos con un decimal (13,5 g de maltodextrina), 0 si no vale
+const gramos = (v) => {
+  if (v === '' || v == null) return 0
+  const n = Number(String(v).replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.round(n * 10) / 10, MAX_GRAMOS_RECETA) : 0
+}
+export const MAX_GRAMOS_RECETA = 300
+
+// Receta de un bidón en GRAMOS a pesar: { maltodextrina_g, fructosa_g, sales_g }
+// o null si no lleva nada. Es lo que el atleta prepara tal cual.
+export function normalizarReceta(r) {
+  if (!r || typeof r !== 'object') return null
+  const receta = { maltodextrina_g: gramos(r.maltodextrina_g), fructosa_g: gramos(r.fructosa_g), sales_g: gramos(r.sales_g) }
+  return receta.maltodextrina_g || receta.fructosa_g || receta.sales_g ? receta : null
+}
+
+// Hidratos y sodio que aporta una receta (para totales y g/h)
+export const aportesReceta = (r) => ({
+  carbohidratos_g: Math.round(r.maltodextrina_g * HIDRATOS_POR_G.maltodextrina + r.fructosa_g * HIDRATOS_POR_G.fructosa),
+  sodio_mg: Math.round(r.sales_g * SODIO_MG_POR_G_SALES),
+})
+
+// Formulario del catálogo → fila a guardar, o null si no vale (sin nombre / tipo).
+// Un bidón con RECETA (gramos) calcula de ella sus hidratos y su sodio; sin
+// receta es "a medida": se escriben en cada sesión.
 export function normalizarProducto(form) {
   const nombre = typeof form?.nombre === 'string' ? form.nombre.trim().slice(0, 60) : ''
   const tipo = TIPOS.some((t) => t.value === form?.tipo) ? form.tipo : null
   if (!nombre || !tipo) return null
+  const receta = tipo === 'bidon' ? normalizarReceta(form) : null
+  const aportes = receta ? aportesReceta(receta) : null
   return {
     nombre,
     tipo,
-    carbohidratos_g: entero(form.carbohidratos_g, LIMITES_PRODUCTO.carbohidratos_g),
+    carbohidratos_g: aportes ? aportes.carbohidratos_g : entero(form.carbohidratos_g, LIMITES_PRODUCTO.carbohidratos_g),
     cafeina_mg: entero(form.cafeina_mg, LIMITES_PRODUCTO.cafeina_mg),
-    sodio_mg: entero(form.sodio_mg, LIMITES_PRODUCTO.sodio_mg),
+    sodio_mg: aportes ? aportes.sodio_mg : entero(form.sodio_mg, LIMITES_PRODUCTO.sodio_mg),
     volumen_ml: tipo === 'bidon' ? entero(form.volumen_ml, LIMITES_PRODUCTO.volumen_ml) : 0,
+    receta,
   }
 }
 
@@ -53,6 +80,7 @@ export const itemDeProducto = (p, cantidad = 1) => ({
   cafeina_mg: p.cafeina_mg || 0,
   sodio_mg: p.sodio_mg || 0,
   volumen_ml: p.volumen_ml || 0,
+  ...(normalizarReceta(p.receta) ? { receta: normalizarReceta(p.receta) } : {}),
 })
 
 // Minutos en que se toma cada unidad: array de como mucho `cantidad` valores
@@ -78,8 +106,10 @@ export function normalizarItems(items) {
     const nombre = typeof it?.nombre === 'string' ? it.nombre.trim().slice(0, 60) : ''
     if (!cantidad || !nombre) continue
     const minutos = minutosDe(it, cantidad)
+    const receta = it.tipo === 'bidon' ? normalizarReceta(it.receta) : null
     limpios.push({
       ...(minutos ? { minutos } : {}),
+      ...(receta ? { receta } : {}),
       producto_id: typeof it.producto_id === 'string' ? it.producto_id : null,
       nombre,
       tipo: TIPOS.some((t) => t.value === it.tipo) ? it.tipo : 'gel',
@@ -175,6 +205,9 @@ const un1 = (x) => Math.round(x * 10) / 10
 // lleva hidratos ni sodio (agua sola) o el item no es un bidón.
 export function recetaBidon(item) {
   if (!item || item.tipo !== 'bidon') return null
+  // Receta propia del producto (gramos exactos): se da tal cual
+  const propia = normalizarReceta(item.receta)
+  if (propia) return propia
   const hidratos = Number(item.carbohidratos_g) || 0
   const sodio = Number(item.sodio_mg) || 0
   if (hidratos <= 0 && sodio <= 0) return null
@@ -194,10 +227,12 @@ const fmtG = (g) => (g >= 10 ? String(Math.round(g)) : g.toLocaleString('es-ES',
 export function textoReceta(item) {
   const r = recetaBidon(item)
   if (!r) return ''
+  // Gramos exactos de una receta propia (13,5 g); los calculados se redondean
+  const f = normalizarReceta(item.receta) ? (g) => g.toLocaleString('es-ES', { maximumFractionDigits: 1 }) : fmtG
   const partes = []
-  if (r.maltodextrina_g > 0) partes.push(`${fmtG(r.maltodextrina_g)} g maltodextrina`)
-  if (r.fructosa_g > 0) partes.push(`${fmtG(r.fructosa_g)} g fructosa`)
-  if (r.sales_g > 0) partes.push(`${fmtG(r.sales_g)} g sales`)
+  if (r.maltodextrina_g > 0) partes.push(`${f(r.maltodextrina_g)} g maltodextrina`)
+  if (r.fructosa_g > 0) partes.push(`${f(r.fructosa_g)} g fructosa`)
+  if (r.sales_g > 0) partes.push(`${f(r.sales_g)} g sales`)
   return partes.join(' · ')
 }
 
