@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   detalleProducto, itemDeProducto, itemsDe, normalizarItems, normalizarProducto, planEfectivo, porHora,
-  resumenItems, resumenTotales, totalesItems,
+  recetaBidon, resumenItems, resumenTotales, textoReceta, totalesItems,
 } from '../src/lib/productosNutricion.js'
 import { formPlanDe, normalizarNutricion, resumenPlan, tienePlan, avisoTomado } from '../src/lib/nutricion.js'
 
@@ -99,4 +99,23 @@ test('resumenPlan: productos con g/h si hay duración; antiguos como antes', () 
 test('detalleProducto', () => {
   assert.equal(detalleProducto(gelCaf), '45 g · 130 mg cafeína')
   assert.equal(detalleProducto(bidon), '800 ml')
+})
+
+test('receta de bidón: 60 g de hidratos y 600 mg de sodio en 2:1', () => {
+  const it = { ...itemDeProducto(bidon, 1), carbohidratos_g: 60, sodio_mg: 600 }
+  const r = recetaBidon(it)
+  assert.equal(r.maltodextrina_g, 42.1) // 40 g de hidratos / 0,95
+  assert.equal(r.fructosa_g, 20)
+  assert.equal(r.sales_g, 4.2) // 600 mg / 142,3 mg por g
+  assert.equal(textoReceta(it), '42 g maltodextrina · 20 g fructosa · 4,2 g sales')
+})
+
+test('receta de bidón: solo sodio, solo hidratos, agua sola y no bidones', () => {
+  assert.equal(textoReceta({ ...itemDeProducto(bidon, 1), sodio_mg: 300 }), '2,1 g sales')
+  const soloH = recetaBidon({ ...itemDeProducto(bidon, 1), carbohidratos_g: 30 })
+  assert.equal(soloH.sales_g, 0)
+  assert.equal(textoReceta({ ...itemDeProducto(bidon, 1), carbohidratos_g: 30 }), '21 g maltodextrina · 10 g fructosa')
+  assert.equal(recetaBidon(itemDeProducto(bidon, 1)), null)
+  assert.equal(recetaBidon({ ...itemDeProducto(gel45, 1), carbohidratos_g: 45 }), null)
+  assert.equal(recetaBidon(null), null)
 })

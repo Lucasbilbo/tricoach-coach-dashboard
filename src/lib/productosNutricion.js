@@ -139,3 +139,48 @@ export function detalleProducto(p) {
   if (p.sodio_mg) partes.push(`${p.sodio_mg} mg sodio`)
   return partes.join(' · ')
 }
+
+// ── Receta de un bidón ──────────────────────────────────────────────────────
+// Jon pone los hidratos y el sodio del bidón; al atleta le salen los GRAMOS de
+// cada polvo a pesar: maltodextrina + fructosa (proporción 2:1, la que usa
+// Lucas) y sales (Evolytes). Valores de las etiquetas (2026-11-19):
+//   maltodextrina HSN 95 g hidratos/100 g · fructosa HSN 100 g/100 g ·
+//   Evolytes Powder 355,7 mg de sodio por 2,5 g (≈ 142,3 mg/g).
+// Se da en gramos (báscula) y no en dosificadores: la etiqueta de la
+// maltodextrina es ambigua (50 ml / 50 g). Lo poco de maltodextrina que lleva
+// Evolytes no se cuenta (la etiqueta no da sus hidratos).
+export const RATIO_MALTO_FRUCTOSA = { maltodextrina: 2, fructosa: 1 }
+export const HIDRATOS_POR_G = { maltodextrina: 0.95, fructosa: 1 }
+export const SODIO_MG_POR_G_SALES = 355.7 / 2.5
+
+const un1 = (x) => Math.round(x * 10) / 10
+
+// → { maltodextrina_g, fructosa_g, sales_g } por bidón, o null si el bidón no
+// lleva hidratos ni sodio (agua sola) o el item no es un bidón.
+export function recetaBidon(item) {
+  if (!item || item.tipo !== 'bidon') return null
+  const hidratos = Number(item.carbohidratos_g) || 0
+  const sodio = Number(item.sodio_mg) || 0
+  if (hidratos <= 0 && sodio <= 0) return null
+  const { maltodextrina: m, fructosa: f } = RATIO_MALTO_FRUCTOSA
+  const total = m + f
+  return {
+    maltodextrina_g: un1((hidratos * (m / total)) / HIDRATOS_POR_G.maltodextrina),
+    fructosa_g: un1((hidratos * (f / total)) / HIDRATOS_POR_G.fructosa),
+    sales_g: un1(sodio / SODIO_MG_POR_G_SALES),
+  }
+}
+
+// 42,1 → "42" · 4,2 → "4,2" (a partir de 10 g sobran los decimales)
+const fmtG = (g) => (g >= 10 ? String(Math.round(g)) : g.toLocaleString('es-ES', { maximumFractionDigits: 1 }))
+
+// "42 g maltodextrina · 20 g fructosa · 4,2 g sales" (solo lo que haya) o ''
+export function textoReceta(item) {
+  const r = recetaBidon(item)
+  if (!r) return ''
+  const partes = []
+  if (r.maltodextrina_g > 0) partes.push(`${fmtG(r.maltodextrina_g)} g maltodextrina`)
+  if (r.fructosa_g > 0) partes.push(`${fmtG(r.fructosa_g)} g fructosa`)
+  if (r.sales_g > 0) partes.push(`${fmtG(r.sales_g)} g sales`)
+  return partes.join(' · ')
+}
