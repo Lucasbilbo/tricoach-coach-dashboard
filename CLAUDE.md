@@ -274,11 +274,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   sodio mg/h y notas ("gel en el min 40"). **La editan los dos**: el atleta de
   la sesión y su coach vinculado (RLS; `athlete_id` debe ser el de la sesión;
   `actualizado_por` = quien guarda → "Editado por …").
-- Sugerencia automática por REGLAS (sin IA) en `src/lib/nutricion.js`
-  (`sugerirNutricion`): duración prevista (`segundosPrevistos` en
-  tssPrevisto.js, también pasos por distancia) + intensidad (IF desde el TSS
-  previsto, alta ≥ 0,75). <60 min nada; 75–150 min 45/60 g/h; >150 min 70/90
-  g/h (carrera tope 60); sodio desde 90 min; piscina sin hidratos; fuerza agua.
+- **Sin sugerencias automáticas** (decidido 2026-11-19, se quitó `sugerirNutricion`
+  y el botón "Usar sugerencia"): los campos salen en blanco y los rellena Jon. El
+  atleta no ve la línea de Nutrición en sesiones futuras hasta que hay plan.
 - UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
   "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
 - **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
@@ -291,7 +289,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   manda (plan o tomado), así uno no pisa al otro. `quitarParte` pone a null una
   parte o borra la fila si no queda nada (la BD no admite filas vacías).
 - **Creador de sesiones**: sección "Nutrición" plegable en `WorkoutBuilder`
-  (`CamposPlanNutricion`, sugerencia en vivo con los bloques del formulario).
+  (`CamposPlanNutricion`, campos en blanco).
   Se guarda DESPUÉS de la sesión (necesita su id); si falla, la sesión queda
   guardada y se avisa. Duplicar copia también el plan (`_nutricionDe`). La
   sección solo aparece si la tabla existe (`nutricionDisponible`).

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  avisoTomado, normalizarNutricion, normalizarTomado, resumenNutricion, resumenTomado, sugerirNutricion, tienePlan, tieneTomado, totalesNutricion,
+  avisoTomado, normalizarNutricion, normalizarTomado, resumenNutricion, resumenTomado, tienePlan, tieneTomado,
 } from '../src/lib/nutricion.js'
 import { segundosPrevistos } from '../src/lib/tssPrevisto.js'
 
@@ -19,40 +19,6 @@ test('segundosPrevistos: pasos por distancia con el ritmo de referencia', () => 
   assert.equal(segundosPrevistos(sesion('run', [paso(10, 'km')])), 3450)
 })
 
-test('rodaje corto: no hace falta comer', () => {
-  const s = sugerirNutricion(sesion('run', [paso(40, 'min', 'Z2')]))
-  assert.equal(s.carbohidratos_g_h, 0)
-  assert.equal(s.liquido_ml_h, 0)
-})
-
-test('bici de 2 h suave: 45 g/h con sodio; con calidad 60 g/h', () => {
-  const suave = sugerirNutricion(sesion('bike', [paso(120, 'min', 'Z2')]))
-  assert.equal(suave.alta, false)
-  assert.equal(suave.carbohidratos_g_h, 45)
-  assert.equal(suave.sodio_mg_h, 400)
-  const dura = sugerirNutricion(sesion('bike', [paso(20, 'min', 'Z2'), { tipo: 'repeat', repeticiones: 4, pasos: [paso(15, 'min', 'Z4'), paso(5, 'min', 'Z2')] }, paso(20, 'min', 'Z2')]))
-  assert.equal(dura.alta, true)
-  assert.equal(dura.carbohidratos_g_h, 60)
-})
-
-test('tirada larga: más de 2h30 en bici hasta 90 g/h; en carrera tope 60', () => {
-  assert.equal(sugerirNutricion(sesion('bike', [paso(210, 'min', 'Z2')])).carbohidratos_g_h, 70)
-  assert.equal(sugerirNutricion(sesion('bike', [paso(180, 'min', 'Z4')])).carbohidratos_g_h, 90)
-  assert.equal(sugerirNutricion(sesion('run', [paso(160, 'min', 'Z2')])).carbohidratos_g_h, 60)
-})
-
-test('natación: nunca hidratos; bidón solo si es larga', () => {
-  assert.equal(sugerirNutricion({ disciplina: 'swim', duracion_min: 50 }).liquido_ml_h, 0)
-  const larga = sugerirNutricion({ disciplina: 'swim', duracion_min: 90 })
-  assert.equal(larga.carbohidratos_g_h, 0)
-  assert.equal(larga.liquido_ml_h, 300)
-})
-
-test('sin duración o disciplina "other" → sin sugerencia', () => {
-  assert.equal(sugerirNutricion({ disciplina: 'run' }), null)
-  assert.equal(sugerirNutricion({ disciplina: 'other', duracion_min: 90 }), null)
-})
-
 test('normalizar: vacío → null; fuera de rango → null; notas recortadas', () => {
   assert.equal(normalizarNutricion({ carbohidratos_g_h: '', notas: '  ' }), null)
   assert.deepEqual(normalizarNutricion({ carbohidratos_g_h: '60', liquido_ml_h: 5000, sodio_mg_h: -1, notas: ' gel min 40 ' }), {
@@ -65,8 +31,6 @@ test('normalizar: vacío → null; fuera de rango → null; notas recortadas', (
 test('resumen y totales', () => {
   assert.equal(resumenNutricion({ carbohidratos_g_h: 60, liquido_ml_h: 600, sodio_mg_h: 400 }), '60 g/h · 600 ml/h · 400 mg sodio/h')
   assert.equal(resumenNutricion({ carbohidratos_g_h: 0, liquido_ml_h: 500 }), 'Sin comer · 500 ml/h')
-  assert.deepEqual(totalesNutricion({ carbohidratos_g_h: 60, liquido_ml_h: 600 }, 135), { gramos: 135, mililitros: 1350 })
-  assert.equal(totalesNutricion({ carbohidratos_g_h: 0 }, 40), null)
 })
 
 test('tomado: normaliza, vacío → null, estómago 1–3', () => {
