@@ -15,7 +15,8 @@ const { actividadesDesde } = require('./lib/strava-lista')
 const supabaseRest = require('./lib/supabase-rest')
 const { crearStore, dbSupabase } = require('./lib/actividades-store')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, potenciaDe, fechaMadrid } = require('./lib/metrics')
+const { leerFtp } = require('./lib/potencia')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 const { agruparSemanas } = require('./lib/semanas')
 const { leerRango, afterUnixDesde } = require('./lib/rango')
@@ -69,7 +70,7 @@ const SPLIT_SWIM = { minM: 80, maxM: 120, metrosUnidad: 100, ritmoMin: 0.8, ritm
 
 // Lunes (YYYY-MM-DD) de la semana de una fecha local YYYY-MM-DD
 
-function transformarActividad(act, fcMax) {
+function transformarActividad(act, fcMax, ftp = null) {
   const duracionMin = act.moving_time ? round(act.moving_time / 60, 1) : null
   const distanciaKm = act.distance ? round(act.distance / 1000, 2) : null
   const disciplina = mapDisciplina(act.sport_type || act.type)
@@ -85,7 +86,7 @@ function transformarActividad(act, fcMax) {
   // Intensidad SIN redondear para clasificar zona (helper único, ver lib/metrics).
   const intensidad = intensidadPct(act.average_heartrate, fcMax)
   // Carga: hrTSS si hay FC; si no, estimación por disciplina (B2). 'other' → null.
-  const carga = cargaActividad(act.moving_time, act.average_heartrate, fcMax, disciplina)
+  const carga = cargaActividad(act.moving_time, act.average_heartrate, fcMax, disciplina, potenciaDe(act, ftp))
 
   return {
     id: act.id,
@@ -100,6 +101,10 @@ function transformarActividad(act, fcMax) {
     fc_media: fcMedia,
     fc_maxima_actividad: act.max_heartrate ? round(act.max_heartrate, 0) : null,
     potencia_media: act.average_watts ? round(act.average_watts, 0) : null,
+    potencia_normalizada: act.weighted_average_watts ? round(act.weighted_average_watts, 0) : null,
+    medidor_potencia: !!act.device_watts,
+    kilojulios: act.kilojoules ? round(act.kilojoules, 0) : null,
+    tss_por_potencia: carga.fuente === 'potencia',
     cadencia_media: act.average_cadence ? round(act.average_cadence, 0) : null,
     desnivel_m: act.total_elevation_gain ? round(act.total_elevation_gain, 0) : null,
     intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
@@ -273,6 +278,8 @@ exports.handler = async (event) => {
     }
     if (!dentroDeLimite) return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
 
+    // FTP (potenciómetro) en paralelo con el perfil: null si no aplica
+    const ftpPromesa = leerFtp(supabaseGet, supabaseHost, SERVICE_KEY, athleteId)
     // 5. Leer perfil del atleta (tokens Strava) con service key
     const perfilRes = await withTimeout(
       supabaseGet(supabaseHost, `/rest/v1/profiles?id=eq.${athleteId}&select=*`, SERVICE_KEY),
@@ -312,8 +319,9 @@ exports.handler = async (event) => {
 
     // 8. Transformar y agrupar
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
+    const ftp = await ftpPromesa
     let actividades = actRes.actividades
-      .map((a) => transformarActividad(a, fcMax))
+      .map((a) => transformarActividad(a, fcMax, ftp))
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
     // Con rango, se pidió a Strava desde un día antes por el margen horario: se
     // recorta al tramo exacto (y las mejores marcas salen solo de él).

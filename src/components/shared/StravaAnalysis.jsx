@@ -462,7 +462,7 @@ export default function StravaAnalysis({
                       {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary }}> · {act.metros_tecnica} m téc.</span> : null}
                     </span>
                     <span>{formatEffort(act)}</span>
-                    <span title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined} style={{ color: COLORS.load }}>
+                    <span title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : act.tss_por_potencia ? 'TSS por potencia' : undefined} style={{ color: COLORS.load }}>
                       TSS {tssTexto(act)}
                     </span>
                   </span>
@@ -540,7 +540,7 @@ export default function StravaAnalysis({
                   {act.fc_media != null ? `${act.fc_media}` : '—'}
                 </span>
                 <span
-                  title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : undefined}
+                  title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : act.tss_por_potencia ? 'TSS por potencia' : undefined}
                   style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.load }}
                 >
                   {tssTexto(act)}

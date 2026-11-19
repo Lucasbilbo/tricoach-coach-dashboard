@@ -48,3 +48,10 @@ test('natación sin objetivo y fuerza tal cual van por TSS/hora de la disciplina
   assert.equal(tssPrevisto({ disciplina: 'other', duracion_min: 60 }), null)
   assert.equal(tssPrevisto({ disciplina: 'run' }), null)
 })
+
+test('bici por potencia: % FTP y zona de potencia dan IF directo', () => {
+  const sesion = (tipo, valor) => ({ disciplina: 'bike', workout_steps: { bloques: [{ tipo: 'step', cantidad: 60, unidad: 'min', objetivo_tipo: tipo, objetivo_valor: valor }] } })
+  assert.equal(tssPrevisto(sesion('potencia', '100')), 100)
+  assert.equal(tssPrevisto(sesion('potencia', '95-105')), 100)
+  assert.equal(tssPrevisto(sesion('zona_potencia', 'Z4')), 96)
+})

@@ -6,7 +6,8 @@
 // de cada paso sale de su objetivo:
 //   - zona Zn → punto medio de la banda de zonaFc (Z1 <60 · Z2 60–70 · … · Z5 ≥90)
 //   - FC %    → ese %
-//   - ritmo / potencia → Z3 (umbral típico de un trabajo con ritmo marcado)
+//   - zona de potencia / % FTP → IF directo (bici con medidor)
+//   - ritmo → Z3 (umbral típico de un trabajo con ritmo marcado)
 //   - sin objetivo → Z1 en bici/carrera (el reloj lleva Z1 HR por defecto);
 //     natación y fuerza, sin FC fiable → TSS/hora por disciplina, como el real
 //     sin pulso (TSS_POR_HORA_SIN_FC).
@@ -20,6 +21,11 @@ export const TSS_POR_HORA_SIN_FC = { swim: 55, bike: 50, run: 65, strength: 40 }
 
 // Punto medio de cada banda de zonaFc (% FC máx)
 export const INTENSIDAD_ZONA = { Z1: 55, Z2: 65, Z3: 75, Z4: 85, Z5: 93 }
+
+// Zonas de POTENCIA (bici con medidor): punto medio de cada banda de Coggan en
+// % del FTP (Z1 <55 · Z2 56–75 · Z3 76–90 · Z4 91–105 · Z5 106–120). Con la
+// potencia, IF = % FTP / 100 y la misma fórmula horas × IF² × 100 da el TSS.
+export const INTENSIDAD_ZONA_POTENCIA = { Z1: 45, Z2: 65, Z3: 83, Z4: 98, Z5: 113 }
 
 // Ritmo de referencia cuando un paso por distancia no lo trae (min por km)
 const MIN_POR_KM_REF = { run: 5.75, bike: 60 / 27, swim: 21.5 }
@@ -50,11 +56,23 @@ function intensidadPaso(paso, disciplina) {
     const z = normalizarZona(valor)
     if (z) return INTENSIDAD_ZONA[z]
   }
+  if (tipo === 'zona_potencia') {
+    const z = normalizarZona(valor)
+    if (z) return INTENSIDAD_ZONA_POTENCIA[z]
+  }
+  if (tipo === 'potencia' && valor) {
+    // % FTP, exacto o rango ("95-105" → 100)
+    const nums = String(valor).split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0)
+    if (nums.length) {
+      const media = nums.reduce((a, b) => a + b, 0) / nums.length
+      if (media >= 30 && media <= 200) return media
+    }
+  }
   if (tipo === 'fc') {
     const n = Number(valor)
     if (n > 30 && n <= 110) return n
   }
-  if ((tipo === 'ritmo' || tipo === 'potencia') && valor) return INTENSIDAD_ZONA.Z3
+  if (tipo === 'ritmo' && valor) return INTENSIDAD_ZONA.Z3
   if (disciplina === 'bike' || disciplina === 'run') return INTENSIDAD_ZONA.Z1
   return null // natación/fuerza sin objetivo → por TSS/hora
 }

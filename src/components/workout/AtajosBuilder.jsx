@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS, inputStyle } from '../../lib/theme'
-import { parsearEntreno } from './parser'
+import { useContext } from 'react'
+import { parsearEntreno, zonasAPotencia } from './parser'
+import { PotenciaContext } from './PotenciaContext'
 import { sectionLabel, miniBtn } from './styles'
 
 const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo', sans-serif" }
@@ -11,6 +13,7 @@ const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', pad
 //  2) Plantillas: cargar/guardar sesiones típicas (tabla coach_plantillas, RLS
 //     por coach). Si la tabla no existe todavía, la sección no se muestra.
 export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, onBloques }) {
+  const bikePotencia = useContext(PotenciaContext) && disciplina === 'bike'
   const [linea, setLinea] = useState('')
   const [errores, setErrores] = useState([])
   const [plantillas, setPlantillas] = useState(null) // null = no disponible
@@ -38,7 +41,7 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
     const r = parsearEntreno(linea, disciplina)
     setErrores(r.errores)
     if (r.bloques.length > 0 && r.errores.length === 0) {
-      onBloques(r.bloques, null)
+      onBloques(bikePotencia ? zonasAPotencia(r.bloques) : r.bloques, null)
       setAviso(`${r.bloques.length} bloque${r.bloques.length === 1 ? '' : 's'} generado${r.bloques.length === 1 ? '' : 's'}`)
     }
   }

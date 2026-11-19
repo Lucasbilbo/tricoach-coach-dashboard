@@ -311,3 +311,27 @@ test('calentamiento y vuelta a la calma: no se repite el prefijo si el nombre ya
   assert.match(t(w('cooldown', 'Vuelta a la calma')), /^- Vuelta a la calma 400mtr/)
   assert.match(t(w('cooldown', 'Soltar')), /^- Vuelta a la calma · Soltar 400mtr/)
 })
+
+test('bici con potenciómetro: zona de potencia (Zn sin HR) y % del FTP', async () => {
+  const { buildIntervalsText } = await import('../netlify/functions/lib/intervals-text.cjs')
+  const sesion = {
+    disciplina: 'bike',
+    workout_steps: {
+      bloques: [
+        { tipo: 'warmup', cantidad: 10, unidad: 'min' },
+        { tipo: 'repeat', repeticiones: 3, pasos: [
+          { cantidad: 5, unidad: 'min', objetivo_tipo: 'potencia', objetivo_valor: '95-105' },
+          { cantidad: 3, unidad: 'min', objetivo_tipo: 'zona_potencia', objetivo_valor: 'Z1' },
+        ] },
+        { tipo: 'cooldown', cantidad: 10, unidad: 'min' },
+      ],
+    },
+  }
+  const conPot = buildIntervalsText(sesion, { bikePotencia: true })
+  assert.match(conPot, /Calentamiento 10m Z1\n/)
+  assert.match(conPot, /5m 95-105%/)
+  assert.match(conPot, /3m Z1\n/)
+  assert.doesNotMatch(conPot, /HR/)
+  // Sin potenciómetro, los pasos sin objetivo siguen por pulso
+  assert.match(buildIntervalsText(sesion), /Calentamiento 10m Z1 HR/)
+})

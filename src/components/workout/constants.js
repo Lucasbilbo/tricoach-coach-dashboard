@@ -48,9 +48,19 @@ export const OBJETIVOS = {
   other: [],
 }
 
+// Bici de un atleta CON potenciómetro: potencia primero; el pulso se sigue
+// ofreciendo (y las sesiones antiguas por zona FC se siguen viendo bien).
+export const OBJETIVOS_BIKE_POTENCIA = [
+  { value: '', label: 'Sin objetivo' },
+  { value: 'zona_potencia', label: 'Zona potencia' },
+  { value: 'potencia', label: 'Potencia % FTP' },
+  { value: 'zona', label: 'Zona FC' },
+  { value: 'fc', label: 'FC %' },
+]
+
 export const OBJETIVO_PLACEHOLDER = {
   swim: { ritmo: '1:45-1:50', fc: '70' },
-  bike: { fc: '75' },
+  bike: { fc: '75', potencia: '95-105' },
   run: { ritmo: '4:50-5:10', fc: '75' },
 }
 

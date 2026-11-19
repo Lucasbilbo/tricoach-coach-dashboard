@@ -8,6 +8,7 @@ import Icon from './ui/Icon'
 import { PageHeader, Tabs } from './ui/Layout'
 import SelectorPeriodo from './ui/SelectorPeriodo'
 import WorkoutBuilder from './WorkoutBuilder'
+import PotenciaAjustes from './PotenciaAjustes'
 import SessionsList from './SessionsList'
 import WeekCompare from './WeekCompare'
 import StravaAnalysis from './shared/StravaAnalysis'
@@ -153,6 +154,10 @@ export default function AthleteView() {
               </button>
             </div>
           </div>
+        )}
+
+        {activeTab === 'sesiones' && coachId && (
+          <PotenciaAjustes athleteId={id} uid={coachId} />
         )}
 
         {activeTab === 'sesiones' && coachId && (

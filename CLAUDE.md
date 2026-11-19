@@ -149,9 +149,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   confirma tras reintentos, borra el evento recién creado (el anterior sigue intacto).
 
 ### Qué llega al reloj (2026-10)
-- **Bici y carrera por PULSO**: la zona se envía como `Zn HR` (también en bici) y
-  el objetivo por defecto es `Z1 HR`. Los atletas no tienen potenciómetro; el
-  builder no ofrece potencia (se sigue generando para sesiones antiguas).
+- **Bici y carrera por PULSO** (por defecto): la zona se envía como `Zn HR` (también en bici) y
+  el objetivo por defecto es `Z1 HR`. Bici por POTENCIA solo si el atleta tiene
+  el interruptor de potenciómetro (ver «Potenciómetro por atleta»).
   **Natación sin objetivo por defecto** (el coach sí puede elegir ritmo /100m, zona de ritmo —`Zn Pace`, requiere ritmo umbral de natación en Intervals— o FC %) (antes `Z1 Pace` → avisos falsos).
 - Ritmo exacto o rango (`4:50-5:10/km Pace`), validado en el builder.
 - **Pasos de serie sin nombre (carrera/bici)** (2026-11-19): el reloj solo enseñaba
@@ -368,6 +368,25 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   workout y un texto libre ahí puede romper el parseo / congelar el reloj
   (misma regla que las notas del entrenador).
 - Tests: `test/nutricion.test.js`.
+
+## Potenciómetro por atleta (2026-11-20, migración 019)
+
+- Tabla `atleta_potencia` (PK `athlete_id`): `potenciometro` bool, `ftp_w` (50–700),
+  `ftp_fecha`. La editan atleta y coach vinculado (RLS, `actualizado_por`).
+  **Migración 019 PENDIENTE de aplicar** (aditiva; deshacer: `DROP TABLE public.atleta_potencia;`).
+  Sin tabla: todo sigue por pulso. UI: `PotenciaAjustes.jsx` (Sesiones del coach y
+  /home del atleta, plegable), `usePotencia`, `potenciaApi.js` (caché 5 min).
+- Con interruptor ON: el creador ofrece en bici «Zona potencia» (`zona_potencia`,
+  texto `Zn`) y «Potencia % FTP» (`potencia`, ` 95-105%`); la escritura rápida
+  convierte Zn → potencia (`zonasAPotencia`); sin objetivo por defecto `Z1`.
+  `bikePotencia` pasa por `construirEvento` (send-to-intervals y move-session).
+  Sesiones antiguas por `zona`/FC no cambian.
+- **FTP también en Intervals.icu** (ajustes de ciclismo): sin él el reloj no
+  convierte Zn/% a vatios. La app no lo sincroniza.
+- TSS de bici: si la actividad tiene `device_watts` real, NP y el atleta tiene
+  interruptor + FTP → TSS = horas × (NP/FTP)² × 100 (`tssPotencia`, `fuente:'potencia'`,
+  `tss_por_potencia`); si no, hrTSS. TSS previsto: zonas Coggan (Z1 45…Z5 113 %).
+- Assioma Uno = medidor de un pedal (×2): sin balance L/R; hay que calibrar (offset).
 
 ## Estructura
 

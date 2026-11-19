@@ -14,6 +14,8 @@ import { metrosTexto, nombrePorDefecto } from './workout/resumen'
 import { metrosDeBloques } from '../lib/cumplimiento'
 import { Perfil } from './WorkoutDetail'
 import AtajosBuilder from './workout/AtajosBuilder'
+import { PotenciaContext } from './workout/PotenciaContext'
+import { usePotencia } from '../hooks/usePotencia'
 import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
 import Icon from './ui/Icon'
@@ -66,6 +68,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // Se calculan al abrir (el creador se monta cada vez), en hora de Madrid
   const DIAS_CHIPS = proximosDias(14, ahora.fecha)
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
+  // Atleta con potenciómetro (migración 019): la bici se prescribe por potencia
+  const bikePotencia = usePotencia(athleteId, coachId, isOpen).potenciometro === true
   // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
   // sesión (necesita su id). Solo si la tabla existe (migración 017).
   const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
@@ -448,7 +452,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       disciplina: form.disciplina,
       workout_steps: { bloques: form.bloques, notas: form.notas },
     },
-    { incluirNotas: true }
+    { incluirNotas: true, bikePotencia }
   )
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -752,6 +756,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </div>
           )}
 
+          <PotenciaContext.Provider value={bikePotencia}>
           {/* Atajos: escritura rápida y plantillas */}
           <AtajosBuilder
             key={form.disciplina}
@@ -815,6 +820,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               </button>
             ))}
           </div>
+          </PotenciaContext.Provider>
 
           {/* Así llega al reloj: el perfil de intensidad (como lo dibuja el
               reloj) y, si se quiere, el texto exacto. Antes el texto iba

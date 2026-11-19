@@ -18,7 +18,10 @@ function unidadIntervals(unidad) {
 // tienen potenciómetro (2026-10) y una zona de potencia sin medidor deja el
 // reloj con un objetivo que no puede medir. Natación SIN objetivo: un ritmo en
 // piscina sin umbral configurado solo genera avisos falsos.
-function defaultZona(disciplina) {
+// Si el atleta tiene potenciómetro (options.bikePotencia) la bici va por zona de
+// POTENCIA (`Z1`, sin HR: Intervals la resuelve con el FTP de sus ajustes).
+function defaultZona(disciplina, bikePotencia = false) {
+  if (disciplina === 'bike' && bikePotencia) return ' Z1'
   if (disciplina === 'run' || disciplina === 'bike') return ' Z1 HR'
   return ''
 }
@@ -132,7 +135,9 @@ function objetivoStr(step, disciplina) {
     return ` ${zona} HR`
   }
   if (tipo === 'fc') return ` ${valor}% HR`
-  if (tipo === 'potencia') return ` ${valor}%`
+  // Bici con medidor: zona de potencia (Zn sin HR) o % del FTP (admite rango 70-80)
+  if (tipo === 'zona_potencia') return disciplina === 'bike' ? ` ${normalizarZona(valor)}` : ''
+  if (tipo === 'potencia') return ` ${String(valor).replace(/\s+/g, '')}%`
   if (tipo === 'ritmo') {
     // Admite ritmo exacto ('5:00') o rango ('4:50-5:10'); Intervals entiende ambos.
     const ritmo = String(valor).replace(/\s+/g, '')
@@ -314,7 +319,7 @@ function problemaEntreno(workoutSteps) {
 const ETIQUETA_ZONA = { 1: 'Suave', 2: 'Suave', 3: 'Medio', 4: 'Fuerte', 5: 'Muy fuerte' }
 function etiquetaPorZona(paso, disciplina) {
   if (disciplina !== 'run' && disciplina !== 'bike') return null
-  if (paso.objetivo_tipo !== 'zona' || !paso.objetivo_valor) return null
+  if ((paso.objetivo_tipo !== 'zona' && paso.objetivo_tipo !== 'zona_potencia') || !paso.objetivo_valor) return null
   const z = Number(String(normalizarZona(paso.objetivo_valor)).replace(/\D/g, ''))
   return ETIQUETA_ZONA[z] || null
 }
@@ -327,6 +332,7 @@ function etiquetaPorZona(paso, disciplina) {
 // false (las notas no llegan al reloj).
 function buildIntervalsText(session, options = {}) {
   const incluirNotas = options.incluirNotas === true
+  const bikePotencia = options.bikePotencia === true
   const ws = session.workout_steps || {}
   const disciplinaWs = session.disciplina
   const bloques = conPausas(ws.bloques || [], disciplinaWs)
@@ -344,13 +350,13 @@ function buildIntervalsText(session, options = {}) {
     if (bloque.tipo === 'pausa') {
       partes.push(lineaPausa(bloque, disciplina))
     } else if (bloque.tipo === 'warmup') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
+      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina, bikePotencia)
       partes.push(lineaPaso(bloque, disciplina, conPrefijo('Calentamiento', bloque.nombre), obj))
     } else if (bloque.tipo === 'cooldown') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
+      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina, bikePotencia)
       partes.push(lineaPaso(bloque, disciplina, conPrefijo('Vuelta a la calma', bloque.nombre), obj))
     } else if (bloque.tipo === 'step') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina)
+      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina, bikePotencia)
       partes.push(lineaPaso(bloque, disciplina, bloque.nombre, obj))
     } else if (bloque.tipo === 'repeat') {
       // La cabecera de la serie es texto del reloj ("Principal 1/8") y Intervals
