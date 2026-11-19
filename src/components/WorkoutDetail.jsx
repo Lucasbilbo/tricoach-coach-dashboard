@@ -1,3 +1,4 @@
+import CopiarStrava from './CopiarStrava'
 import { COLORS, FONTS } from '../lib/theme'
 import { conPausas, textoPausa } from '../lib/intervalsText'
 import { adjuntoDe } from '../lib/adjuntos'
@@ -131,7 +132,7 @@ function Paso({ paso, etiqueta, disciplina }) {
   )
 }
 
-export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
+export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrava = false }) {
   const ws = sesion?.workout_steps
   const adjunto = adjuntoDe(ws)
   if (!ws?.bloques?.length && !adjunto) return null
@@ -179,6 +180,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true }) {
           <p style={{ margin: 0, fontSize: 14, color: COLORS.textPrimary, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{notas}</p>
         </div>
       )}
+      {copiarStrava && <CopiarStrava sesion={sesion} />}
     </div>
   )
 }

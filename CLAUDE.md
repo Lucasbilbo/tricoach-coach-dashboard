@@ -508,6 +508,16 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
     el atleta), ya no «Pendiente».
   - `PlanProductos`: solo se ven los productos con cantidad > 0; el resto, en
     «Añadir producto». «Editar despensa» abre el gestor.
+- **Atleta: esfuerzo en un toque y copiar para Strava (2026-11-20)**:
+  - «Hechos y pendientes»: las sesiones Hechas sin feedback muestran debajo una
+    fila RPE 1–10 (`FeedbackRapido` en `FeedbackSesion.jsx`); un toque guarda ya
+    el feedback solo con el esfuerzo (sensaciones, molestias y comentario se
+    completan abriendo la fila, `FeedbackEditor`). Quitado el «Cuenta cómo fue».
+  - `CopiarStrava.jsx` (botón dentro de `WorkoutDetail copiarStrava`, solo vistas
+    del atleta): copia el entreno en texto para la descripción de Strava
+    (`lib/textoStrava.js`: «Calentamiento: 15 min Z1», «8 × (1 min Z5 / 1 min
+    Z1)», material entre paréntesis, texto libre de fuerza). NO es el texto de
+    Intervals y NO incluye las notas del entrenador. Tests: `test/texto-strava.test.js`.
 - Pendiente (decidido no hacer aún): copiar semana entera, avisar al coach
   cuando el atleta cambia su disponibilidad.
 

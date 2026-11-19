@@ -177,6 +177,51 @@ export function FeedbackEditor({ sesion, athleteId, inicial, onCambio }) {
   )
 }
 
+// ── Esfuerzo en un toque ──────────────────────────────────────────────────
+// Para las filas de "Hechos y pendientes": un toque en el RPE guarda ya el
+// feedback (solo con el esfuerzo); el resto se completa abriendo la fila.
+export function FeedbackRapido({ sesion, athleteId, onCambio }) {
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  async function elegir(n) {
+    const fila = normalizarFeedback({ rpe: n })
+    if (!fila || guardando) return
+    setGuardando(true)
+    setError('')
+    try {
+      const guardado = await guardarFeedback(sesion.id, athleteId, fila)
+      onCambio?.(sesion.id, guardado)
+    } catch {
+      setError('No se pudo guardar. Inténtalo de nuevo.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div>
+      <p style={etiqueta}>¿Qué esfuerzo sentiste?</p>
+      <div role="radiogroup" aria-label="Esfuerzo percibido de 1 a 10" style={{ display: 'flex', gap: 4, opacity: guardando ? 0.5 : 1 }}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+          <button
+            key={n}
+            role="radio"
+            aria-checked={false}
+            aria-label={`${n} — ${etiquetaRpe(n)}`}
+            disabled={guardando}
+            onClick={() => elegir(n)}
+            style={{ ...chip(false, COLORS.load), fontFamily: FONTS.mono }}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      {error && <p style={{ color: COLORS.error, fontSize: 13, margin: '6px 0 0' }}>{error}</p>}
+    </div>
+  )
+}
+
 // ── Vista del coach ───────────────────────────────────────────────────────
 // Línea compacta para la tarjeta: esfuerzo, sensaciones y aviso de molestias.
 export function FeedbackLinea({ feedback, nombre }) {
