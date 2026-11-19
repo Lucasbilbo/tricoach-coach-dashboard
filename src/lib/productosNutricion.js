@@ -240,3 +240,46 @@ export function lineaTiempo(items, duracionMin) {
 
 // 75 → "1:15" (para leerlo como hora de carrera)
 export const minutoComoHora = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`
+
+
+// ── Lo que el atleta se ha tomado, unidad a unidad ──────────────────────────
+// Cada unidad del plan tiene una CLAVE estable ("<producto>#<n>"); el atleta
+// marca las que se toma y se guardan sus claves (sesion_nutricion.tomado_items,
+// migración 019). Los g/h tomados salen de ahí. Si el plan cambia, las claves
+// que ya no existen se ignoran.
+export const claveUnidad = (item, i) => `${item.producto_id || item.nombre}#${i}`
+
+// Todas las unidades del plan, en el orden en que se toman (las sin hora, al final)
+export function unidadesOrdenadas(items) {
+  const out = []
+  for (const it of items || []) {
+    const n = it.cantidad || 0
+    for (let i = 0; i < n; i++) {
+      const m = it.minutos?.[i]
+      const v = m === '' || m == null ? NaN : Number(m)
+      out.push({ clave: claveUnidad(it, i), nombre: it.nombre, tipo: it.tipo, item: it, min: Number.isFinite(v) && v >= 0 ? Math.round(v) : null, orden: out.length })
+    }
+  }
+  return out.sort((a, b) => (a.min == null) - (b.min == null) || (a.min ?? 0) - (b.min ?? 0) || a.orden - b.orden)
+}
+
+// Claves sueltas → lista limpia (sin repetidos, recortada) o null si no queda ninguna
+export function normalizarClaves(claves) {
+  if (!Array.isArray(claves)) return null
+  const vistas = new Set()
+  for (const c of claves) {
+    if (typeof c === 'string' && c.length > 0 && c.length <= 80) vistas.add(c)
+    if (vistas.size >= 60) break
+  }
+  return vistas.size ? [...vistas] : null
+}
+
+// Las marcadas que siguen existiendo en el plan
+export function tomadasValidas(items, claves) {
+  const marcadas = new Set(Array.isArray(claves) ? claves : [])
+  return unidadesOrdenadas(items).filter((u) => marcadas.has(u.clave))
+}
+
+// Totales de lo tomado (mismo formato que totalesItems)
+export const totalesTomados = (items, claves) =>
+  totalesItems(tomadasValidas(items, claves).map((u) => ({ ...u.item, cantidad: 1 })))

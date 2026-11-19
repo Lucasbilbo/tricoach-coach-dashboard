@@ -18,8 +18,8 @@ import { cargarFeedback } from '../lib/feedbackApi'
 import { FeedbackLinea, FeedbackTexto } from './FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from './NutricionSesion'
-import { avisoTomado, tienePlan, tieneTomado } from '../lib/nutricion'
-import { itemsDe, planEfectivo, totalesItems } from '../lib/productosNutricion'
+import { avisoTomado, nutricionEfectiva, tienePlan, tieneTomado } from '../lib/nutricion'
+import { itemsDe, totalesItems } from '../lib/productosNutricion'
 import { duracionPrevista } from '../lib/tssPrevisto'
 import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
@@ -433,7 +433,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     const nutri = nutricion.mapa.get(sesion.id)
     // Nutrición: en futuras siempre (para planificar); en pasadas solo si hay algo
     const mostrarNutri = nutricion.disponible && sesion.disciplina !== 'other' && (!pasada || tienePlan(nutri) || tieneTomado(nutri))
-    const nutriEf = planEfectivo(nutri, duracionPrevista(sesion)?.min ?? null)
+    const nutriEf = nutricionEfectiva(nutri, duracionPrevista(sesion)?.min ?? null)
     const avisoNutri = avisoTomado(nutriEf)
     // Chip: g/h del plan; con productos y sin duración conocida, los hidratos totales
     const hidratosTotal = itemsDe(nutri).length ? totalesItems(itemsDe(nutri)).hidratos_g : 0

@@ -36,7 +36,7 @@ test('resumen y totales', () => {
 test('tomado: normaliza, vacío → null, estómago 1–3', () => {
   assert.equal(normalizarTomado({ tomado_notas: ' ' }), null)
   assert.deepEqual(normalizarTomado({ tomado_carbohidratos_g_h: '50', estomago: 4, tomado_notas: ' 2 geles ' }), {
-    tomado_carbohidratos_g_h: 50, tomado_liquido_ml_h: null, estomago: null, tomado_notas: '2 geles',
+    tomado_carbohidratos_g_h: 50, tomado_liquido_ml_h: null, estomago: null, tomado_items: null, tomado_notas: '2 geles',
   })
   assert.equal(normalizarTomado({ estomago: 2 }).estomago, 2)
 })

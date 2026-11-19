@@ -13,14 +13,14 @@
 // NO se envía al reloj: la descripción del evento de Intervals es el texto del
 // workout y cualquier texto libre ahí puede romper el parseo o congelar el reloj
 // (misma regla que las notas del entrenador). Se ve en la app.
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { hoyMadrid } from '../lib/chartUtils'
 import {
   ESTOMAGO, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
-  normalizarTomado, resumenPlan, resumenTomado, tienePlan, tieneTomado,
+  normalizarTomado, nutricionEfectiva, resumenPlan, resumenTomado, tienePlan, tieneTomado,
 } from '../lib/nutricion'
-import { itemsDe, planEfectivo, textoReceta } from '../lib/productosNutricion'
+import { itemsDe, normalizarClaves, tomadasValidas, textoReceta, unidadesOrdenadas } from '../lib/productosNutricion'
 import { duracionPrevista } from '../lib/tssPrevisto'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
@@ -43,8 +43,54 @@ const formTomadoDe = (n) => ({
   tomado_carbohidratos_g_h: n?.tomado_carbohidratos_g_h ?? '',
   tomado_liquido_ml_h: n?.tomado_liquido_ml_h ?? '',
   estomago: n?.estomago ?? null,
+  tomado_items: n?.tomado_items ?? null,
   tomado_notas: n?.tomado_notas ?? '',
 })
+
+// Lista de lo que lleva el plan, en orden: el atleta toca cada cosa al tomársela.
+// Un toque = marcada/desmarcada y guardada (sin botón). Bidón: al terminarlo.
+function ChecklistTomado({ unidades, marcadas, onAlternar }) {
+  const hechas = unidades.filter((u) => marcadas.has(u.clave)).length
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{ ...etiqueta, margin: 0, display: 'flex', justifyContent: 'space-between' }}>
+        <span>Toca lo que te vayas tomando</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 500 }}>{hechas} de {unidades.length}</span>
+      </p>
+      {unidades.map((u) => {
+        const on = marcadas.has(u.clave)
+        return (
+          <button
+            key={u.clave}
+            type="button"
+            role="checkbox"
+            aria-checked={on}
+            onClick={() => onAlternar(u.clave)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 48, padding: '8px 12px', textAlign: 'left',
+              borderRadius: RADIUS.sm, cursor: 'pointer', fontSize: 14,
+              border: `1px solid ${on ? COLORS.accent : COLORS.cardBorder}`,
+              background: on ? 'rgba(47,191,175,0.10)' : 'transparent',
+              color: on ? COLORS.textPrimary : COLORS.textSecondary,
+            }}
+          >
+            <span style={{
+              width: 24, height: 24, flexShrink: 0, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              border: `1.5px solid ${on ? COLORS.accent : COLORS.textTertiary}`, background: on ? COLORS.accent : 'transparent', color: COLORS.background,
+            }}>
+              {on && <Icon name="check" size={16} strokeWidth={2.6} />}
+            </span>
+            <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>{u.nombre}</span>
+            {u.min != null && <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>Min {u.min}</span>}
+          </button>
+        )
+      })}
+      {unidades.some((u) => u.tipo === 'bidon') && (
+        <p style={{ margin: 0, fontSize: 12, color: COLORS.textTertiary }}>El bidón, márcalo cuando lo termines.</p>
+      )}
+    </div>
+  )
+}
 
 function CamposNumero({ campos, form, onCambiar }) {
   return (
@@ -110,6 +156,11 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   const [tomadoSucio, setTomadoSucio] = useState(false)
   const [guardando, setGuardando] = useState(null) // 'plan' | 'tomado'
   const [error, setError] = useState('')
+  // Marcar unidades guarda al momento: las llamadas van en cola para que dos
+  // toques seguidos no se pisen, y mientras haya alguna en vuelo no se recoge
+  // la fila de fuera (ver abajo)
+  const cola = useRef(Promise.resolve())
+  const pendientes = useRef(0)
   // Si la fila cambia desde fuera (guardado en el creador, recarga), se recogen
   // los valores nuevos en los formularios que no se estén editando. Ajuste de
   // estado en render, como en WorkoutBuilder: sin efecto ni render intermedio.
@@ -126,11 +177,14 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   const hayPlan = tienePlan(inicial)
   // Duración prevista de la sesión: de ella salen los g/h de los productos
   const minutos = duracionPrevista(sesion)?.min ?? null
-  const efectivo = planEfectivo(inicial, minutos)
+  const efectivo = nutricionEfectiva(inicial, minutos)
+  const unidades = unidadesOrdenadas(itemsDe(inicial))
+  const modoLista = unidades.length > 0
   const hayTomado = tieneTomado(inicial)
   // En una sesión pasada el atleta solo ve el plan; hoy o futuro, lo edita
   const editaPlan = !esAtleta || sesion.fecha >= hoy
   const apuntaTomado = esAtleta && yaLlego
+  const tomadoPrimero = apuntaTomado && modoLista
 
   const filaPlan = normalizarNutricion(plan)
   const filaTomado = normalizarTomado(tomado)
@@ -152,6 +206,30 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
     setTomado((f) => ({ ...f, [campo]: valor }))
     setTomadoSucio(true)
     setError('')
+  }
+
+  const alternar = (clave) => {
+    const marcadas = new Set(normalizarClaves(tomado.tomado_items) || [])
+    if (marcadas.has(clave)) marcadas.delete(clave)
+    else marcadas.add(clave)
+    // Solo claves que siguen en el plan, en el orden del plan
+    const nuevas = unidades.map((u) => u.clave).filter((c) => marcadas.has(c))
+    const lista = nuevas.length ? nuevas : null
+    setTomado((f) => ({ ...f, tomado_items: lista }))
+    setTomadoSucio(true)
+    setError('')
+    pendientes.current += 1
+    cola.current = cola.current.then(async () => {
+      try {
+        const fila = await guardarNutricion(sesion.id, sesion.athlete_id, uid, { tomado_items: lista })
+        onCambio?.(sesion.id, fila)
+      } catch {
+        setError('No se pudo guardar lo que marcaste. Inténtalo de nuevo.')
+      } finally {
+        pendientes.current -= 1
+        if (pendientes.current === 0) setTomadoSucio(false)
+      }
+    })
   }
 
   async function ejecutar(parte, accion) {
@@ -220,8 +298,8 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
 
       {abierto && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0 10px' }}>
-          {/* ── Plan ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* ── Plan ── (el día de la sesión, lo que se marca va arriba y el plan debajo) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, order: tomadoPrimero ? 2 : 0, ...(tomadoPrimero ? { paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` } : {}) }}>
             {apuntaTomado && <p style={subtitulo}>Plan</p>}
             {editaPlan ? (
               <>
@@ -262,9 +340,13 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
 
           {/* ── Lo tomado: el atleta lo apunta; el coach lo ve ── */}
           {apuntaTomado && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, order: 1, ...(tomadoPrimero ? {} : { paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }) }}>
               <p style={subtitulo}>Lo que tomaste</p>
-              <CamposNumero campos={CAMPOS_TOMADO_UI} form={tomado} onCambiar={cambiarTomado} />
+              {modoLista ? (
+                <ChecklistTomado unidades={unidades} marcadas={new Set(normalizarClaves(tomado.tomado_items) || [])} onAlternar={alternar} />
+              ) : (
+                <CamposNumero campos={CAMPOS_TOMADO_UI} form={tomado} onCambiar={cambiarTomado} />
+              )}
               <div>
                 <p style={etiqueta}>¿Qué tal te sentó?</p>
                 <div role="radiogroup" aria-label="Qué tal te sentó" style={{ display: 'flex', gap: 4 }}>
@@ -293,13 +375,13 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                 </div>
               </div>
               <label style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={etiqueta}>Qué tomaste</span>
+                <span style={etiqueta}>{modoLista ? 'Notas' : 'Qué tomaste'}</span>
                 <textarea
                   value={tomado.tomado_notas}
                   onChange={(e) => cambiarTomado('tomado_notas', e.target.value)}
                   maxLength={LIMITE_NOTAS_TOMADO}
                   rows={2}
-                  placeholder="Ej.: 3 geles y 2 bidones de isotónica; el 3.º gel me costó"
+                  placeholder={modoLista ? 'Ej.: el 3.º gel me costó' : 'Ej.: 3 geles y 2 bidones de isotónica; el 3.º gel me costó'}
                   style={{ ...inputStyle, resize: 'vertical', minHeight: 56, lineHeight: 1.4 }}
                 />
               </label>
@@ -317,6 +399,11 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
             <div style={{ paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13, lineHeight: 1.5 }}>
               <p style={{ ...subtitulo, marginBottom: 4 }}>Lo que tomó {otroNombre || 'el atleta'}</p>
               <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 12, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(efectivo)}</p>
+              {modoLista && Array.isArray(inicial.tomado_items) && tomadasValidas(itemsDe(inicial), inicial.tomado_items).length < unidades.length && (
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+                  Sin tomar: {unidades.filter((u) => !inicial.tomado_items.includes(u.clave)).map((u) => `${u.nombre}${u.min != null ? ` (min ${u.min})` : ''}`).join(' · ')}
+                </p>
+              )}
               {inicial.tomado_notas && (
                 <p style={{ margin: '4px 0 0', color: COLORS.textPrimary, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>“{inicial.tomado_notas}”</p>
               )}

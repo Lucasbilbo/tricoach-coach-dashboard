@@ -154,3 +154,54 @@ test('lineaTiempo: ordena por minuto, aparta sin hora y marca los que pasan del 
   assert.deepEqual(sinHora, [{ nombre: 'Gel', cantidad: 1 }])
   assert.equal(minutoComoHora(75), '1:15')
 })
+
+// ── Lo tomado, unidad a unidad ──
+import { nutricionEfectiva, normalizarTomado, resumenTomado } from '../src/lib/nutricion.js'
+import { claveUnidad, normalizarClaves, tomadasValidas, totalesTomados, unidadesOrdenadas } from '../src/lib/productosNutricion.js'
+
+const PLAN = [
+  { producto_id: 'g45', nombre: 'Gel 45 g', tipo: 'gel', cantidad: 3, minutos: [60, 30], carbohidratos_g: 45, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0 },
+  { producto_id: 'b8', nombre: 'Bidón 800', tipo: 'bidon', cantidad: 1, minutos: [0], carbohidratos_g: 40, cafeina_mg: 0, sodio_mg: 600, volumen_ml: 800 },
+]
+
+test('unidadesOrdenadas: por minuto, las sin hora al final, con clave estable', () => {
+  const u = unidadesOrdenadas(PLAN)
+  assert.deepEqual(u.map((x) => [x.nombre, x.min]), [['Bidón 800', 0], ['Gel 45 g', 30], ['Gel 45 g', 60], ['Gel 45 g', null]])
+  assert.equal(claveUnidad(PLAN[0], 1), 'g45#1')
+  assert.deepEqual(u.map((x) => x.clave), ['b8#0', 'g45#1', 'g45#0', 'g45#2'])
+})
+
+test('normalizarClaves y tomadasValidas ignoran repetidas y claves que ya no existen', () => {
+  assert.equal(normalizarClaves([]), null)
+  assert.equal(normalizarClaves('x'), null)
+  assert.deepEqual(normalizarClaves(['a', 'a', '', 5, 'b']), ['a', 'b'])
+  assert.deepEqual(tomadasValidas(PLAN, ['g45#0', 'zzz#9']).map((u) => u.clave), ['g45#0'])
+})
+
+test('totalesTomados suma solo lo marcado (bidón entero)', () => {
+  const t = totalesTomados(PLAN, ['g45#0', 'b8#0'])
+  assert.equal(t.hidratos_g, 85)
+  assert.equal(t.liquido_ml, 800)
+  assert.equal(t.sodio_mg, 600)
+})
+
+test('nutricionEfectiva: g/h tomados salen de lo marcado y comparan con el plan', () => {
+  const fila = { productos: PLAN, tomado_items: ['g45#0', 'g45#1'], tomado_carbohidratos_g_h: 5, estomago: 3 }
+  const ef = nutricionEfectiva(fila, 120)
+  // plan: 3×45 + 40 = 175 g en 2 h → 88 g/h; tomado: 90 g en 2 h → 45 g/h
+  assert.equal(ef.carbohidratos_g_h, 88)
+  assert.equal(ef.tomado_carbohidratos_g_h, 45)
+  assert.equal(resumenTomado(ef), '2/4 · 45 de 88 g/h · 0 de 400 ml/h · Estómago bien')
+  // sin marcas se respeta lo que escribió a mano
+  assert.equal(nutricionEfectiva({ productos: PLAN, tomado_carbohidratos_g_h: 30 }, 120).tomado_carbohidratos_g_h, 30)
+})
+
+test('avisoTomado funciona con lo marcado (< 70 % de lo previsto)', () => {
+  const ef = nutricionEfectiva({ productos: PLAN, tomado_items: ['g45#0'] }, 120)
+  assert.equal(avisoTomado(ef), 'Comió bastante menos de lo previsto')
+})
+
+test('normalizarTomado: solo marcas ya es una fila válida', () => {
+  assert.deepEqual(normalizarTomado({ tomado_items: ['g45#0'] }).tomado_items, ['g45#0'])
+  assert.equal(normalizarTomado({ tomado_items: [] }), null)
+})
