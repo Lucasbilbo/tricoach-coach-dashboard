@@ -14,7 +14,7 @@ test('cambios de Leire en una línea', () => {
   assert.deepEqual(bloques.map((b) => b.tipo), ['warmup', 'repeat', 'cooldown'])
   assert.equal(bloques[1].repeticiones, 8)
   assert.equal(texto('run', "15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1"),
-    '- Calentamiento 15m Z1 HR\n\nSerie 8x\n- 1m Z5 HR\n- 1m Z1 HR\n\n- Vuelta a la calma 10m Z1 HR')
+    '- Calentamiento 15m Z1 HR\n\nSerie 8x\n- Muy fuerte 1m Z5 HR\n- Suave 1m Z1 HR\n\n- Vuelta a la calma 10m Z1 HR')
 })
 
 test('distancias, segundos y descanso con nombre', () => {
@@ -41,7 +41,7 @@ test('natación: material, cal/vc explícitos y zona de ritmo', () => {
 })
 
 test('bici: zona por pulso, ritmo no aplica', () => {
-  assert.match(texto('bike', "30' Z1 + 3x(8' Z3 / 5' Z1) + 10' Z1"), /- 8m Z3 HR/)
+  assert.match(texto('bike', "30' Z1 + 3x(8' Z3 / 5' Z1) + 10' Z1"), /- Medio 8m Z3 HR/)
   assert.equal(parsearEntreno("20' 4:30", 'bike').bloques[0].objetivo_tipo, null)
 })
 

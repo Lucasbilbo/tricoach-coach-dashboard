@@ -21,7 +21,7 @@ test('bici: zonas por pulso y sin potencia por defecto (no hay potenciómetro)',
   ]))
   assert.match(t, /- Calentamiento 30m Z1 HR/)
   assert.match(t, /- Tranquilo comodo 90m Z1 HR/)
-  assert.match(t, /- 8m Z3 HR/)
+  assert.match(t, /- Medio 8m Z3 HR/)
   assert.doesNotMatch(t, / Z\d(?! HR)/) // ninguna zona sin "HR" (sería potencia)
 })
 
@@ -31,7 +31,7 @@ test('carrera: rango de ritmo y zona de pulso', () => {
     { tipo: 'repeat', nombre: '', repeticiones: 5, pasos: [paso(1, 'km', 'zona', 'Z4'), paso(3, 'min', null, null, 'Descanso parado')] },
   ]))
   assert.match(t, /- Zona 2 alta 50m 4:50-5:10\/km Pace/)
-  assert.match(t, /Serie 5x\n- 1km Z4 HR\n- Descanso parado 3m/)
+  assert.match(t, /Serie 5x\n- Fuerte 1km Z4 HR\n- Descanso parado 3m/)
 })
 
 test('cabecera de serie: el nombre del coach no compite con el Nx de Intervals', () => {
@@ -284,4 +284,30 @@ test('natación: pausa para quitar el material aunque haya descanso por medio', 
   const d = conPausas([st('Z3', 100, ['aletas']), rec, st('Z3', 100, ['aletas'])], 'swim')
   assert.deepEqual(d.map((x) => x.tipo), ['step', 'step', 'pausa', 'step'])
   assert.equal(d[2].cambiaMaterial, false)
+})
+
+// 2026-11-19: etiquetas por zona en series de carrera/bici y calentamiento sin duplicar.
+test('series de carrera/bici: pasos sin nombre se etiquetan por zona; con nombre, el del coach', () => {
+  const zona = (cantidad, unidad, z, extra = {}) => ({ tipo: 'step', cantidad, unidad, nombre: null, material: [], objetivo_tipo: 'zona', objetivo_valor: z, ...extra })
+  const serie = { tipo: 'repeat', repeticiones: 8, nombre: '', pasos: [zona(1, 'min', 'Z5'), zona(1, 'min', 'Z1')] }
+  const t = buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [serie] } }, { incluirNotas: false })
+  assert.match(t, /- Muy fuerte 1m Z5 HR\n- Suave 1m Z1 HR/)
+  const conNombre = { ...serie, pasos: [zona(1, 'km', 'Z4', { nombre: 'Ritmo 10k' }), zona(2, 'min', 'Z1', { nombre: 'Trote' })] }
+  const t2 = buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [conNombre] } }, { incluirNotas: false })
+  assert.match(t2, /- Ritmo 10k 1km Z4 HR\n- Trote 2m Z1 HR/)
+  // Un paso suelto (fuera de serie) no se etiqueta; la natación tampoco.
+  const suelto = buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [zona(8, 'km', 'Z4')] } }, { incluirNotas: false })
+  assert.equal(suelto, '- 8km Z4 HR')
+  const nat = buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ ...serie, pasos: [zona(100, 'mtr', 'Z3')] }] } }, { incluirNotas: false })
+  assert.doesNotMatch(nat, /Medio|Fuerte|Suave/)
+})
+
+test('calentamiento y vuelta a la calma: no se repite el prefijo si el nombre ya lo dice', () => {
+  const w = (tipo, nombre) => ({ tipo, nombre, cantidad: 400, unidad: 'mtr', material: [] })
+  const t = (b) => buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [b] } }, { incluirNotas: false })
+  assert.match(t(w('warmup', 'Calentar')), /^- Calentar 400mtr/)
+  assert.match(t(w('warmup', 'Calentamiento suave')), /^- Calentamiento suave 400mtr/)
+  assert.match(t(w('warmup', '75 crol')), /^- Calentamiento · 75 crol 400mtr/)
+  assert.match(t(w('cooldown', 'Vuelta a la calma')), /^- Vuelta a la calma 400mtr/)
+  assert.match(t(w('cooldown', 'Soltar')), /^- Vuelta a la calma · Soltar 400mtr/)
 })
