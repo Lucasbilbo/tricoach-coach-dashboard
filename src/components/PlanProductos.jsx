@@ -273,6 +273,7 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
 export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
   const { productos, disponible, anadir, editar, quitar } = useProductosNutricion(athleteId)
   const [gestorAbierto, setGestorAbierto] = useState(false)
+  const [selectorAbierto, setSelectorAbierto] = useState(false)
   const items = Array.isArray(form.productos) ? form.productos : []
   const itemDe = (id) => items.find((i) => i.producto_id === id)
 
@@ -318,7 +319,7 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
             </p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {productos.map((p) => {
+            {productos.filter((p) => (Number(itemDe(p.id)?.cantidad) || 0) > 0).map((p) => {
               const item = itemDe(p.id)
               const cantidad = item ? Number(item.cantidad) || 0 : 0
               return (
@@ -350,6 +351,33 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
             ))}
           </div>
 
+          {/* Solo se ven los productos que lleva; el resto, al pulsar «Añadir producto»
+              (la despensa entera con +/− alargaba mucho el formulario). */}
+          {(() => {
+            const sinUsar = productos.filter((p) => !(Number(itemDe(p.id)?.cantidad) > 0))
+            if (sinUsar.length === 0) return null
+            return selectorAbierto ? (
+              <div style={{ display: 'flex', flexDirection: 'column', border: `1px solid ${COLORS.cardBorder}`, borderRadius: 10, padding: 4 }}>
+                {sinUsar.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => { cambiarCantidad(p, 1); setSelectorAbierto(false) }}
+                    style={{ ...textoBtn, minHeight: 44, padding: '0 10px', justifyContent: 'space-between', width: '100%', color: COLORS.textPrimary, fontSize: 14 }}
+                  >
+                    <span>{p.nombre}</span>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textTertiary }}>{detalleProducto(p)}</span>
+                  </button>
+                ))}
+                <button type="button" onClick={() => setSelectorAbierto(false)} style={{ ...textoBtn, minHeight: 40, padding: '0 10px', color: COLORS.textTertiary }}>Cancelar</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setSelectorAbierto(true)} style={{ ...textoBtn, alignSelf: 'flex-start' }}>
+                <Icon name="plus" size={15} /> Añadir producto
+              </button>
+            )
+          })()}
+
           {textoTotal && (
             <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.5 }}>
               Total: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoTotal}</span>
@@ -365,7 +393,7 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
             <Gestor productos={productos} anadir={anadir} editar={editar} quitar={quitar} onCerrar={() => setGestorAbierto(false)} />
           ) : (
             <button type="button" onClick={() => setGestorAbierto(true)} style={{ ...textoBtn, alignSelf: 'flex-start' }}>
-              <Icon name="edit" size={15} /> {productos.length ? 'Editar productos' : 'Añadir productos'}
+              <Icon name="edit" size={15} /> {productos.length ? 'Editar despensa' : 'Añadir productos'}
             </button>
           )}
         </>
