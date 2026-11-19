@@ -112,7 +112,12 @@ function lineaPaso(paso, disciplina, cueNombre, objetivo) {
 // 'Calentamiento' + nombre opcional del coach → 'Calentamiento · 75 crol 25 otro'
 function conPrefijo(prefijo, nombre) {
   const n = nombre && String(nombre).trim()
-  return n ? `${prefijo} · ${n}` : prefijo
+  if (!n) return prefijo
+  // Si el nombre ya dice lo mismo que el prefijo ("Calentar", "Calentamiento",
+  // "Vuelta a la calma"), no se repite: el reloj mostraba "Calentamiento · Calentar".
+  const raiz = prefijo.toLowerCase().startsWith('calent') ? /^calent/i : /^vuelta a la calma/i
+  if (raiz.test(n)) return n
+  return `${prefijo} · ${n}`
 }
 
 function objetivoStr(step, disciplina) {
@@ -302,6 +307,18 @@ function problemaEntreno(workoutSteps) {
   return null
 }
 
+// Pasos de una serie de carrera/bici sin nombre: el reloj solo enseñaba "1m Z5 HR"
+// y "1m Z1 HR", sin decir cuál es el fuerte y cuál el suave. Se etiquetan por la
+// zona (2026-11-19). Solo dentro de series, solo por zona (con ritmo o FC exacta
+// el objetivo ya habla) y nunca si el coach puso nombre.
+const ETIQUETA_ZONA = { 1: 'Suave', 2: 'Suave', 3: 'Medio', 4: 'Fuerte', 5: 'Muy fuerte' }
+function etiquetaPorZona(paso, disciplina) {
+  if (disciplina !== 'run' && disciplina !== 'bike') return null
+  if (paso.objetivo_tipo !== 'zona' || !paso.objetivo_valor) return null
+  const z = Number(String(normalizarZona(paso.objetivo_valor)).replace(/\D/g, ''))
+  return ETIQUETA_ZONA[z] || null
+}
+
 // Construye el texto de un entrenamiento. Los bloques se separan con \n\n para
 // que Intervals los parsee como pasos independientes; los pasos internos de un
 // repeat van con \n simple.
@@ -346,7 +363,7 @@ function buildIntervalsText(session, options = {}) {
           lines.push(lineaPausa(paso, disciplina))
           continue
         }
-        lines.push(lineaPaso(paso, disciplina, paso.nombre, objetivoStr(paso, disciplina)))
+        lines.push(lineaPaso(paso, disciplina, paso.nombre || etiquetaPorZona(paso, disciplina), objetivoStr(paso, disciplina)))
       }
       partes.push(lines.join('\n'))
     }

@@ -154,6 +154,12 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   builder no ofrece potencia (se sigue generando para sesiones antiguas).
   **Natación sin objetivo por defecto** (el coach sí puede elegir ritmo /100m, zona de ritmo —`Zn Pace`, requiere ritmo umbral de natación en Intervals— o FC %) (antes `Z1 Pace` → avisos falsos).
 - Ritmo exacto o rango (`4:50-5:10/km Pace`), validado en el builder.
+- **Pasos de serie sin nombre (carrera/bici)** (2026-11-19): el reloj solo enseñaba
+  `1m Z5 HR` / `1m Z1 HR`. Se etiquetan por zona (`etiquetaPorZona`): Z1-2 Suave,
+  Z3 Medio, Z4 Fuerte, Z5 Muy fuerte. Solo dentro de series, solo con objetivo por
+  zona y nunca si el coach puso nombre; natación y pasos sueltos no se tocan.
+  `conPrefijo` no repite el prefijo si el nombre ya empieza por «calent…» /
+  «vuelta a la calma» (antes: «Calentamiento · Calentar»).
 - El material de cada paso va en el texto del paso. **El texto (cue) va DELANTE
   de la duración** (`- Pies · aletas, tabla 200mtr`): Intervals solo lleva al reloj
   lo que precede a la duración; lo de detrás se pierde (bug 2026-10, antes `@…`
