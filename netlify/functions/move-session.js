@@ -66,6 +66,15 @@ const depsReales = {
     const r = await rest('GET', `profiles?id=eq.${athleteId}&select=intervals_api_key,intervals_athlete_id`)
     return Array.isArray(r.json) ? r.json[0] || null : null
   },
+  // ¿El atleta tiene potenciómetro? (la bici va por potencia); false si falla
+  async leerPotenciometro(athleteId) {
+    try {
+      const r = await rest('GET', `atleta_potencia?athlete_id=eq.${athleteId}&select=potenciometro`)
+      return Array.isArray(r.json) && r.json[0]?.potenciometro === true
+    } catch {
+      return false
+    }
+  },
   // PATCH con reintentos; true solo si la BD confirma la fila.
   async guardar(id, cambios) {
     let espera = 300
@@ -129,7 +138,7 @@ async function moverSesion({ auth, body, ahora, deps, ahoraIso = new Date().toIS
     return res(409, { error: 'La sesión está en el reloj pero el atleta ya no tiene Intervals.icu conectado', code: 'NO_INTERVALS' })
   }
   const nueva = { ...sesion, ...cambios }
-  const creado = await deps.intervalsPost(perfil.intervals_athlete_id, perfil.intervals_api_key, construirEvento(nueva))
+  const creado = await deps.intervalsPost(perfil.intervals_athlete_id, perfil.intervals_api_key, construirEvento(nueva, { bikePotencia: nueva.disciplina === 'bike' && deps.leerPotenciometro ? await deps.leerPotenciometro(nueva.athlete_id) : false }))
   if (creado.status < 200 || creado.status >= 300) {
     console.error('move-session: error de Intervals', creado.status, JSON.stringify(creado.body))
     return res(502, { error: 'No se pudo mover el entreno en Intervals.icu; no se ha cambiado nada', code: 'INTERVALS_ERROR' })

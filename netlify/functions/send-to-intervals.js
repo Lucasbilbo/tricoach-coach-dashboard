@@ -180,7 +180,13 @@ exports.handler = async (event) => {
     }
 
     // Evento (texto del reloj, tipo, piscina y hora de inicio si la tiene)
-    const eventBody = construirEvento(session)
+    // Potenciómetro del atleta (tabla atleta_potencia; si falla → pulso, como siempre)
+    let bikePotencia = false
+    if (session.disciplina === 'bike') {
+      const pot = await supabaseGet(`atleta_potencia?athlete_id=eq.${session.athlete_id}&select=potenciometro`)
+      bikePotencia = Array.isArray(pot) && pot[0]?.potenciometro === true
+    }
+    const eventBody = construirEvento(session, { bikePotencia })
 
     // Reenvío (sesión editada o reenviada): primero se CREA la versión nueva y
     // solo cuando está confirmada se borra la anterior. Al revés, un fallo de

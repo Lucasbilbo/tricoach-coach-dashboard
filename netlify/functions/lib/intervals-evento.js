@@ -21,7 +21,8 @@ function inicioLocal(fecha, horaInicioMin) {
   return `${fecha}T${dosDigitos(Math.floor(horaInicioMin / 60))}:${dosDigitos(horaInicioMin % 60)}:00`
 }
 
-function construirEvento(session) {
+// opciones.bikePotencia: el atleta tiene potenciómetro → la bici va por potencia
+function construirEvento(session, opciones = {}) {
   const piscina = session.workout_steps?.piscina || '25'
   const isSwim = session.disciplina === 'swim'
   const isOpen = piscina === 'open'
@@ -31,7 +32,7 @@ function construirEvento(session) {
     type: DISCIPLINE_TYPE[session.disciplina] || 'Workout',
     name: session.workout_steps?.nombre || session.descripcion?.substring(0, 60) || 'Entrenamiento',
     // incluirNotas:false SIEMPRE — las notas del entrenador no llegan al reloj
-    description: buildIntervalsText(session, { incluirNotas: false }),
+    description: buildIntervalsText(session, { incluirNotas: false, bikePotencia: opciones.bikePotencia === true }),
     indoor: isSwim && !isOpen,
   }
   // Sin pasos estructurados (p. ej. Hyrox adjunto como captura): el reloj solo

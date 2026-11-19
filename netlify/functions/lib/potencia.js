@@ -3,7 +3,7 @@
 // guardado; si no (o si la tabla aún no existe / falla) → null y la carga sigue
 // calculándose por pulso. Nunca lanza.
 
-async function leerFtp(supabaseGet, host, key, athleteId) {
+async function leerPotencia(supabaseGet, host, key, athleteId) {
   try {
     const res = await supabaseGet(
       host,
@@ -11,10 +11,17 @@ async function leerFtp(supabaseGet, host, key, athleteId) {
       key
     )
     const fila = Array.isArray(res.json) ? res.json[0] : null
-    return fila && fila.potenciometro && fila.ftp_w > 0 ? Number(fila.ftp_w) : null
+    return {
+      potenciometro: !!(fila && fila.potenciometro),
+      ftp: fila && fila.potenciometro && fila.ftp_w > 0 ? Number(fila.ftp_w) : null,
+    }
   } catch {
-    return null
+    return { potenciometro: false, ftp: null }
   }
 }
 
-module.exports = { leerFtp }
+async function leerFtp(supabaseGet, host, key, athleteId) {
+  return (await leerPotencia(supabaseGet, host, key, athleteId)).ftp
+}
+
+module.exports = { leerFtp, leerPotencia }
