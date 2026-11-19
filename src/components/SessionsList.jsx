@@ -62,7 +62,7 @@ function estadoSesion(sesion, actividad, coberturaDesde) {
   if (estado === ESTADO.completada) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: actividad }
   if (estado === ESTADO.programada) return { texto: 'Programada', color: COLORS.textSecondary, actividadStrava: null }
   if (estado === ESTADO.sinDatos) return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
-  return { texto: 'Pendiente', color: COLORS.textSecondary, actividadStrava: null }
+  return { texto: 'Sin hacer', color: COLORS.textSecondary, actividadStrava: null }
 }
 
 function tituloSesion(sesion) {
@@ -94,6 +94,24 @@ const accionIconoStyle = {
   ...iconButtonStyle,
   border: 'none',
   color: COLORS.textTertiary,
+}
+
+// Opción del menú «⋯» de la tarjeta (área táctil de 44 px)
+const itemMenuStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  width: '100%',
+  minHeight: 44,
+  padding: '0 12px',
+  background: 'transparent',
+  border: 'none',
+  borderRadius: 8,
+  color: COLORS.textPrimary,
+  fontSize: 14,
+  fontFamily: 'inherit',
+  textAlign: 'left',
+  cursor: 'pointer',
 }
 
 // Ámbar: sesión que aún no está en el reloj.
@@ -172,7 +190,9 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const [expandidaId, setExpandidaId] = useState(null)
   const [actividadDetalle, setActividadDetalle] = useState(null)
   const [historicoAbierto, setHistoricoAbierto] = useState(false)
-  // Actividades para calcular Completada/Pendiente, y el inicio de su cobertura.
+  const [enviandoTodas, setEnviandoTodas] = useState(false)
+  const [menuId, setMenuId] = useState(null) // sesión con el menú ⋯ abierto
+  // Actividades para calcular Completada/Sin hacer, y el inicio de su cobertura.
   // El estado NO depende del selector de semanas del análisis (A1). Cacheadas.
   const [actividadesEstado, setActividadesEstado] = useState(null)
   const [coberturaDesde, setCoberturaDesde] = useState(null)
@@ -239,7 +259,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       const lista = data || []
       setSesiones(lista)
 
-      // Estado Completada/Pendiente: solo las sesiones PASADAS definen la ventana
+      // Estado Completada/Sin hacer: solo las sesiones PASADAS definen la ventana
       // de actividades que necesitamos.
       const hoy = hoyMadrid()
       const fechasPasadas = lista.map((s) => s.fecha).filter((f) => f && f <= hoy)
@@ -357,6 +377,36 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     }
   }
 
+  // Envía de una vez todas las sesiones con entreno que aún no están en el reloj
+  // (de hoy en adelante). En serie: cada envío crea y borra eventos en Intervals.
+  async function handleEnviarTodas(lista) {
+    setEnviandoTodas(true)
+    setError('')
+    let fallos = 0
+    let ultimoAviso = null
+    try {
+      for (const sesion of lista) {
+        try {
+          const res = await fetch('/.netlify/functions/send-to-intervals', {
+            method: 'POST',
+            headers: await authHeaders(),
+            body: JSON.stringify({ sessionId: sesion.id }),
+          })
+          const json = await res.json().catch(() => ({}))
+          if (res.ok) ultimoAviso = avisoEventoAntiguo(json, sesion.fecha, 'coach') || ultimoAviso
+          else fallos += 1
+        } catch {
+          fallos += 1
+        }
+      }
+    } finally {
+      setEnviandoTodas(false)
+      cargarSesiones()
+    }
+    if (fallos > 0) setError(`${fallos} ${fallos === 1 ? 'sesión no se pudo enviar' : 'sesiones no se pudieron enviar'}. Reintenta desde su tarjeta.`)
+    setAvisoReloj(ultimoAviso)
+  }
+
   if (cargando) return <p style={{ color: COLORS.textSecondary }}>Cargando sesiones…</p>
 
   // Card individual de sesión (JSX intacto; solo extraído para reutilizarlo en
@@ -412,25 +462,50 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             </div>
             <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
           </div>
-          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0, position: 'relative' }}>
             <button onClick={() => setSesionEditando(sesion)} style={accionIconoStyle} aria-label="Editar sesión" title="Editar">
               <Icon name="edit" size={16} />
             </button>
+            {/* Duplicar y eliminar van en «⋯»: con el pulgar en móvil era fácil
+                borrar sin querer. */}
             <button
-              onClick={() =>
-                // Copia sin id ni envío: el builder la trata como sesión nueva y
-                // solo falta elegir el día.
-                setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false, _nutricionDe: sesion.id })
-              }
+              onClick={() => setMenuId((prev) => (prev === sesion.id ? null : sesion.id))}
               style={accionIconoStyle}
-              aria-label="Duplicar sesión"
-              title="Duplicar a otro día"
+              aria-label="Más acciones"
+              aria-haspopup="menu"
+              aria-expanded={menuId === sesion.id}
+              title="Más"
             >
-              <Icon name="copy" size={16} />
+              <Icon name="more" size={18} strokeWidth={2.6} />
             </button>
-            <button onClick={() => handleEliminar(sesion)} style={accionIconoStyle} aria-label="Eliminar sesión" title="Eliminar">
-              <Icon name="trash" size={16} />
-            </button>
+            {menuId === sesion.id && (
+              <>
+                <div onClick={() => setMenuId(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
+                <div role="menu" style={{ position: 'absolute', top: 40, right: 0, zIndex: 21, minWidth: 190, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 10, padding: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuId(null)
+                      // Copia sin id ni envío: el builder la trata como sesión nueva y
+                      // solo falta elegir el día.
+                      setSesionEditando({ ...sesion, id: undefined, fecha: '', intervals_event_id: null, enviado_a_garmin: false, _nutricionDe: sesion.id })
+                    }}
+                    style={itemMenuStyle}
+                  >
+                    <Icon name="copy" size={16} />
+                    Duplicar a otro día
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuId(null); handleEliminar(sesion) }}
+                    style={{ ...itemMenuStyle, color: COLORS.error }}
+                  >
+                    <Icon name="trash" size={16} />
+                    Eliminar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -443,7 +518,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           {!pasada && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
               <Icon name="watch" size={15} />
-              {enviada ? 'En el reloj' : 'Sin enviar al reloj'}
+              {enviada ? 'En el reloj' : 'Sin enviar'}
             </span>
           )}
           <FeedbackLinea feedback={feedbacks.get(sesion.id)} nombre={atletaNombre} />
@@ -616,11 +691,29 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
   const futuras = semanasFuturas(semanaActual, grupos.map((g) => g.lunes), semanasExtra)
     .map((lunes) => ({ lunes, sesiones: sesionesPorLunes[lunes] || [] }))
   const pasadas = grupos.filter((g) => g.lunes < semanaActual).reverse()
+  // Sesiones con entreno que aún no están en el reloj (hoy en adelante)
+  const sinEnviar = sesiones.filter((x) => !x.enviado_a_garmin && x.fecha >= hoy && tieneEntreno(x.workout_steps))
 
   return (
     <div>
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
       {avisoReloj && <Aviso onCerrar={() => setAvisoReloj(null)} style={{ marginBottom: 16 }}>{avisoReloj}</Aviso>}
+      {sinEnviar.length >= 2 && (
+        <Aviso style={{ marginBottom: 16, alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <span>{sinEnviar.length} sesiones sin enviar al reloj</span>
+            <button
+              type="button"
+              onClick={() => handleEnviarTodas(sinEnviar)}
+              disabled={enviandoTodas || reenviando !== null}
+              style={{ ...iconButtonStyle, width: 'auto', padding: '0 12px', gap: 6, color: COLORS.accent, borderColor: 'rgba(47,191,175,0.45)', fontSize: 13, fontWeight: 600, opacity: enviandoTodas ? 0.6 : 1 }}
+            >
+              <Icon name="send" size={15} />
+              {enviandoTodas ? 'Enviando…' : 'Enviar todas'}
+            </button>
+          </span>
+        </Aviso>
+      )}
 
       {sesiones.length === 0 && (
         // B4: estado vacío claro para el coach (en vez de solo "Sin sesiones esta semana").
