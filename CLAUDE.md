@@ -339,8 +339,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
-- `supabase/migrations/` — 001–017 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (desde el SQL Editor; verificadas sus 4 policies).
+- `supabase/migrations/` — 001–018 (+ ficheros `PENDIENTE_*` que NO se aplican
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19.
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).

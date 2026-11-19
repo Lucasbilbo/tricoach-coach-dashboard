@@ -1,5 +1,5 @@
 -- 018_productos_nutricion.sql — despensa de nutrición por atleta (2026-11)
--- PENDIENTE de aplicar en producción (SQL Editor). Aditiva y reversible.
+-- APLICADA en producción el 2026-11-19 (Supabase MCP); verificadas 4 policies, restricción única y semilla. Aditiva y reversible.
 --
 -- 1) Tabla `atleta_productos_nutricion`: los productos que TIENE cada atleta
 --    (gel 30 g, gel 45 g con cafeína, guayaba, bidón de 750 ml…). Los editan el
