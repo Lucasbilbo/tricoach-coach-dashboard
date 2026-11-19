@@ -317,6 +317,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   fructosa, sin sales), rodillo 800 (32+16+2,5 g Evolytes), bici 800 (40+20+2,5)
   y bici larga 800 (50+25+2,5). Se ignora a propósito la "dosis diaria" de
   Evolytes (decisión de Lucas, 2026-11-19).
+  **Tonicidad** (`tonicidadBidon`, se calcula, no se guarda): por g de hidratos
+  /100 ml — hipotónico < 4 %, isotónico 4–8 %, hipertónico > 8 % (aproximación
+  solo por hidratos; con receta propia usa sus gramos exactos). Sale en el
+  detalle del producto, en la línea de receta del plan y en la vista del atleta
+  ("7,3 % · isotónico"). Natación 500 ml (3,9 %) sale hipotónico. La semilla de
+  Lucas añade tres bidones HIPERTÓNICOS de 800 ml por hidratos que Jon elige:
+  80 / 90 / 100 g (malto:fructosa 2:1 + 2,5 g Evolytes) y deja la despensa en
+  orden guayaba → bidones → geles (su prioridad).
   **Receta del bidón** (`recetaBidon`/`textoReceta`): de los hidratos y el sodio
   del bidón salen los GRAMOS a pesar: maltodextrina + fructosa en 2:1 (la que
   usa Lucas; constante `RATIO_MALTO_FRUCTOSA`), con maltodextrina HSN 95 g

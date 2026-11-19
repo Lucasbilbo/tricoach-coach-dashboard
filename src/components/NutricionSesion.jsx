@@ -20,7 +20,7 @@ import {
   ESTOMAGO, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
   normalizarTomado, nutricionEfectiva, resumenPlan, resumenTomado, tienePlan, tieneTomado,
 } from '../lib/nutricion'
-import { itemsDe, normalizarClaves, tomadasValidas, textoReceta, unidadesOrdenadas } from '../lib/productosNutricion'
+import { itemsDe, normalizarClaves, tomadasValidas, textoReceta, tonicidadBidon, unidadesOrdenadas } from '../lib/productosNutricion'
 import { duracionPrevista } from '../lib/tssPrevisto'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
@@ -329,6 +329,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                   return receta ? (
                     <p key={i} style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
                       {it.nombre}, cada uno: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{receta}</span>
+                      {tonicidadBidon(it) && <span style={{ fontFamily: FONTS.mono }}> · {tonicidadBidon(it).texto}</span>}
                     </p>
                   ) : null
                 })}

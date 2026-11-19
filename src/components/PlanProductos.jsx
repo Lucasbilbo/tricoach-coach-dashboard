@@ -12,7 +12,7 @@ import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from
 import { LIMITE_NOTAS, resumenNutricion } from '../lib/nutricion'
 import {
   LIMITES_PRODUCTO, MAX_CANTIDAD, MAX_MINUTO, TIPOS, detalleProducto, itemDeProducto, lineaTiempo, minutoComoHora,
-  normalizarItems, normalizarProducto, porHora, repartirMinutos, resumenTotales, textoReceta, totalesItems,
+  normalizarItems, normalizarProducto, porHora, tonicidadBidon, repartirMinutos, resumenTotales, textoReceta, totalesItems,
 } from '../lib/productosNutricion'
 import { useProductosNutricion } from '../hooks/useProductosNutricion'
 import Icon from './ui/Icon'
@@ -49,6 +49,7 @@ function Mezcla({ item, onCambiar }) {
     return (
       <p style={{ margin: 0, padding: '0 0 10px 12px', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
         Receta: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoReceta(item)}</span>
+        {tonicidadBidon(item) && <span style={{ fontFamily: FONTS.mono }}> · {tonicidadBidon(item).texto}</span>}
       </p>
     )
   }
@@ -78,6 +79,7 @@ function Mezcla({ item, onCambiar }) {
       {receta && (
         <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
           Cada bidón: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{receta}</span>
+          {tonicidadBidon(item) && <span style={{ fontFamily: FONTS.mono }}> · {tonicidadBidon(item).texto}</span>}
         </p>
       )}
     </div>

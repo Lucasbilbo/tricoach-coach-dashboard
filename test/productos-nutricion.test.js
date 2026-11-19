@@ -240,3 +240,25 @@ test('item con receta propia: se copia del producto y se da con los gramos exact
   // sin receta propia sigue el cálculo 2:1 de siempre
   assert.equal(textoReceta({ tipo: 'bidon', carbohidratos_g: 60, sodio_mg: 600 }), '42 g maltodextrina · 20 g fructosa · 4,2 g sales')
 })
+
+// ── Tonicidad ──
+import { tonicidadBidon } from '../src/lib/productosNutricion.js'
+
+test('tonicidadBidon: tus recetas por concentración de hidratos', () => {
+  const b = (ml, m, f) => ({ tipo: 'bidon', volumen_ml: ml, carbohidratos_g: Math.round(m * 0.95 + f), receta: { maltodextrina_g: m, fructosa_g: f, sales_g: 0 } })
+  assert.equal(tonicidadBidon(b(500, 13.5, 6.5)).texto, '3,9 % · hipotónico')
+  assert.equal(tonicidadBidon(b(800, 32, 16)).texto, '5,8 % · isotónico')
+  assert.equal(tonicidadBidon(b(800, 40, 20)).texto, '7,3 % · isotónico')
+  assert.equal(tonicidadBidon(b(800, 50, 25)).texto, '9,1 % · hipertónico')
+  assert.equal(tonicidadBidon(b(800, 55.2, 27.6)).texto, '10 % · hipertónico')
+})
+
+test('tonicidadBidon: bidón a medida usa sus hidratos; agua o gel → null', () => {
+  assert.equal(tonicidadBidon({ tipo: 'bidon', volumen_ml: 800, carbohidratos_g: 40 }).texto, '5 % · isotónico')
+  assert.equal(tonicidadBidon({ tipo: 'bidon', volumen_ml: 800, carbohidratos_g: 0 }), null)
+  assert.equal(tonicidadBidon({ tipo: 'gel', volumen_ml: 0, carbohidratos_g: 45 }), null)
+})
+
+test('detalleProducto de un bidón incluye su tonicidad', () => {
+  assert.match(detalleProducto({ tipo: 'bidon', volumen_ml: 800, carbohidratos_g: 58, sodio_mg: 356, receta: { maltodextrina_g: 40, fructosa_g: 20, sales_g: 2.5 } }), /7,3 % · isotónico/)
+})

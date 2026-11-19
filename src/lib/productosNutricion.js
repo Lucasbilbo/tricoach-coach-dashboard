@@ -176,6 +176,25 @@ export function resumenTotales(t) {
   return partes.join(' · ')
 }
 
+// ── Tonicidad de un bidón ───────────────────────────────────────────────────
+// Se clasifica por la concentración de hidratos (g por 100 ml): hipotónico
+// < 4 %, isotónico 4–8 %, hipertónico > 8 %. Aproximación solo por hidratos (la
+// osmolaridad real también depende de las sales). Se calcula, no se guarda.
+export const TONICIDAD = { isotonicoDesde: 4, hipertonicoDesde: 8 }
+
+// → { pct, tipo, texto: "7,3 % · isotónico" } o null (agua, no es bidón, sin ml)
+export function tonicidadBidon(it) {
+  if (!it || it.tipo !== 'bidon') return null
+  const ml = Number(it.volumen_ml) || 0
+  const r = normalizarReceta(it.receta)
+  // Con receta propia se usan sus gramos exactos (no los hidratos redondeados)
+  const hidratos = r ? r.maltodextrina_g * HIDRATOS_POR_G.maltodextrina + r.fructosa_g * HIDRATOS_POR_G.fructosa : Number(it.carbohidratos_g) || 0
+  if (hidratos <= 0 || ml <= 0) return null
+  const pct = Math.round((hidratos / ml) * 1000) / 10
+  const tipo = pct < TONICIDAD.isotonicoDesde ? 'hipotónico' : pct <= TONICIDAD.hipertonicoDesde ? 'isotónico' : 'hipertónico'
+  return { pct, tipo, texto: `${pct.toLocaleString('es-ES', { maximumFractionDigits: 1 })} % · ${tipo}` }
+}
+
 // Texto corto de un producto del catálogo: "45 g · 130 mg cafeína" / "750 ml"
 export function detalleProducto(p) {
   const partes = []
@@ -183,6 +202,8 @@ export function detalleProducto(p) {
   if (p.carbohidratos_g) partes.push(`${p.carbohidratos_g} g`)
   if (p.cafeina_mg) partes.push(`${p.cafeina_mg} mg cafeína`)
   if (p.sodio_mg) partes.push(`${p.sodio_mg} mg sodio`)
+  const t = tonicidadBidon(p)
+  if (t) partes.push(t.texto)
   return partes.join(' · ')
 }
 
