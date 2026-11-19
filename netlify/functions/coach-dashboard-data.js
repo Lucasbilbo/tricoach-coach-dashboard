@@ -9,7 +9,8 @@ const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, cargaActividad, fechaMadrid, mapDisciplina } = require('./lib/metrics')
+const { round, cargaActividad, potenciaDe, fechaMadrid, mapDisciplina } = require('./lib/metrics')
+const { leerFtp } = require('./lib/potencia')
 const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 const { lunesDeSemana } = require('./lib/semanas')
 const supabaseRest = require('./lib/supabase-rest')
@@ -35,7 +36,7 @@ const VENTANA_LECTURA_DIAS = 35
 // antigua a más reciente, con TSS agregado y a 0 si no hubo actividad. Antes
 // eran "las últimas N semanas CON datos": un atleta parado hace 3 semanas
 // enseñaba un sparkline de hace un mes como si fuera reciente.
-function semanasRecientes(actividades, fcMax, n, hoy = fechaMadrid(new Date())) {
+function semanasRecientes(actividades, fcMax, n, hoy = fechaMadrid(new Date()), ftp = null) {
   const porLunes = {}
   for (const a of actividades) {
     if (!a.start_date) continue
@@ -43,7 +44,7 @@ function semanasRecientes(actividades, fcMax, n, hoy = fechaMadrid(new Date())) 
     if (disc === 'other') continue // B1: excluir no-tri
     // Semana en Europe/Madrid a partir del instante UTC (no de start_date_local)
     const lunes = lunesDeSemana(fechaMadrid(new Date(a.start_date)))
-    porLunes[lunes] = (porLunes[lunes] || 0) + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, disc).tss || 0)
+    porLunes[lunes] = (porLunes[lunes] || 0) + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, disc, potenciaDe(a, ftp)).tss || 0)
   }
   const lunesHoy = lunesDeSemana(hoy)
   const semanas = []
@@ -91,6 +92,7 @@ async function procesarAtleta(athleteId, perfil, env) {
     const actividades = actRes.actividades
     const corteSemana = ahoraMs - VENTANA_DIAS * DIA_MS
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
+    const ftp = await leerFtp(supabaseGet, env.supabaseHost, env.SERVICE_KEY, athleteId)
 
     const semana = actividades.filter(
       (a) => a.start_date && new Date(a.start_date).getTime() >= corteSemana &&
@@ -101,7 +103,7 @@ async function procesarAtleta(athleteId, perfil, env) {
       (acc, a) => ({
         km: acc.km + (a.distance || 0) / 1000,
         horas: acc.horas + (a.moving_time || 0) / 3600,
-        tss: acc.tss + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, mapDisciplina(a.sport_type || a.type)).tss || 0),
+        tss: acc.tss + (cargaActividad(a.moving_time, a.average_heartrate, fcMax, mapDisciplina(a.sport_type || a.type), potenciaDe(a, ftp)).tss || 0),
       }),
       { km: 0, horas: 0, tss: 0 }
     )
@@ -133,7 +135,7 @@ async function procesarAtleta(athleteId, perfil, env) {
       horas_semana: round(totales.horas, 1),
       tss_semana: round(totales.tss, 0),
       ultima_actividad_dias: ultimaDias,
-      semanas_recientes: semanasRecientes(actividades, fcMax, SEMANAS_SPARKLINE),
+      semanas_recientes: semanasRecientes(actividades, fcMax, SEMANAS_SPARKLINE, undefined, ftp),
     }
   } catch (err) {
     console.error(`procesarAtleta ${athleteId} error:`, err.message)

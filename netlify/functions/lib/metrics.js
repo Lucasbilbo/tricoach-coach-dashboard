@@ -75,8 +75,22 @@ const TSS_POR_HORA_SIN_FC = { swim: 55, bike: 50, run: 65, strength: 40 }
 //  - sin FC + disciplina de entrenamiento → duración × TSS/hora (estimado:true)
 //  - 'other' o sin datos → { tss:null }
 // El llamante redondea. `estimado` permite marcarlo en el UI.
-function cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina) {
+// TSS por POTENCIA (bici con medidor): horas × IF² × 100, con IF = NP / FTP.
+// Solo si la actividad trae potencia real de un medidor (`device_watts`, no la
+// estimada de Strava), potencia normalizada y el atleta tiene FTP.
+function tssPotencia(movingTimeSec, potNormalizada, ftp) {
+  if (!movingTimeSec || !(potNormalizada > 0) || !(ftp > 0)) return null
+  const IF = potNormalizada / ftp
+  return (movingTimeSec / 3600) * IF * IF * 100
+}
+
+// potencia = { np, ftp, medidor } (opcional): solo aplica a la bici.
+function cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina, potencia) {
   if (disciplina === 'other') return { tss: null, estimado: false }
+  if (disciplina === 'bike' && potencia && potencia.medidor) {
+    const pw = tssPotencia(movingTimeSec, potencia.np, potencia.ftp)
+    if (pw != null) return { tss: pw, estimado: false, fuente: 'potencia' }
+  }
   const hr = tssEstimado(movingTimeSec, fcMedia, fcMax)
   if (hr != null) return { tss: hr, estimado: false }
   const factor = TSS_POR_HORA_SIN_FC[disciplina]
@@ -84,7 +98,12 @@ function cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina) {
   return { tss: null, estimado: false }
 }
 
+// Datos de potencia de una actividad de Strava para cargaActividad (ftp del atleta).
+function potenciaDe(act, ftp) {
+  return { np: act.weighted_average_watts, ftp, medidor: !!act.device_watts }
+}
+
 module.exports = {
-  round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, cargaActividad,
+  round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, tssPotencia, potenciaDe, cargaActividad,
   fechaMadrid, TSS_POR_HORA_SIN_FC, FC_MAX_DEFAULT,
 }

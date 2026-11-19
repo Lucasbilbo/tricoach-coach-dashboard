@@ -10,7 +10,8 @@ const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, fechaMadrid } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, potenciaDe, fechaMadrid } = require('./lib/metrics')
+const { leerFtp } = require('./lib/potencia')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -91,7 +92,7 @@ function transformarVueltas(laps, disciplina) {
   }))
 }
 
-function transformarActividad(act, fcMax) {
+function transformarActividad(act, fcMax, ftp = null) {
   const disciplina = mapDisciplina(act.sport_type || act.type)
   const distanciaKm = act.distance ? round(act.distance / 1000, 2) : null
   const duracionMovMin = act.moving_time ? round(act.moving_time / 60, 1) : null
@@ -99,7 +100,7 @@ function transformarActividad(act, fcMax) {
   // Intensidad SIN redondear para clasificar zona (helper único, ver lib/metrics).
   const intensidad = intensidadPct(act.average_heartrate, fcMax)
   // Carga: hrTSS si hay FC; si no, estimación por disciplina (B2). 'other' → null.
-  const carga = cargaActividad(act.moving_time, act.average_heartrate, fcMax, disciplina)
+  const carga = cargaActividad(act.moving_time, act.average_heartrate, fcMax, disciplina, potenciaDe(act, ftp))
 
   const splits = transformarSplits(act.splits_metric, disciplina)
   const desnivelNeg = splits.reduce(
@@ -246,7 +247,7 @@ exports.handler = async (event) => {
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
     const disciplina = mapDisciplina(actRes.json.sport_type || actRes.json.type)
     return respuesta(200, {
-      actividad: transformarActividad(actRes.json, fcMax),
+      actividad: transformarActividad(actRes.json, fcMax, await leerFtp(supabaseGet, supabaseHost, SERVICE_KEY, athleteId)),
       vueltas: transformarVueltas(laps, disciplina),
     })
   } catch (err) {
