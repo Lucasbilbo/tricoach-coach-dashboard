@@ -20,7 +20,7 @@ import {
   ESTOMAGO, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
   normalizarTomado, resumenPlan, resumenTomado, tienePlan, tieneTomado,
 } from '../lib/nutricion'
-import { planEfectivo } from '../lib/productosNutricion'
+import { itemsDe, planEfectivo, textoReceta } from '../lib/productosNutricion'
 import { duracionPrevista } from '../lib/tssPrevisto'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
@@ -240,10 +240,20 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                 />
               </>
             ) : hayPlan ? (
-              <p style={{ margin: 0, fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.45 }}>
-                <span style={{ fontFamily: FONTS.mono }}>{resumenPlan(inicial, minutos)}</span>
-                {inicial.notas ? <span style={{ color: COLORS.textSecondary }}> · {inicial.notas}</span> : null}
-              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p style={{ margin: 0, fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.45 }}>
+                  <span style={{ fontFamily: FONTS.mono }}>{resumenPlan(inicial, minutos)}</span>
+                  {inicial.notas ? <span style={{ color: COLORS.textSecondary }}> · {inicial.notas}</span> : null}
+                </p>
+                {itemsDe(inicial).map((it, i) => {
+                  const receta = textoReceta(it)
+                  return receta ? (
+                    <p key={i} style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+                      {it.nombre}, cada uno: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{receta}</span>
+                    </p>
+                  ) : null
+                })}
+              </div>
             ) : (
               <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>No había plan de nutrición.</p>
             )}

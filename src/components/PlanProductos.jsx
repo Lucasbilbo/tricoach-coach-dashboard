@@ -12,7 +12,7 @@ import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from
 import { LIMITE_NOTAS, resumenNutricion } from '../lib/nutricion'
 import {
   LIMITES_PRODUCTO, MAX_CANTIDAD, TIPOS, detalleProducto, itemDeProducto, normalizarItems, normalizarProducto,
-  porHora, resumenTotales, totalesItems,
+  porHora, resumenTotales, textoReceta, totalesItems,
 } from '../lib/productosNutricion'
 import { useProductosNutricion } from '../hooks/useProductosNutricion'
 import Icon from './ui/Icon'
@@ -60,10 +60,18 @@ function Mezcla({ item, onCambiar }) {
       />
     </label>
   )
+  const receta = textoReceta(item)
   return (
-    <div style={{ display: 'flex', gap: 8, padding: '0 0 10px 12px' }}>
-      {campo('carbohidratos_g', 'Hidratos', 'g / bidón', LIMITES_PRODUCTO.carbohidratos_g)}
-      {campo('sodio_mg', 'Sodio', 'mg / bidón', LIMITES_PRODUCTO.sodio_mg)}
+    <div style={{ padding: '0 0 10px 12px' }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {campo('carbohidratos_g', 'Hidratos', 'g / bidón', LIMITES_PRODUCTO.carbohidratos_g)}
+        {campo('sodio_mg', 'Sodio', 'mg / bidón', LIMITES_PRODUCTO.sodio_mg)}
+      </div>
+      {receta && (
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+          Cada bidón: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{receta}</span>
+        </p>
+      )}
     </div>
   )
 }

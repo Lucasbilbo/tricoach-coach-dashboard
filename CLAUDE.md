@@ -289,7 +289,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   sesión (maltodextrina + fructosa + sales). Lo tomado sigue siendo en g/h.
   UI en `PlanProductos.jsx` (+/− por producto, totales, gestor de productos);
   datos en `productosApi.js` (caché 5 min) y `hooks/useProductosNutricion.js`.
-  Tests: `test/productos-nutricion.test.js`.
+  **Receta del bidón** (`recetaBidon`/`textoReceta`): de los hidratos y el sodio
+  del bidón salen los GRAMOS a pesar: maltodextrina + fructosa en 2:1 (la que
+  usa Lucas; constante `RATIO_MALTO_FRUCTOSA`), con maltodextrina HSN 95 g
+  hidratos/100 g, fructosa HSN 100 g/100 g y sales Evolytes 355,7 mg de sodio
+  por 2,5 g (valores de las etiquetas, 2026-11-19). En gramos y no en
+  dosificadores (la etiqueta de la maltodextrina es ambigua). Se ve en el
+  editor (Jon y atleta) y en la vista de solo lectura. Guayaba = 22 g (950 g /
+  36 unidades × 85 %). Tests: `test/productos-nutricion.test.js`.
 - UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
   "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
 - **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
