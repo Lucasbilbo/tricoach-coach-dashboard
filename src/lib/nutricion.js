@@ -10,7 +10,9 @@
 //
 // Sin sugerencias automáticas (decidido 2026-11-19): Jon rellena el plan a mano.
 
-import { itemsDe, normalizarItems, planEfectivo, resumenItems } from './productosNutricion'
+import {
+  itemsDe, normalizarClaves, normalizarItems, planEfectivo, porHora, resumenItems, tomadasValidas, totalesTomados,
+} from './productosNutricion'
 
 export const LIMITES = { carbohidratos_g_h: 150, liquido_ml_h: 1500, sodio_mg_h: 2000 }
 export const LIMITE_NOTAS = 400
@@ -65,7 +67,7 @@ export function etiquetaEstomago(v) {
 }
 
 export const CAMPOS_PLAN = ['carbohidratos_g_h', 'liquido_ml_h', 'sodio_mg_h', 'productos', 'notas']
-export const CAMPOS_TOMADO = ['tomado_carbohidratos_g_h', 'tomado_liquido_ml_h', 'estomago', 'tomado_notas']
+export const CAMPOS_TOMADO = ['tomado_carbohidratos_g_h', 'tomado_liquido_ml_h', 'estomago', 'tomado_items', 'tomado_notas']
 
 const tieneAlgo = (n, campos) => !!n && campos.some((c) => n[c] != null && n[c] !== '')
 export const tienePlan = (n) => tieneAlgo(n, CAMPOS_PLAN)
@@ -79,16 +81,35 @@ export function normalizarTomado(form) {
     tomado_carbohidratos_g_h: cantidad(form?.tomado_carbohidratos_g_h, LIMITES.carbohidratos_g_h),
     tomado_liquido_ml_h: cantidad(form?.tomado_liquido_ml_h, LIMITES.liquido_ml_h),
     estomago: Number.isInteger(est) && est >= 1 && est <= 3 ? est : null,
+    tomado_items: normalizarClaves(form?.tomado_items),
     tomado_notas: notas || null,
   }
-  const vacio = fila.tomado_carbohidratos_g_h == null && fila.tomado_liquido_ml_h == null && fila.estomago == null && !fila.tomado_notas
+  const vacio = fila.tomado_carbohidratos_g_h == null && fila.tomado_liquido_ml_h == null && fila.estomago == null && !fila.tomado_items && !fila.tomado_notas
   return vacio ? null : fila
 }
 
-// "50 de 60 g/h · 500 ml/h · Estómago regular" (con el plan al lado si lo hay)
+// Con lista de unidades marcadas, los g/h y ml/h tomados se CALCULAN de lo que
+// marcó (misma duración que el plan, así la comparación es exacta). Sin
+// marcas, la fila queda como está (planes antiguos: lo escribía a mano).
+export function tomadoEfectivo(n, minutos) {
+  const items = itemsDe(n)
+  if (!n || !items.length || !Array.isArray(n.tomado_items)) return n
+  const ph = porHora(totalesTomados(items, n.tomado_items), minutos)
+  return { ...n, tomado_carbohidratos_g_h: ph ? ph.carbohidratos_g_h : null, tomado_liquido_ml_h: ph ? ph.liquido_ml_h : null }
+}
+
+// Plan y tomado con todo lo calculado (lo que pintan la tarjeta y los avisos)
+export const nutricionEfectiva = (n, minutos) => tomadoEfectivo(planEfectivo(n, minutos), minutos)
+
+// "3/5 · 50 de 60 g/h · 500 ml/h · Estómago regular" (con el plan al lado si lo hay)
 export function resumenTomado(n) {
   if (!tieneTomado(n)) return ''
   const partes = []
+  const items = itemsDe(n)
+  if (items.length && Array.isArray(n.tomado_items)) {
+    const total = items.reduce((t, it) => t + (it.cantidad || 0), 0)
+    partes.push(`${tomadasValidas(items, n.tomado_items).length}/${total}`)
+  }
   const c = n.tomado_carbohidratos_g_h
   if (c != null) {
     partes.push(n.carbohidratos_g_h != null && n.carbohidratos_g_h > 0 ? `${c} de ${n.carbohidratos_g_h} g/h` : `${c} g/h`)

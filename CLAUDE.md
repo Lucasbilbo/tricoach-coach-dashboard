@@ -314,6 +314,18 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   36 unidades × 85 %). Tests: `test/productos-nutricion.test.js`.
 - UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
   "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
+- **Lo tomado, unidad a unidad** (2026-11-20, migración 019 `tomado_items` jsonb;
+  ⚠️ APLICAR 019 ANTES de desplegar: `cargarNutricion` selecciona la columna y
+  sin ella la sección de nutrición desaparece): si el plan lleva productos, el
+  atleta ve la lista de unidades en orden (`unidadesOrdenadas`, claves
+  "<producto>#<n>") y TOCA cada una al tomársela; un toque guarda al momento
+  (cola de guardados, sin botón). Bidón = al terminarlo. El día de la sesión
+  esa lista va ARRIBA y el plan debajo. Los g/h y ml/h tomados se calculan de
+  lo marcado con la misma duración que el plan (`tomadoEfectivo` /
+  `nutricionEfectiva` en `lib/nutricion.js`), así "45 de 88 g/h" y el aviso de
+  < 70 % siguen funcionando; "3/5" en el resumen y Jon ve "Sin tomar: …".
+  Sin productos (planes antiguos) se siguen escribiendo g/h a mano. Claves que
+  ya no existen en el plan se ignoran.
 - **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
   `estomago` (1 mal · 2 regular · 3 bien), `tomado_notas`. Lo apunta el atleta
   desde el día de la sesión (Próximos si es hoy; Hechos y pendientes después);
@@ -361,8 +373,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
-- `supabase/migrations/` — 001–018 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19.
+- `supabase/migrations/` — 001–019 (+ ficheros `PENDIENTE_*` que NO se aplican
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 PENDIENTE de aplicar (2026-11-20).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).

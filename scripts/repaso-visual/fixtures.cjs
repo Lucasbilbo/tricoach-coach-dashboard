@@ -77,6 +77,17 @@ Object.assign(nutricion[1], {
   ],
 })
 
+// Rodillo de hoy: plan con minutos y el atleta ya se ha tomado el primer gel
+nutricion.push({
+  session_id: porDesc('Rodillo Z2').id, athlete_id: A, carbohidratos_g_h: null, liquido_ml_h: null, sodio_mg_h: null, notas: null,
+  productos: [
+    { producto_id: productos[2].id, nombre: 'Gel 45 g', tipo: 'gel', cantidad: 2, minutos: [25, 50], carbohidratos_g: 45, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0 },
+    { producto_id: productos[7].id, nombre: 'Bidón 800', tipo: 'bidon', cantidad: 1, minutos: [0], carbohidratos_g: 40, cafeina_mg: 0, sodio_mg: 600, volumen_ml: 800 },
+  ],
+  tomado_carbohidratos_g_h: null, tomado_liquido_ml_h: null, estomago: null, tomado_items: [`${productos[2].id}#0`], tomado_notas: null,
+  actualizado_por: A, updated_at: new Date().toISOString(),
+})
+
 const tramo = (dia, disciplina, ini, fin) => ({ id: uid(), athlete_id: A, dia_semana: dia, disciplina, inicio_min: ini * 60, fin_min: fin * 60 })
 const dispSemana = [1, 2, 3, 4, 5].flatMap((d) => [tramo(d, 'swim', 7, 8), tramo(d, 'run', 18, 19.5), tramo(d, 'bike', 17.5, 20)])
   .concat([tramo(6, 'bike', 8, 13), tramo(6, 'run', 9, 12), tramo(7, 'run', 9, 11), tramo(7, 'swim', 10, 12)])
