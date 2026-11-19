@@ -7,7 +7,7 @@ import { supabase } from './supabase'
 import { crearCacheValores } from './valueCache'
 import { registrarCache } from './clientCache'
 
-const CAMPOS = 'id, athlete_id, nombre, tipo, carbohidratos_g, cafeina_mg, sodio_mg, volumen_ml, orden'
+const CAMPOS = 'id, athlete_id, nombre, tipo, carbohidratos_g, cafeina_mg, sodio_mg, volumen_ml, receta, orden'
 const cache = crearCacheValores({ ttl: 5 * 60 * 1000 })
 registrarCache(() => cache.clear())
 

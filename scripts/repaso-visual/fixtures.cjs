@@ -56,7 +56,7 @@ const nutricion = [
   { session_id: porDesc('Tirada 21 km').id, athlete_id: A, carbohidratos_g_h: 60, liquido_ml_h: 600, sodio_mg_h: 500, notas: 'Gel cada 30 min, empezando en el 40', tomado_carbohidratos_g_h: null, tomado_liquido_ml_h: null, estomago: null, tomado_notas: null, actualizado_por: C, updated_at: new Date().toISOString() },
 ]
 
-const prod = (orden, nombre, tipo, c, caf, ml) => ({ id: uid(), athlete_id: A, nombre, tipo, carbohidratos_g: c, cafeina_mg: caf, sodio_mg: 0, volumen_ml: ml, orden })
+const prod = (orden, nombre, tipo, c, caf, ml, sodio = 0, receta = null) => ({ id: uid(), athlete_id: A, nombre, tipo, carbohidratos_g: c, cafeina_mg: caf, sodio_mg: sodio, volumen_ml: ml, receta, orden })
 const productos = [
   prod(1, 'Guayaba', 'solido', 20, 0, 0),
   prod(2, 'Gel 30 g', 'gel', 30, 0, 0),
@@ -66,6 +66,8 @@ const productos = [
   prod(6, 'Bidón 500', 'bidon', 0, 0, 500),
   prod(7, 'Bidón 750', 'bidon', 0, 0, 750),
   prod(8, 'Bidón 800', 'bidon', 0, 0, 800),
+  prod(9, 'Bidón natación', 'bidon', 19, 0, 500, 0, { maltodextrina_g: 13.5, fructosa_g: 6.5, sales_g: 0 }),
+  prod(10, 'Bidón rodillo', 'bidon', 46, 0, 800, 356, { maltodextrina_g: 32, fructosa_g: 16, sales_g: 2.5 }),
 ]
 // Plan con productos en la tirada larga (sustituye al de cantidades por hora)
 Object.assign(nutricion[1], {
@@ -82,7 +84,7 @@ nutricion.push({
   session_id: porDesc('Rodillo Z2').id, athlete_id: A, carbohidratos_g_h: null, liquido_ml_h: null, sodio_mg_h: null, notas: null,
   productos: [
     { producto_id: productos[2].id, nombre: 'Gel 45 g', tipo: 'gel', cantidad: 2, minutos: [25, 50], carbohidratos_g: 45, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0 },
-    { producto_id: productos[7].id, nombre: 'Bidón 800', tipo: 'bidon', cantidad: 1, minutos: [0], carbohidratos_g: 40, cafeina_mg: 0, sodio_mg: 600, volumen_ml: 800 },
+    { producto_id: productos[9].id, nombre: 'Bidón rodillo', tipo: 'bidon', cantidad: 1, minutos: [0], carbohidratos_g: 46, cafeina_mg: 0, sodio_mg: 356, volumen_ml: 800, receta: { maltodextrina_g: 32, fructosa_g: 16, sales_g: 2.5 } },
   ],
   tomado_carbohidratos_g_h: null, tomado_liquido_ml_h: null, estomago: null, tomado_items: [`${productos[2].id}#0`], tomado_notas: null,
   actualizado_por: A, updated_at: new Date().toISOString(),
