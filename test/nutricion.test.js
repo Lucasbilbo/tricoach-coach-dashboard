@@ -22,7 +22,7 @@ test('segundosPrevistos: pasos por distancia con el ritmo de referencia', () => 
 test('normalizar: vacío → null; fuera de rango → null; notas recortadas', () => {
   assert.equal(normalizarNutricion({ carbohidratos_g_h: '', notas: '  ' }), null)
   assert.deepEqual(normalizarNutricion({ carbohidratos_g_h: '60', liquido_ml_h: 5000, sodio_mg_h: -1, notas: ' gel min 40 ' }), {
-    carbohidratos_g_h: 60, liquido_ml_h: null, sodio_mg_h: null, notas: 'gel min 40',
+    carbohidratos_g_h: 60, liquido_ml_h: null, sodio_mg_h: null, productos: null, notas: 'gel min 40',
   })
   assert.equal(normalizarNutricion({ carbohidratos_g_h: 0 }).carbohidratos_g_h, 0)
   assert.equal(normalizarNutricion({ notas: 'x'.repeat(900) }).notas.length, 400)
