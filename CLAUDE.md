@@ -496,6 +496,18 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   entreno y nutrición. El aviso de reloj (icono ámbar) solo si toca hoy o
   mañana. "¿Cómo te fue?" de hoy es un botón (teal) hasta que hay feedback.
   Títulos de sección (`sectionTitleStyle`) en frase normal, 15 px, Ink.
+- **Panel más corto en móvil (2026-11-19)**:
+  - `SemanaCalendario` en móvil: la rejilla horaria va PLEGADA; el día sale como
+    lista corta de sesiones y un botón «Ver horas y planificar» la abre (medía
+    ~550 px y empujaba «Próximos»). Escritorio no cambia.
+  - `SessionsList`: duplicar y eliminar van en un menú «⋯» (editar queda
+    visible; borrar sin querer con el pulgar). Con 2+ sesiones con entreno sin
+    enviar (hoy en adelante) sale un aviso «N sesiones sin enviar al reloj ·
+    Enviar todas» (envía en serie a `send-to-intervals`); la tarjeta solo pone
+    «Sin enviar». Estado de sesión pasada sin actividad: «Sin hacer» (igual que
+    el atleta), ya no «Pendiente».
+  - `PlanProductos`: solo se ven los productos con cantidad > 0; el resto, en
+    «Añadir producto». «Editar despensa» abre el gestor.
 - Pendiente (decidido no hacer aún): copiar semana entera, avisar al coach
   cuando el atleta cambia su disponibilidad.
 
