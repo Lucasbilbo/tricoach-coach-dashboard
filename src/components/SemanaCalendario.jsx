@@ -123,6 +123,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
   const [destino, setDestino] = useState(null) // { fecha, hora }
   const [hoja, setHoja] = useState(null) // sesión en la hoja "Mover"
   const [diaMovil, setDiaMovil] = useState(null)
+  const [horasAbiertas, setHorasAbiertas] = useState(false) // móvil: rejilla horaria plegada por defecto
 
   // La línea de "ahora" y lo que ya ha pasado se refrescan cada minuto.
   useEffect(() => {
@@ -380,21 +381,52 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
           })}
         </div>
 
-        {sueltas.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: 11, color: COLORS.textTertiary }}>Sin hora</span>
-            {sueltas.map((s) => (
-              <Tarjeta key={s.id} sesion={s} aviso={avisoDe(s)} movidaPor={nombreMovida(s)} onClick={() => abrir(s)} compacta />
-            ))}
+        {/* Plegado: el día en una lista corta (la rejilla horaria mide ~550 px y
+            empujaba "Próximos" fuera de la pantalla). Se abre para ver las horas
+            o planificar a una hora concreta. */}
+        {!horasAbiertas && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+            {inf.delDia.length === 0 ? (
+              <span style={{ fontSize: 13, color: COLORS.textTertiary }}>
+                {inf.libre ? 'Día libre' : inf.sinActividad ? 'Sin disponibilidad' : 'Sin sesiones'}
+              </span>
+            ) : (
+              [...inf.delDia]
+                .sort((x, z) => (x.hora_inicio_min ?? -1) - (z.hora_inicio_min ?? -1))
+                .map((s) => <Tarjeta key={s.id} sesion={s} aviso={avisoDe(s)} movidaPor={nombreMovida(s)} onClick={() => abrir(s)} compacta />)
+            )}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: `${ANCHO_HORAS}px minmax(0, 1fr)`, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 12, padding: '10px 8px 10px 0', opacity: inf.pasado ? 0.6 : 1 }}>
-          {ejeHoras()}
-          {columna(dia, sel, inf, true)}
-        </div>
-        {inf.pulsable && (
-          <p style={{ margin: '6px 0 0', fontSize: 11.5, color: COLORS.textTertiary }}>Toca una hora libre para planificar.</p>
+        <button
+          type="button"
+          onClick={() => setHorasAbiertas((v) => !v)}
+          aria-expanded={horasAbiertas}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', padding: '8px 0', minHeight: 36, color: COLORS.textSecondary, fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}
+        >
+          <Icon name="chevronDown" size={16} style={{ transform: horasAbiertas ? 'rotate(180deg)' : 'none' }} />
+          {horasAbiertas ? 'Ocultar horas' : inf.pulsable ? 'Ver horas y planificar' : 'Ver horas'}
+        </button>
+
+        {horasAbiertas && (
+          <>
+            {sueltas.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                <span style={{ fontSize: 11, color: COLORS.textTertiary }}>Sin hora</span>
+                {sueltas.map((s) => (
+                  <Tarjeta key={s.id} sesion={s} aviso={avisoDe(s)} movidaPor={nombreMovida(s)} onClick={() => abrir(s)} compacta />
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: `${ANCHO_HORAS}px minmax(0, 1fr)`, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 12, padding: '10px 8px 10px 0', opacity: inf.pasado ? 0.6 : 1 }}>
+              {ejeHoras()}
+              {columna(dia, sel, inf, true)}
+            </div>
+            {inf.pulsable && (
+              <p style={{ margin: '6px 0 0', fontSize: 11.5, color: COLORS.textTertiary }}>Toca una hora libre para planificar.</p>
+            )}
+          </>
         )}
         {hojaMover}
       </div>
