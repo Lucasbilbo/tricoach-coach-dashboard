@@ -104,6 +104,7 @@ const db = {
   sesion_feedback: feedback,
   sesion_nutricion: nutricion,
   atleta_productos_nutricion: productos,
+  atleta_potencia: [{ athlete_id: A, potenciometro: true, ftp_w: 230, ftp_fecha: fecha(-10), actualizado_por: C, updated_at: new Date().toISOString() }],
   atleta_disponibilidad_semana: dispSemana,
   atleta_disponibilidad_fecha: [{ id: uid(), athlete_id: A, fecha: fecha(4), tipo: 'no_disponible', disciplina: null, inicio_min: null, fin_min: null, nota: 'Viaje' }],
   coach_plantillas: [],
