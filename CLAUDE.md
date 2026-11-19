@@ -315,8 +315,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
   "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
 - **Lo tomado, unidad a unidad** (2026-11-20, migración 019 `tomado_items` jsonb;
-  ⚠️ APLICAR 019 ANTES de desplegar: `cargarNutricion` selecciona la columna y
-  sin ella la sección de nutrición desaparece): si el plan lleva productos, el
+  aplicada en producción; `cargarNutricion` selecciona la columna y
+  sin ella la sección de nutrición desaparecería): si el plan lleva productos, el
   atleta ve la lista de unidades en orden (`unidadesOrdenadas`, claves
   "<producto>#<n>") y TOCA cada una al tomársela; un toque guarda al momento
   (cola de guardados, sin botón). Bidón = al terminarlo. El día de la sesión
@@ -374,7 +374,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
 - `supabase/migrations/` — 001–019 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 PENDIENTE de aplicar (2026-11-20).
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 aplicada 2026-11-20.
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).
