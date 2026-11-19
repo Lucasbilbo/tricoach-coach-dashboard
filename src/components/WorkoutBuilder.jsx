@@ -21,7 +21,7 @@ import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import { CamposPlanNutricion } from './NutricionSesion'
 import { duracionPrevista } from '../lib/tssPrevisto'
-import { aplicarSugerencia, formPlanDe, normalizarNutricion, resumenNutricion, sugerirNutricion, tienePlan } from '../lib/nutricion'
+import { formPlanDe, normalizarNutricion, resumenNutricion, tienePlan } from '../lib/nutricion'
 import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -440,11 +440,6 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setEnviando(false)
     }
   }
-
-  // Sugerencia de nutrición con lo que lleva el formulario ahora mismo
-  const sugerenciaNutri = form.disciplina
-    ? sugerirNutricion({ disciplina: form.disciplina, workout_steps: { bloques: form.bloques }, duracion_min: duracionFinal })
-    : null
 
   // incluirNotas:true SOLO aquí (el coach debe ver que las escribió). El envío
   // real a Garmin las omite siempre — ver send-to-intervals.js.
@@ -902,11 +897,6 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                       form={nutri}
                       onCambiar={(campo, valor) => {
                         setNutri((f) => ({ ...f, [campo]: valor }))
-                        setNutriSucio(true)
-                      }}
-                      sugerencia={sugerenciaNutri}
-                      onUsarSugerencia={() => {
-                        setNutri((f) => aplicarSugerencia(f, sugerenciaNutri))
                         setNutriSucio(true)
                       }}
                     />

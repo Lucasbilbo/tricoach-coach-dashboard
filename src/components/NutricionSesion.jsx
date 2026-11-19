@@ -2,7 +2,8 @@
 // (SessionsList) y el atleta (/home). Datos en sesion_nutricion (migración
 // 017); lógica pura en lib/nutricion.js.
 //
-// - PLAN (hidratos/líquido/sodio por hora + cómo tomarlo): lo editan los dos.
+// - PLAN (hidratos/líquido/sodio por hora + cómo tomarlo): lo editan los dos,
+//   sin sugerencias automáticas (decidido 2026-11-19: lo rellena Jon).
 //   En sesiones pasadas el atleta lo ve, no lo edita (ya no tiene sentido).
 // - LO TOMADO (+ qué tal le sentó): lo apunta el atleta desde el día de la
 //   sesión; Jon lo ve al lado del plan, con aviso si le sentó mal o comió
@@ -15,8 +16,8 @@ import { useState } from 'react'
 import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { hoyMadrid } from '../lib/chartUtils'
 import {
-  ESTOMAGO, LIMITE_NOTAS, LIMITE_NOTAS_TOMADO, LIMITES, aplicarSugerencia, avisoTomado, formPlanDe, formatDuracion, normalizarNutricion,
-  normalizarTomado, resumenNutricion, resumenTomado, sugerirNutricion, tienePlan, tieneTomado, totalesNutricion,
+  ESTOMAGO, LIMITE_NOTAS, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
+  normalizarTomado, resumenNutricion, resumenTomado, tienePlan, tieneTomado,
 } from '../lib/nutricion'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
@@ -70,22 +71,11 @@ function CamposNumero({ campos, form, onCambiar }) {
   )
 }
 
-// Campos del PLAN (sugerencia + cantidades + cómo tomarlo). Compartido con el
-// creador de sesiones (WorkoutBuilder).
-export function CamposPlanNutricion({ form, onCambiar, sugerencia, onUsarSugerencia }) {
+// Campos del PLAN (cantidades + cómo tomarlo), en blanco para que los rellene
+// el coach. Compartido con el creador de sesiones (WorkoutBuilder).
+export function CamposPlanNutricion({ form, onCambiar }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {sugerencia && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
-          <span style={{ flex: '1 1 220px', lineHeight: 1.45 }}>
-            Sugerencia (~{formatDuracion(sugerencia.minutos)}{sugerencia.alta ? ', con intensidad' : ''}):{' '}
-            <span style={{ color: COLORS.textPrimary }}>{resumenNutricion(sugerencia) || 'nada'}</span>. {sugerencia.motivo}
-          </span>
-          <button type="button" onClick={onUsarSugerencia} style={{ ...ghostButtonStyle, padding: '6px 12px', fontSize: 13 }}>
-            Usar sugerencia
-          </button>
-        </div>
-      )}
       <CamposNumero campos={CAMPOS_PLAN_UI} form={form} onCambiar={onCambiar} />
       <label style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={etiqueta}>Cómo tomarlo</span>
@@ -154,19 +144,16 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   const editaPlan = !esAtleta || sesion.fecha >= hoy
   const apuntaTomado = esAtleta && yaLlego
 
-  const sugerencia = sugerirNutricion(sesion)
   const filaPlan = normalizarNutricion(plan)
   const filaTomado = normalizarTomado(tomado)
-  const totales = hayPlan && sugerencia ? totalesNutricion(inicial, sugerencia.minutos) : null
   const editadoPorOtro = inicial?.actualizado_por && inicial.actualizado_por !== uid
   const aviso = !esAtleta ? avisoTomado(inicial) : null
 
-  // Atleta y sesión futura sin plan: solo merece la pena si hay algo que sugerir
-  // Solo si hay que COMER algo (hidratos o sales): "agua según sed" en un
-  // rodaje de 45' llenaba la lista del atleta de filas que no aportan.
-  const sugerenciaUtil = sugerencia && (sugerencia.carbohidratos_g_h || sugerencia.sodio_mg_h)
-  if (esAtleta && !yaLlego && !inicial && !sugerenciaUtil) return null
-  if (!sugerencia && !inicial && sesion.disciplina === 'other') return null
+  // Sin sugerencias automáticas: el plan lo rellena Jon. El atleta no ve la
+  // línea en sesiones futuras hasta que haya plan (así no llena su lista de filas
+  // vacías); desde el día de la sesión sí, para apuntar lo que tomó.
+  if (esAtleta && !yaLlego && !inicial) return null
+  if (!inicial && sesion.disciplina === 'other') return null
 
   const cambiarPlan = (campo, valor) => {
     setPlan((f) => ({ ...f, [campo]: valor }))
@@ -220,7 +207,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   } else if (apuntaTomado) {
     resumenCabecera = <span style={{ color: COLORS.textSecondary }}>¿qué tomaste?</span>
   } else {
-    resumenCabecera = <span style={{ color: COLORS.textSecondary }}>{esAtleta ? 'ver sugerencia' : 'sin plan'}</span>
+    resumenCabecera = <span style={{ color: COLORS.textSecondary }}>{'sin plan'}</span>
   }
 
   return (
@@ -248,25 +235,9 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           {/* ── Plan ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {apuntaTomado && <p style={subtitulo}>Plan</p>}
-            {totales && (
-              <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
-                Para ~{formatDuracion(sugerencia.minutos)} {sesion.fecha < hoy ? 'tocaba llevar' : 'lleva'}
-                {totales.gramos ? <> <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{totales.gramos} g</span> de hidratos</> : null}
-                {totales.gramos && totales.mililitros ? ' y' : ''}
-                {totales.mililitros ? <> <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{(totales.mililitros / 1000).toLocaleString('es-ES', { maximumFractionDigits: 2 })} l</span> de líquido</> : null}
-              </p>
-            )}
             {editaPlan ? (
               <>
-                <CamposPlanNutricion
-                  form={plan}
-                  onCambiar={cambiarPlan}
-                  sugerencia={sugerencia}
-                  onUsarSugerencia={() => {
-                    setPlan((f) => aplicarSugerencia(f, sugerencia))
-                    setPlanSucio(true)
-                  }}
-                />
+                <CamposPlanNutricion form={plan} onCambiar={cambiarPlan} />
                 <Botonera
                   puedeGuardar={!!filaPlan && planSucio}
                   guardando={guardando === 'plan'}
@@ -354,11 +325,6 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           )}
 
           {error && <p style={{ color: COLORS.error, fontSize: 13, margin: 0 }}>{error}</p>}
-          {editaPlan && (
-            <p style={{ margin: 0, fontSize: 12, color: COLORS.textTertiary }}>
-              Orientativo. Ajústalo a lo que toleras y prueba en entreno lo que usarás en carrera.
-            </p>
-          )}
         </div>
       )}
     </div>
