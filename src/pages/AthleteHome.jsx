@@ -22,7 +22,7 @@ import AgendaAtleta from '../components/AgendaAtleta'
 import { formatHora } from '../lib/disponibilidad'
 import { cargarFeedback } from '../lib/feedbackApi'
 import { resumenFeedback } from '../lib/feedback'
-import { FeedbackEditor } from '../components/FeedbackSesion'
+import { FeedbackEditor, FeedbackRapido } from '../components/FeedbackSesion'
 import { cargarNutricion } from '../lib/nutricionApi'
 import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
@@ -685,8 +685,6 @@ export default function AthleteHome() {
                               <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span> · {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
                               {fb ? (
                                 <span style={{ color: COLORS.textPrimary }}> · {resumenFeedback(fb) || 'Feedback enviado'}</span>
-                              ) : estado === ESTADO.completada ? (
-                                <span style={{ color: COLORS.textPrimary }}> · Cuenta cómo fue</span>
                               ) : null}
                             </span>
                           </span>
@@ -695,6 +693,12 @@ export default function AthleteHome() {
                             {estado === ESTADO.completada && <Cumplimiento sesion={sesion} actividad={asignacion.get(sesion.id)} />}
                           </span>
                         </button>
+                        {/* Hecho y sin feedback: esfuerzo en un toque, sin abrir la fila */}
+                        {!abierta && !fb && estado === ESTADO.completada && (
+                          <div style={{ padding: '0 16px 12px 31px' }}>
+                            <FeedbackRapido sesion={sesion} athleteId={userId} onCambio={actualizarFeedback} />
+                          </div>
+                        )}
                         {abierta && (
                           <div style={{ padding: '0 16px 14px 31px' }}>
                             <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />
