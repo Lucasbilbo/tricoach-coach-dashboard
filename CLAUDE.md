@@ -287,6 +287,15 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   columnas `*_g_h` solo quedan para planes antiguos y se anulan al guardar con
   productos. Bidones: hidratos y sodio de la mezcla se escriben POR BIDÓN en la
   sesión (maltodextrina + fructosa + sales). Lo tomado sigue siendo en g/h.
+  **Minuto de cada unidad** (2026-11-19, sin migración: va dentro del jsonb):
+  cada item lleva `minutos: [30, 60]` (uno por unidad, `null` = sin hora, máx.
+  720; se recorta a `cantidad`). Jon los escribe bajo cada producto ("Tomar en el
+  minuto"; en bidones "Empezar en el minuto"); «Repartir» propone un reparto
+  parejo (`repartirMinutos`: geles entre inicio y final, bidones desde el 0) que
+  él cambia — nunca se aplica solo. `LineaTiempo` (PlanProductos.jsx) ordena
+  todo por minuto ("Min 40 · Gel 45 g · 0:40" a partir de 60), apunta aparte lo
+  "sin hora" y marca en ámbar lo que cae después del final. Se ve en el editor
+  (Jon y atleta) y en la vista de solo lectura. NO va al reloj (misma regla).
   UI en `PlanProductos.jsx` (+/− por producto, totales, gestor de productos);
   datos en `productosApi.js` (caché 5 min) y `hooks/useProductosNutricion.js`.
   **Receta del bidón** (`recetaBidon`/`textoReceta`): de los hidratos y el sodio

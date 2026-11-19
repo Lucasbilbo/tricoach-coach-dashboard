@@ -11,8 +11,8 @@ import { useState } from 'react'
 import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { LIMITE_NOTAS, resumenNutricion } from '../lib/nutricion'
 import {
-  LIMITES_PRODUCTO, MAX_CANTIDAD, TIPOS, detalleProducto, itemDeProducto, normalizarItems, normalizarProducto,
-  porHora, resumenTotales, textoReceta, totalesItems,
+  LIMITES_PRODUCTO, MAX_CANTIDAD, MAX_MINUTO, TIPOS, detalleProducto, itemDeProducto, lineaTiempo, minutoComoHora,
+  normalizarItems, normalizarProducto, porHora, repartirMinutos, resumenTotales, textoReceta, totalesItems,
 } from '../lib/productosNutricion'
 import { useProductosNutricion } from '../hooks/useProductosNutricion'
 import Icon from './ui/Icon'
@@ -70,6 +70,71 @@ function Mezcla({ item, onCambiar }) {
       {receta && (
         <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
           Cada bidón: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{receta}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+// Un minuto por cada unidad del item ("Tomar en el minuto": 30 · 60 · 90).
+// Opcional. «Repartir» propone un reparto parejo que Jon puede cambiar.
+function Momentos({ item, minutos, onCambiar }) {
+  const n = Number(item.cantidad) || 0
+  const valores = Array.from({ length: n }, (_, i) => item.minutos?.[i] ?? '')
+  const poner = (i, v) => onCambiar(valores.map((x, j) => (j === i ? v : x)))
+  const sugerido = minutos > 0 ? repartirMinutos(n, minutos, item.tipo) : []
+  return (
+    <div style={{ padding: '0 0 10px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <span style={{ ...etiqueta, margin: 0, fontWeight: 500 }}>{item.tipo === 'bidon' ? 'Empezar en el minuto' : 'Tomar en el minuto'}</span>
+        {sugerido.length > 0 && (
+          <button type="button" onClick={() => onCambiar(sugerido)} style={{ ...textoBtn, padding: '4px 0', minHeight: 28, fontSize: 12 }}>
+            Repartir
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {valores.map((v, i) => (
+          <input
+            key={i}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={MAX_MINUTO}
+            value={v}
+            placeholder={n > 1 ? `${i + 1}º` : 'min'}
+            aria-label={`${item.nombre}${n > 1 ? ` nº ${i + 1}` : ''}, minuto`}
+            onChange={(e) => poner(i, e.target.value)}
+            style={{ ...inputStyle, fontFamily: FONTS.mono, padding: '8px 10px', width: 72, flex: '0 0 auto' }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Orden en el que se toma todo: "Min 40 · Gel 45 g". Vacío si nadie tiene minuto.
+export function LineaTiempo({ items, minutos }) {
+  const { eventos, sinHora } = lineaTiempo(items, minutos)
+  if (!eventos.length) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <p style={{ ...etiqueta, margin: 0 }}>Cuándo tomarlo</p>
+      {eventos.map((e, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13, lineHeight: 1.4 }}>
+          <span style={{ width: 62, flexShrink: 0, fontFamily: FONTS.mono, color: e.pasa ? COLORS.warning : COLORS.textPrimary }}>
+            Min {e.min}
+          </span>
+          <span style={{ color: COLORS.textPrimary }}>
+            {e.nombre}
+            {e.min >= 60 && <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textTertiary }}> · {minutoComoHora(e.min)}</span>}
+            {e.pasa && <span style={{ fontSize: 11, color: COLORS.warning }}> · después del final</span>}
+          </span>
+        </div>
+      ))}
+      {sinHora.length > 0 && (
+        <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+          Sin hora: {sinHora.map((s) => `${s.cantidad} × ${s.nombre}`).join(' · ')}
         </p>
       )}
     </div>
@@ -219,7 +284,9 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
       return
     }
     const cantidad = Math.min(MAX_CANTIDAD, Math.max(0, (Number(actual.cantidad) || 0) + delta))
-    poner(cantidad ? items.map((i) => (i === actual ? { ...i, cantidad } : i)) : items.filter((i) => i !== actual))
+    // Si baja la cantidad, se van también los minutos de las unidades que sobran
+    const recortar = (i) => ({ ...i, cantidad, ...(Array.isArray(i.minutos) ? { minutos: i.minutos.slice(0, cantidad) } : {}) })
+    poner(cantidad ? items.map((i) => (i === actual ? recortar(i) : i)) : items.filter((i) => i !== actual))
   }
   const cambiarItem = (item, campo, valor) => poner(items.map((i) => (i === item ? { ...i, [campo]: valor } : i)))
   const quitarItem = (item) => poner(items.filter((i) => i !== item))
@@ -264,6 +331,7 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
                     <Stepper cantidad={cantidad} nombre={p.nombre} onMenos={() => cambiarCantidad(p, -1)} onMas={() => cambiarCantidad(p, 1)} />
                   </div>
                   {item && p.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => cambiarItem(item, campo, valor)} />}
+                  {item && cantidad > 0 && <Momentos item={item} minutos={minutos} onCambiar={(v) => cambiarItem(item, 'minutos', v)} />}
                 </div>
               )
             })}
@@ -290,6 +358,8 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
               )}
             </p>
           )}
+
+          <LineaTiempo items={limpios} minutos={minutos} />
 
           {gestorAbierto ? (
             <Gestor productos={productos} anadir={anadir} editar={editar} quitar={quitar} onCerrar={() => setGestorAbierto(false)} />

@@ -24,7 +24,7 @@ import { itemsDe, planEfectivo, textoReceta } from '../lib/productosNutricion'
 import { duracionPrevista } from '../lib/tssPrevisto'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
-import PlanProductos from './PlanProductos'
+import PlanProductos, { LineaTiempo } from './PlanProductos'
 
 const etiqueta = { fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
 const subtitulo = { fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }
@@ -245,6 +245,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                   <span style={{ fontFamily: FONTS.mono }}>{resumenPlan(inicial, minutos)}</span>
                   {inicial.notas ? <span style={{ color: COLORS.textSecondary }}> · {inicial.notas}</span> : null}
                 </p>
+                <LineaTiempo items={itemsDe(inicial)} minutos={minutos} />
                 {itemsDe(inicial).map((it, i) => {
                   const receta = textoReceta(it)
                   return receta ? (
