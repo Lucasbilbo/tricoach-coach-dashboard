@@ -388,6 +388,13 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   interruptor + FTP → TSS = horas × (NP/FTP)² × 100 (`tssPotencia`, `fuente:'potencia'`,
   `tss_por_potencia`); si no, hrTSS. TSS previsto: zonas Coggan (Z1 45…Z5 113 %).
 - Assioma Uno = medidor de un pedal (×2): sin balance L/R; hay que calibrar (offset).
+- **Pendiente (potenciómetro, desde 2026-11-20)**:
+  - Hablar con Jon: test de FTP. Hasta que haya FTP en `atleta_potencia`, el TSS de bici sigue por pulso.
+  - Con el FTP: ponerlo en la app (plegable «Bici») Y en Intervals.icu (ajustes de ciclismo); la app no lo sincroniza (posible mejora: subirlo a Intervals por API).
+  - Activar el interruptor del atleta; reenviar con «Guardar y actualizar reloj» las sesiones de bici ya enviadas.
+  - Calibrar (offset a cero) y emparejar el Assioma Uno con el Garmin; es de un solo pedal (×2, sin balance L/R).
+  - Revisar tras las primeras salidas: que `device_watts`/NP lleguen de Strava y que el TSS por potencia cuadre con el de pulso.
+  - Ideas sin hacer: eficiencia aeróbica (potencia ÷ pulso), bienestar de Intervals (sueño/FC reposo/HRV), alerta de molestias al coach.
 
 ## Estructura
 
