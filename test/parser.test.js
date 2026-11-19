@@ -107,3 +107,12 @@ test('natación: zona de ritmo y ritmo llegan a Intervals', () => {
   assert.match(texto('swim', '10x100m Z3'), /- 100mtr Z3 Pace/)
   assert.match(texto('swim', '8x100m 1:45-1:50 rec 20"'), /- 100mtr 1:45-1:50\/100m Pace/)
 })
+
+import { zonasAPotencia } from '../src/components/workout/parser.js'
+test('zonasAPotencia: Z de la escritura rápida pasa a zona de potencia (también en series)', () => {
+  const r = parsearEntreno("10' Z1 + 3x(5' Z4 / 3' Z1)", 'bike')
+  const p = zonasAPotencia(r.bloques)
+  assert.equal(p[0].objetivo_tipo, 'zona_potencia')
+  assert.equal(p[1].pasos[0].objetivo_tipo, 'zona_potencia')
+  assert.equal(p[1].pasos[0].objetivo_valor, 'Z4')
+})

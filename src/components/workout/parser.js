@@ -254,3 +254,10 @@ export function parsearEntreno(texto, disciplina) {
 
   return { bloques, errores }
 }
+
+// Bici de un atleta con potenciómetro: el "Z4" de la escritura rápida es zona de
+// POTENCIA, no de pulso. Recorre bloques y pasos de series.
+export function zonasAPotencia(bloques) {
+  const cambiar = (p) => (p && p.objetivo_tipo === 'zona' ? { ...p, objetivo_tipo: 'zona_potencia' } : p)
+  return (bloques || []).map((b) => (b.tipo === 'repeat' ? { ...b, pasos: (b.pasos || []).map(cambiar) } : cambiar(b)))
+}

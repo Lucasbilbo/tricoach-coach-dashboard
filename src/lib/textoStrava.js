@@ -15,7 +15,8 @@ function cantidad(c, u) {
 function objetivo(tipo, valor) {
   if (!tipo || !valor) return ''
   if (tipo === 'fc') return `${valor}% FC`
-  if (tipo === 'potencia') return `${valor}% pot.`
+  if (tipo === 'potencia') return `${valor}% FTP`
+  if (tipo === 'zona_potencia') return `${valor} potencia`
   return String(valor)
 }
 

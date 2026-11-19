@@ -21,7 +21,8 @@ export function metrosTexto(metros) {
 export function objetivoTexto(tipo, valor) {
   if (!tipo || !valor) return ''
   if (tipo === 'fc') return `${valor}% FC`
-  if (tipo === 'potencia') return `${valor}% pot.`
+  if (tipo === 'potencia') return `${valor}% FTP`
+  if (tipo === 'zona_potencia') return `${valor} pot.`
   return String(valor) // zona (Z2) o ritmo (4:50-5:10)
 }
 

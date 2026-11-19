@@ -12,6 +12,7 @@ import Icon from '../components/ui/Icon'
 import { PageHeader, SectionTitle, Tabs } from '../components/ui/Layout'
 import SelectorPeriodo from '../components/ui/SelectorPeriodo'
 import WorkoutDetail from '../components/WorkoutDetail'
+import PotenciaAjustes from '../components/PotenciaAjustes'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
 import SinStrava from '../components/shared/SinStrava'
@@ -736,6 +737,7 @@ export default function AthleteHome() {
             {/* Conexiones — al fondo */}
             <section style={{ marginTop: 32 }}>
               <SectionTitle>Conexiones</SectionTitle>
+              {userId && <PotenciaAjustes athleteId={userId} uid={userId} />}
               <div style={{ ...cardStyle, padding: '4px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0' }}>
                   <div>

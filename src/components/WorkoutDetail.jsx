@@ -14,7 +14,7 @@ const COLOR_NIVEL = { 1: '#4E6475', 2: '#2FBFAF', 3: '#E8934A', 4: '#E8704F', 5:
 
 function nivelPaso(paso) {
   const v = paso.objetivo_valor
-  if (paso.objetivo_tipo === 'zona' && v) return Math.min(Math.max(Number(String(v).replace(/\D/g, '').charAt(0)) || 1, 1), 5)
+  if ((paso.objetivo_tipo === 'zona' || paso.objetivo_tipo === 'zona_potencia') && v) return Math.min(Math.max(Number(String(v).replace(/\D/g, '').charAt(0)) || 1, 1), 5)
   if (paso.objetivo_tipo === 'fc' && v) {
     const pct = Number(v)
     return pct >= 92 ? 5 : pct >= 85 ? 4 : pct >= 78 ? 3 : pct >= 70 ? 2 : 1
@@ -91,7 +91,8 @@ function formatCant(cant, unidad) {
 function formatObjetivo(tipo, valor) {
   if (!tipo || !valor) return ''
   if (tipo === 'fc') return `${valor}% FC`
-  if (tipo === 'potencia') return `${valor}% pot.`
+  if (tipo === 'potencia') return `${valor}% FTP`
+  if (tipo === 'zona_potencia') return `${valor} pot.`
   if (tipo === 'ritmo') return valor
   return valor
 }

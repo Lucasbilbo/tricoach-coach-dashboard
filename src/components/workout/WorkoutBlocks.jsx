@@ -6,8 +6,10 @@
 // el ancho (antes anchos fijos de 70–110 px: en el móvil se cortaban "Sin
 // objetivo" y "ej: Descanso"), la zona en su propia fila y la etiqueta a lo
 // ancho. Cada paso de una serie lleva su número y su papelera arriba.
+import { useContext } from 'react'
 import { COLORS, FONTS, inputStyle } from '../../lib/theme'
-import { UNIDADES, OBJETIVOS, OBJETIVO_PLACEHOLDER } from './constants'
+import { UNIDADES, OBJETIVOS, OBJETIVOS_BIKE_POTENCIA, OBJETIVO_PLACEHOLDER } from './constants'
+import { PotenciaContext } from './PotenciaContext'
 import Icon from '../ui/Icon'
 import { labelSm, miniBtn, addBtnStyle } from './styles'
 import { MaterialChips, ZonasChips } from './WorkoutChips'
@@ -72,8 +74,10 @@ function CabeceraBloque({ titulo, color, bloque, abierto, onToggle, children }) 
 // Cantidad · unidad · objetivo (· valor) + zona. Compartido por bloque y paso.
 function CamposPaso({ datos, disciplina, onCambio }) {
   const unidades = UNIDADES[disciplina] || UNIDADES.other
-  const objetivos = OBJETIVOS[disciplina] || []
-  const conValor = datos.objetivo_tipo && datos.objetivo_tipo !== 'zona'
+  const bikePotencia = useContext(PotenciaContext)
+  const objetivos = (disciplina === 'bike' && bikePotencia ? OBJETIVOS_BIKE_POTENCIA : OBJETIVOS[disciplina]) || []
+  const esZona = datos.objetivo_tipo === 'zona' || datos.objetivo_tipo === 'zona_potencia'
+  const conValor = datos.objetivo_tipo && !esZona
   return (
     <>
       <div style={rejilla}>
@@ -119,7 +123,7 @@ function CamposPaso({ datos, disciplina, onCambio }) {
           </div>
         )}
       </div>
-      {datos.objetivo_tipo === 'zona' && (
+      {esZona && (
         <div style={{ marginTop: 8 }}>
           <ZonasChips valor={datos.objetivo_valor} onSelect={(z) => onCambio({ objetivo_valor: z })} />
         </div>
