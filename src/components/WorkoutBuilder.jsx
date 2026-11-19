@@ -21,7 +21,7 @@ import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import { CamposPlanNutricion } from './NutricionSesion'
 import { duracionPrevista } from '../lib/tssPrevisto'
-import { formPlanDe, normalizarNutricion, resumenNutricion, tienePlan } from '../lib/nutricion'
+import { formPlanDe, normalizarNutricion, resumenPlan, tienePlan } from '../lib/nutricion'
 import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -874,7 +874,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               Más opciones
               {!masAbierto && (
                 <span style={{ fontWeight: 400, fontSize: 12, color: COLORS.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  · {[form.notas?.trim() ? 'Notas' : null, normalizarNutricion(nutri) ? `Nutrición ${resumenNutricion(normalizarNutricion(nutri)) || 'con notas'}` : null].filter(Boolean).join(' · ') || 'notas y nutrición'}
+                  · {[form.notas?.trim() ? 'Notas' : null, normalizarNutricion(nutri) ? `Nutrición ${resumenPlan(normalizarNutricion(nutri), duracionFinal) || 'con notas'}` : null].filter(Boolean).join(' · ') || 'notas y nutrición'}
                 </span>
               )}
             </button>
@@ -894,6 +894,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   <div style={{ marginBottom: 4 }}>
                     <label style={sectionLabel}>Nutrición</label>
                     <CamposPlanNutricion
+                      athleteId={athleteId}
+                      minutos={duracionFinal}
                       form={nutri}
                       onCambiar={(campo, valor) => {
                         setNutri((f) => ({ ...f, [campo]: valor }))

@@ -2,11 +2,15 @@
 // sesion_nutricion, migración 017). Lógica PURA para node --test; el acceso a
 // datos está en nutricionApi.js.
 //
-// Tres cantidades por hora (carbohidratos g/h, líquido ml/h, sodio mg/h) y una
-// nota libre ("gel en el min 40", "isotónica cada 20'"). Lo editan el coach y
-// el atleta.
+// El plan es una lista de PRODUCTOS (despensa del atleta, productosNutricion.js:
+// "3 × gel 45 g, 2 × bidón 750") y una nota libre ("gel en el min 40"). Los g/h
+// se calculan con la duración (`planEfectivo`). Los planes antiguos guardaban
+// tres cantidades por hora (carbohidratos g/h, líquido ml/h, sodio mg/h) y se
+// siguen mostrando. Lo editan el coach y el atleta.
 //
 // Sin sugerencias automáticas (decidido 2026-11-19): Jon rellena el plan a mano.
+
+import { itemsDe, normalizarItems, planEfectivo, resumenItems } from './productosNutricion'
 
 export const LIMITES = { carbohidratos_g_h: 150, liquido_ml_h: 1500, sodio_mg_h: 2000 }
 export const LIMITE_NOTAS = 400
@@ -21,13 +25,16 @@ const cantidad = (v, max) => {
 // dice nada (la BD rechaza una fila vacía).
 export function normalizarNutricion(form) {
   const notas = typeof form?.notas === 'string' ? form.notas.trim().slice(0, LIMITE_NOTAS) : ''
+  const productos = normalizarItems(form?.productos)
+  // Con productos, las cantidades por hora antiguas dejan de valer (se calculan)
   const fila = {
-    carbohidratos_g_h: cantidad(form?.carbohidratos_g_h, LIMITES.carbohidratos_g_h),
-    liquido_ml_h: cantidad(form?.liquido_ml_h, LIMITES.liquido_ml_h),
-    sodio_mg_h: cantidad(form?.sodio_mg_h, LIMITES.sodio_mg_h),
+    carbohidratos_g_h: productos ? null : cantidad(form?.carbohidratos_g_h, LIMITES.carbohidratos_g_h),
+    liquido_ml_h: productos ? null : cantidad(form?.liquido_ml_h, LIMITES.liquido_ml_h),
+    sodio_mg_h: productos ? null : cantidad(form?.sodio_mg_h, LIMITES.sodio_mg_h),
+    productos,
     notas: notas || null,
   }
-  const vacio = fila.carbohidratos_g_h == null && fila.liquido_ml_h == null && fila.sodio_mg_h == null && !fila.notas
+  const vacio = fila.carbohidratos_g_h == null && fila.liquido_ml_h == null && fila.sodio_mg_h == null && !fila.productos && !fila.notas
   return vacio ? null : fila
 }
 
@@ -57,7 +64,7 @@ export function etiquetaEstomago(v) {
   return ESTOMAGO.find((e) => e.value === v)?.label || ''
 }
 
-export const CAMPOS_PLAN = ['carbohidratos_g_h', 'liquido_ml_h', 'sodio_mg_h', 'notas']
+export const CAMPOS_PLAN = ['carbohidratos_g_h', 'liquido_ml_h', 'sodio_mg_h', 'productos', 'notas']
 export const CAMPOS_TOMADO = ['tomado_carbohidratos_g_h', 'tomado_liquido_ml_h', 'estomago', 'tomado_notas']
 
 const tieneAlgo = (n, campos) => !!n && campos.some((c) => n[c] != null && n[c] !== '')
@@ -109,5 +116,15 @@ export const formPlanDe = (n) => ({
   carbohidratos_g_h: n?.carbohidratos_g_h ?? '',
   liquido_ml_h: n?.liquido_ml_h ?? '',
   sodio_mg_h: n?.sodio_mg_h ?? '',
+  productos: itemsDe(n),
   notas: n?.notas ?? '',
 })
+
+// Resumen del plan para la cabecera: productos si los hay (con los g/h si se
+// sabe la duración) y si no, las cantidades por hora de los planes antiguos.
+export function resumenPlan(n, minutos) {
+  const items = itemsDe(n)
+  if (!items.length) return resumenNutricion(n)
+  const ef = planEfectivo(n, minutos)
+  return [resumenItems(items), ef.carbohidratos_g_h > 0 ? `${ef.carbohidratos_g_h} g/h` : ''].filter(Boolean).join(' · ')
+}

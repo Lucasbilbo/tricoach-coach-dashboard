@@ -277,6 +277,19 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - **Sin sugerencias automáticas** (decidido 2026-11-19, se quitó `sugerirNutricion`
   y el botón "Usar sugerencia"): los campos salen en blanco y los rellena Jon. El
   atleta no ve la línea de Nutrición en sesiones futuras hasta que hay plan.
+- **Despensa por atleta** (2026-11-19, migración 018): tabla
+  `atleta_productos_nutricion` (nombre, tipo gel/sólido/bidón, hidratos g,
+  cafeína mg, sodio mg, volumen ml; los editan atleta y coach, RLS como 017;
+  semilla con los de Lucas). El plan de la sesión es `sesion_nutricion.productos`
+  (jsonb, items COPIADOS del producto con valores por unidad + cantidad: editar la
+  despensa no cambia planes hechos). Los g/h, ml/h y sodio/h se CALCULAN al pintar
+  con la duración prevista (`planEfectivo` en `lib/productosNutricion.js`); las
+  columnas `*_g_h` solo quedan para planes antiguos y se anulan al guardar con
+  productos. Bidones: hidratos y sodio de la mezcla se escriben POR BIDÓN en la
+  sesión (maltodextrina + fructosa + sales). Lo tomado sigue siendo en g/h.
+  UI en `PlanProductos.jsx` (+/− por producto, totales, gestor de productos);
+  datos en `productosApi.js` (caché 5 min) y `hooks/useProductosNutricion.js`.
+  Tests: `test/productos-nutricion.test.js`.
 - UI `NutricionSesion.jsx` (plegable) en la tarjeta de SessionsList (coach) y en
   "Próximos" de /home (atleta). Si la tabla no existe, la sección no se pinta.
 - **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
@@ -326,8 +339,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
   season-validate).
-- `supabase/migrations/` — 001–017 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (desde el SQL Editor; verificadas sus 4 policies).
+- `supabase/migrations/` — 001–018 (+ ficheros `PENDIENTE_*` que NO se aplican
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19.
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).

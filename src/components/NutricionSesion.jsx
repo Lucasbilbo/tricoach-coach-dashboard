@@ -2,8 +2,9 @@
 // (SessionsList) y el atleta (/home). Datos en sesion_nutricion (migración
 // 017); lógica pura en lib/nutricion.js.
 //
-// - PLAN (hidratos/líquido/sodio por hora + cómo tomarlo): lo editan los dos,
-//   sin sugerencias automáticas (decidido 2026-11-19: lo rellena Jon).
+// - PLAN (productos de la despensa del atleta + cómo tomarlo): lo editan los dos,
+//   sin sugerencias automáticas (decidido 2026-11-19: lo rellena Jon). Los g/h
+//   se calculan con la duración de la sesión.
 //   En sesiones pasadas el atleta lo ve, no lo edita (ya no tiene sentido).
 // - LO TOMADO (+ qué tal le sentó): lo apunta el atleta desde el día de la
 //   sesión; Jon lo ve al lado del plan, con aviso si le sentó mal o comió
@@ -16,11 +17,14 @@ import { useState } from 'react'
 import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { hoyMadrid } from '../lib/chartUtils'
 import {
-  ESTOMAGO, LIMITE_NOTAS, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
-  normalizarTomado, resumenNutricion, resumenTomado, tienePlan, tieneTomado,
+  ESTOMAGO, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
+  normalizarTomado, resumenPlan, resumenTomado, tienePlan, tieneTomado,
 } from '../lib/nutricion'
+import { planEfectivo } from '../lib/productosNutricion'
+import { duracionPrevista } from '../lib/tssPrevisto'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
+import PlanProductos from './PlanProductos'
 
 const etiqueta = { fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
 const subtitulo = { fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }
@@ -30,11 +34,6 @@ const textoBtn = {
   minHeight: 36, fontSize: 13, fontWeight: 500, cursor: 'pointer',
 }
 
-const CAMPOS_PLAN_UI = [
-  { campo: 'carbohidratos_g_h', label: 'Hidratos', unidad: 'g/h', paso: 5, max: LIMITES.carbohidratos_g_h },
-  { campo: 'liquido_ml_h', label: 'Líquido', unidad: 'ml/h', paso: 50, max: LIMITES.liquido_ml_h },
-  { campo: 'sodio_mg_h', label: 'Sodio', unidad: 'mg/h', paso: 50, max: LIMITES.sodio_mg_h },
-]
 const CAMPOS_TOMADO_UI = [
   { campo: 'tomado_carbohidratos_g_h', label: 'Hidratos', unidad: 'g/h', paso: 5, max: LIMITES.carbohidratos_g_h },
   { campo: 'tomado_liquido_ml_h', label: 'Líquido', unidad: 'ml/h', paso: 50, max: LIMITES.liquido_ml_h },
@@ -71,25 +70,11 @@ function CamposNumero({ campos, form, onCambiar }) {
   )
 }
 
-// Campos del PLAN (cantidades + cómo tomarlo), en blanco para que los rellene
-// el coach. Compartido con el creador de sesiones (WorkoutBuilder).
-export function CamposPlanNutricion({ form, onCambiar }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <CamposNumero campos={CAMPOS_PLAN_UI} form={form} onCambiar={onCambiar} />
-      <label style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={etiqueta}>Cómo tomarlo</span>
-        <textarea
-          value={form.notas}
-          onChange={(e) => onCambiar('notas', e.target.value)}
-          maxLength={LIMITE_NOTAS}
-          rows={2}
-          placeholder="Ej.: gel en el min 40 y cada 30'; isotónica en el bidón"
-          style={{ ...inputStyle, resize: 'vertical', minHeight: 56, lineHeight: 1.4 }}
-        />
-      </label>
-    </div>
-  )
+// Campos del PLAN: productos de la despensa del atleta + cómo tomarlo, en
+// blanco para que los rellene el coach. Compartido con el creador de sesiones
+// (WorkoutBuilder).
+export function CamposPlanNutricion({ athleteId, form, onCambiar, minutos }) {
+  return <PlanProductos athleteId={athleteId} form={form} onCambiar={onCambiar} minutos={minutos} />
 }
 
 function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, extra }) {
@@ -139,6 +124,9 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   const yaLlego = !!sesion.fecha && sesion.fecha <= hoy
   const esAtleta = quien === 'atleta'
   const hayPlan = tienePlan(inicial)
+  // Duración prevista de la sesión: de ella salen los g/h de los productos
+  const minutos = duracionPrevista(sesion)?.min ?? null
+  const efectivo = planEfectivo(inicial, minutos)
   const hayTomado = tieneTomado(inicial)
   // En una sesión pasada el atleta solo ve el plan; hoy o futuro, lo edita
   const editaPlan = !esAtleta || sesion.fecha >= hoy
@@ -147,7 +135,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   const filaPlan = normalizarNutricion(plan)
   const filaTomado = normalizarTomado(tomado)
   const editadoPorOtro = inicial?.actualizado_por && inicial.actualizado_por !== uid
-  const aviso = !esAtleta ? avisoTomado(inicial) : null
+  const aviso = !esAtleta ? avisoTomado(efectivo) : null
 
   // Sin sugerencias automáticas: el plan lo rellena Jon. El atleta no ve la
   // línea en sesiones futuras hasta que haya plan (así no llena su lista de filas
@@ -201,8 +189,8 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
   if (hayPlan || hayTomado) {
     const partes = []
     // Con lo tomado delante basta: ya lleva el plan al lado ("35 de 60 g/h")
-    if (hayTomado) partes.push(`${esAtleta ? 'tomaste' : 'tomó'} ${resumenTomado(inicial)}`)
-    else partes.push(resumenNutricion(inicial) || 'ver notas')
+    if (hayTomado) partes.push(`${esAtleta ? 'tomaste' : 'tomó'} ${resumenTomado(efectivo)}`)
+    else partes.push(resumenPlan(inicial, minutos) || 'ver notas')
     resumenCabecera = <span style={{ fontFamily: FONTS.mono, fontSize: 12 }}>{partes.join(' · ')}</span>
   } else if (apuntaTomado) {
     resumenCabecera = <span style={{ color: COLORS.textSecondary }}>¿qué tomaste?</span>
@@ -237,7 +225,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
             {apuntaTomado && <p style={subtitulo}>Plan</p>}
             {editaPlan ? (
               <>
-                <CamposPlanNutricion form={plan} onCambiar={cambiarPlan} />
+                <CamposPlanNutricion athleteId={sesion.athlete_id} form={plan} onCambiar={cambiarPlan} minutos={minutos} />
                 <Botonera
                   puedeGuardar={!!filaPlan && planSucio}
                   guardando={guardando === 'plan'}
@@ -253,7 +241,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
               </>
             ) : hayPlan ? (
               <p style={{ margin: 0, fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.45 }}>
-                <span style={{ fontFamily: FONTS.mono }}>{resumenNutricion(inicial)}</span>
+                <span style={{ fontFamily: FONTS.mono }}>{resumenPlan(inicial, minutos)}</span>
                 {inicial.notas ? <span style={{ color: COLORS.textSecondary }}> · {inicial.notas}</span> : null}
               </p>
             ) : (
@@ -317,7 +305,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           {!esAtleta && hayTomado && (
             <div style={{ paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13, lineHeight: 1.5 }}>
               <p style={{ ...subtitulo, marginBottom: 4 }}>Lo que tomó {otroNombre || 'el atleta'}</p>
-              <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 12, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(inicial)}</p>
+              <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 12, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(efectivo)}</p>
               {inicial.tomado_notas && (
                 <p style={{ margin: '4px 0 0', color: COLORS.textPrimary, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>“{inicial.tomado_notas}”</p>
               )}

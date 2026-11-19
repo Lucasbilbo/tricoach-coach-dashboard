@@ -56,6 +56,27 @@ const nutricion = [
   { session_id: porDesc('Tirada 21 km').id, athlete_id: A, carbohidratos_g_h: 60, liquido_ml_h: 600, sodio_mg_h: 500, notas: 'Gel cada 30 min, empezando en el 40', tomado_carbohidratos_g_h: null, tomado_liquido_ml_h: null, estomago: null, tomado_notas: null, actualizado_por: C, updated_at: new Date().toISOString() },
 ]
 
+const prod = (orden, nombre, tipo, c, caf, ml) => ({ id: uid(), athlete_id: A, nombre, tipo, carbohidratos_g: c, cafeina_mg: caf, sodio_mg: 0, volumen_ml: ml, orden })
+const productos = [
+  prod(1, 'Guayaba', 'solido', 20, 0, 0),
+  prod(2, 'Gel 30 g', 'gel', 30, 0, 0),
+  prod(3, 'Gel 45 g', 'gel', 45, 0, 0),
+  prod(4, 'Gel 45 g · cafeína 75 mg', 'gel', 45, 75, 0),
+  prod(5, 'Gel 45 g · cafeína 130 mg', 'gel', 45, 130, 0),
+  prod(6, 'Bidón 500', 'bidon', 0, 0, 500),
+  prod(7, 'Bidón 750', 'bidon', 0, 0, 750),
+  prod(8, 'Bidón 800', 'bidon', 0, 0, 800),
+]
+// Plan con productos en la tirada larga (sustituye al de cantidades por hora)
+Object.assign(nutricion[1], {
+  carbohidratos_g_h: null, liquido_ml_h: null, sodio_mg_h: null,
+  productos: [
+    { producto_id: productos[2].id, nombre: 'Gel 45 g', tipo: 'gel', cantidad: 3, carbohidratos_g: 45, cafeina_mg: 0, sodio_mg: 0, volumen_ml: 0 },
+    { producto_id: productos[4].id, nombre: 'Gel 45 g · cafeína 130 mg', tipo: 'gel', cantidad: 1, carbohidratos_g: 45, cafeina_mg: 130, sodio_mg: 0, volumen_ml: 0 },
+    { producto_id: productos[7].id, nombre: 'Bidón 800', tipo: 'bidon', cantidad: 2, carbohidratos_g: 40, cafeina_mg: 0, sodio_mg: 600, volumen_ml: 800 },
+  ],
+})
+
 const tramo = (dia, disciplina, ini, fin) => ({ id: uid(), athlete_id: A, dia_semana: dia, disciplina, inicio_min: ini * 60, fin_min: fin * 60 })
 const dispSemana = [1, 2, 3, 4, 5].flatMap((d) => [tramo(d, 'swim', 7, 8), tramo(d, 'run', 18, 19.5), tramo(d, 'bike', 17.5, 20)])
   .concat([tramo(6, 'bike', 8, 13), tramo(6, 'run', 9, 12), tramo(7, 'run', 9, 11), tramo(7, 'swim', 10, 12)])
@@ -71,6 +92,7 @@ const db = {
   coach_sessions: sesiones,
   sesion_feedback: feedback,
   sesion_nutricion: nutricion,
+  atleta_productos_nutricion: productos,
   atleta_disponibilidad_semana: dispSemana,
   atleta_disponibilidad_fecha: [{ id: uid(), athlete_id: A, fecha: fecha(4), tipo: 'no_disponible', disciplina: null, inicio_min: null, fin_min: null, nota: 'Viaje' }],
   coach_plantillas: [],
