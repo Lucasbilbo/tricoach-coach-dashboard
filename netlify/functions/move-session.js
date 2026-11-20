@@ -18,6 +18,7 @@
 // pierde; hoy solo a una hora que no ha llegado).
 
 const { verifyAuth, canCoachSession, UUID_REGEX } = require('./lib/auth')
+const { leerAjustes } = require('./lib/potencia')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 const { construirEvento } = require('./lib/intervals-evento')
@@ -68,12 +69,7 @@ const depsReales = {
   },
   // ¿El atleta tiene potenciómetro? (la bici va por potencia); false si falla
   async leerPotenciometro(athleteId) {
-    try {
-      const r = await rest('GET', `atleta_potencia?athlete_id=eq.${athleteId}&select=potenciometro`)
-      return Array.isArray(r.json) && r.json[0]?.potenciometro === true
-    } catch {
-      return false
-    }
+    return (await leerAjustes(async (path) => (await rest('GET', path)).json, athleteId)).potenciometro
   },
   // PATCH con reintentos; true solo si la BD confirma la fila.
   async guardar(id, cambios) {

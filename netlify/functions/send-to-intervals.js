@@ -11,6 +11,7 @@ const { construirEvento } = require('./lib/intervals-evento')
 const { problemaEntreno } = require('./lib/intervals-text.cjs')
 const { intervalsPost, intervalsDelete, eventoBorrado } = require('./lib/intervals-api')
 const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
+const { leerAjustes } = require('./lib/potencia')
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)) }
 
@@ -182,10 +183,7 @@ exports.handler = async (event) => {
     // Evento (texto del reloj, tipo, piscina y hora de inicio si la tiene)
     // Potenciómetro del atleta (tabla atleta_potencia; si falla → pulso, como siempre)
     let bikePotencia = false
-    if (session.disciplina === 'bike') {
-      const pot = await supabaseGet(`atleta_potencia?athlete_id=eq.${session.athlete_id}&select=potenciometro`)
-      bikePotencia = Array.isArray(pot) && pot[0]?.potenciometro === true
-    }
+    if (session.disciplina === 'bike') bikePotencia = (await leerAjustes(supabaseGet, session.athlete_id)).potenciometro
     const eventBody = construirEvento(session, { bikePotencia })
 
     // Reenvío (sesión editada o reenviada): primero se CREA la versión nueva y
