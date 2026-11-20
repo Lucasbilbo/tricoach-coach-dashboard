@@ -69,7 +69,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const DIAS_CHIPS = proximosDias(14, ahora.fecha)
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
   // Atleta con potenciómetro (migración 021): la bici se prescribe por potencia
-  const bikePotencia = usePotencia(athleteId, coachId, isOpen).potenciometro === true
+  const potenciaAtleta = usePotencia(athleteId, coachId, isOpen)
+  const bikePotencia = potenciaAtleta.potenciometro === true
+  // Potenciómetro sin FTP: el reloj recibe zonas de potencia que no puede pasar
+  // a vatios y el TSS sigue por pulso. Se avisa (no bloquea).
+  const avisoSinFtp = bikePotencia && form.disciplina === 'bike' && !potenciaAtleta.ftp_w
   // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
   // sesión (necesita su id). Solo si la tabla existe (migración 017).
   const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
@@ -967,6 +971,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             )}
 
             {avisoReloj && <Aviso style={{ marginBottom: 12 }}>{avisoReloj}</Aviso>}
+            {avisoSinFtp && (
+              <Aviso style={{ marginBottom: 12 }}>
+                Tiene potenciómetro pero aún no tiene FTP: el reloj no podrá pasar las zonas de potencia a vatios. Pon el FTP en «Bici y pulso» (Sesiones).
+              </Aviso>
+            )}
 
             {error && !errorIntervals && (
               <p style={{ color: COLORS.error, fontSize: 13, marginBottom: 12 }}>{error}</p>
