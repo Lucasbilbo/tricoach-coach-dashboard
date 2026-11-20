@@ -1,9 +1,9 @@
 // tssPrevisto.js — carga (TSS) PREVISTA de una sesión prescrita, a partir de
 // sus pasos. Lógica PURA (sin imports) para node --test.
 //
-// Misma escala que el TSS real (lib/metrics.js en backend): hrTSS = horas ×
-// (intensidad/100)² × 100, con la intensidad como % de FC máxima. La intensidad
-// de cada paso sale de su objetivo:
+// Misma escala que el TSS real (lib/metrics.js en backend): TSS = horas × IF² ×
+// 100, con IF = FC / FC umbral (umbral = 90 % de la FC máx) o potencia / FTP.
+// La intensidad de cada paso sale de su objetivo:
 //   - zona Zn → punto medio de la banda de zonaFc (Z1 <60 · Z2 60–70 · … · Z5 ≥90)
 //   - FC %    → ese %
 //   - zona de potencia / % FTP → IF directo (bici con medidor)
@@ -18,6 +18,10 @@
 // Copia de TSS_POR_HORA_SIN_FC (netlify/functions/lib/metrics.js); un test
 // comprueba que no se desvían.
 export const TSS_POR_HORA_SIN_FC = { swim: 55, bike: 50, run: 65, strength: 40 }
+
+// FC de umbral por defecto en % de la FC máx (copia de FC_UMBRAL_PCT de
+// metrics.js; un test comprueba que no se desvían).
+export const FC_UMBRAL_PCT = 90
 
 // Punto medio de cada banda de zonaFc (% FC máx)
 export const INTENSIDAD_ZONA = { Z1: 55, Z2: 65, Z3: 75, Z4: 85, Z5: 93 }
@@ -49,31 +53,35 @@ function ritmoMin(valor) {
   return mins.reduce((a, b) => a + b, 0) / mins.length
 }
 
+// Factor de intensidad (IF) de un paso: pulso contra la FC de UMBRAL (90 % de
+// la FC máx, igual que el hrTSS real), potencia contra el FTP. null = sin
+// objetivo en natación/fuerza (va por TSS/hora).
 function intensidadPaso(paso, disciplina) {
   const tipo = paso.objetivo_tipo
   const valor = paso.objetivo_valor
+  const porPulso = (pctFcMax) => pctFcMax / FC_UMBRAL_PCT
   if (tipo === 'zona') {
     const z = normalizarZona(valor)
-    if (z) return INTENSIDAD_ZONA[z]
+    if (z) return porPulso(INTENSIDAD_ZONA[z])
   }
   if (tipo === 'zona_potencia') {
     const z = normalizarZona(valor)
-    if (z) return INTENSIDAD_ZONA_POTENCIA[z]
+    if (z) return INTENSIDAD_ZONA_POTENCIA[z] / 100
   }
   if (tipo === 'potencia' && valor) {
     // % FTP, exacto o rango ("95-105" → 100)
     const nums = String(valor).split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0)
     if (nums.length) {
       const media = nums.reduce((a, b) => a + b, 0) / nums.length
-      if (media >= 30 && media <= 200) return media
+      if (media >= 30 && media <= 200) return media / 100
     }
   }
   if (tipo === 'fc') {
     const n = Number(valor)
-    if (n > 30 && n <= 110) return n
+    if (n > 30 && n <= 110) return porPulso(n)
   }
-  if (tipo === 'ritmo' && valor) return INTENSIDAD_ZONA.Z3
-  if (disciplina === 'bike' || disciplina === 'run') return INTENSIDAD_ZONA.Z1
+  if (tipo === 'ritmo' && valor) return porPulso(INTENSIDAD_ZONA.Z3)
+  if (disciplina === 'bike' || disciplina === 'run') return porPulso(INTENSIDAD_ZONA.Z1)
   return null // natación/fuerza sin objetivo → por TSS/hora
 }
 
@@ -95,7 +103,7 @@ function segundosPaso(paso, disciplina) {
 
 function tssPaso(segundos, intensidad, disciplina) {
   const horas = segundos / 3600
-  if (intensidad != null) return horas * (intensidad / 100) ** 2 * 100
+  if (intensidad != null) return horas * intensidad ** 2 * 100
   const factor = TSS_POR_HORA_SIN_FC[disciplina]
   return factor ? horas * factor : 0
 }

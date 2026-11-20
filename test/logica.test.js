@@ -48,15 +48,20 @@ test('intensidadPct: sin FC → null; FC máx 0/ausente → 185 por defecto', ()
   cerca(M.intensidadPct(150, 200), 75)
 })
 
-test('hrTSS: 1 h a la FC máx = 100; 1 h al 75 % = 56.25; sin FC o duración → null', () => {
-  cerca(M.tssEstimado(3600, 185, 185), 100)
-  cerca(M.tssEstimado(3600, 150, 200), 56.25)
+test('hrTSS contra la FC umbral: 1 h a umbral = 100 (90 % FC máx o la del atleta); sin FC o duración → null', () => {
+  cerca(M.tssEstimado(3600, 166.5, 185), 100, 1e-9)
+  cerca(M.tssEstimado(3600, 150, 200), 69.444, 1e-3)
+  cerca(M.tssEstimado(3600, 150, 200, 150), 100)
+  cerca(M.tssEstimado(3600, 185, 185), 123.457, 1e-3)
+  assert.equal(M.fcUmbralDe(200, null), 180)
+  assert.equal(M.fcUmbralDe(200, 170), 170)
   assert.equal(M.tssEstimado(3600, null, 185), null)
   assert.equal(M.tssEstimado(0, 150, 185), null)
 })
 
 test('cargaActividad: con FC, sin FC (estimado por disciplina) y "other"', () => {
-  assert.deepEqual(M.cargaActividad(3600, 150, 200, 'run'), { tss: 56.25, estimado: false })
+  cerca(M.cargaActividad(3600, 150, 200, 'run').tss, 69.444, 1e-3)
+  cerca(M.cargaActividad(3600, 150, 200, 'run', null, 150).tss, 100)
   for (const [disc, porHora] of Object.entries(M.TSS_POR_HORA_SIN_FC)) {
     const r = M.cargaActividad(1800, null, 185, disc)
     assert.equal(r.estimado, true)
@@ -172,7 +177,7 @@ test('sparkline del dashboard: 4 semanas de calendario hasta hoy, también si el
   assert.deepEqual(parado.map((s) => s.tss_total), [0, 0, 0, 0])
   // 22:30 UTC del domingo 4-oct es lunes 5 en Madrid → semana actual
   const r = _semanasRecientes([strava('2026-10-04T22:30:00Z', 'Run', 60, 185), strava('2026-10-01T08:00:00Z', 'Golf', 120, 120)], 185, 4, '2026-10-08')
-  assert.deepEqual(r.map((s) => s.tss_total), [0, 0, 0, 100])
+  assert.deepEqual(r.map((s) => s.tss_total), [0, 0, 0, 123])
 })
 
 // ── fechas y formato (frontend) ─────────────────────────────────────────

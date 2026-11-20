@@ -9,13 +9,13 @@ const act = (fecha, tss, extra = {}) => ({ fecha, disciplina: 'run', duracion_mi
 const HOY = '2026-10-22'
 
 test('calibra con la mediana de real/previsto y exige muestras suficientes', () => {
-  // 40' Z2 = 28 previsto; reales 42, 56, 70 → ratios 1,5 / 2 / 2,5 → mediana 2
+  // 40' Z2 = 35 previsto; reales 52,5, 70, 87,5 → ratios 1,5 / 2 / 2,5 → mediana 2
   const sesiones = [ses('a', '2026-10-01', 40), ses('b', '2026-10-05', 40), ses('c', '2026-10-09', 40)]
-  const acts = [act('2026-10-01', 42), act('2026-10-05', 56), act('2026-10-09', 70)]
+  const acts = [act('2026-10-01', 52.5), act('2026-10-05', 70), act('2026-10-09', 87.5)]
   const cal = calibrar(sesiones, acts, HOY)
   assert.equal(cal.run.factor, 2)
   assert.equal(cal.run.muestras, 3)
-  assert.equal(tssPlan(ses('x', '2026-10-25', 40), cal), 56)
+  assert.equal(tssPlan(ses('x', '2026-10-25', 40), cal), 70)
   // Con 2 muestras no hay calibración
   assert.deepEqual(calibrar(sesiones.slice(0, 2), acts, HOY), {})
 })
@@ -73,12 +73,12 @@ test('prueba fuera del plan: no se inventa su forma', () => {
 
 test('carga de la semana: prevista calibrada y real solo si está cubierta', () => {
   const cal = { run: { factor: 2, muestras: 3 } }
-  const semana = [ses('a', '2026-10-19', 40), ses('b', '2026-10-21', 40)] // 28 → 56 cada una
+  const semana = [ses('a', '2026-10-19', 40), ses('b', '2026-10-21', 40)] // 35 → 70 cada una
   const acts = [act('2026-10-19', 50), act('2026-10-20', 30), act('2026-10-27', 99)]
   const base = { lunes: '2026-10-19', sesiones: semana, actividades: acts, calibracion: cal, hoy: HOY }
-  assert.deepEqual(cargaSemana({ ...base, coberturaDesde: '2026-09-01' }), { prevista: 112, real: 80 })
-  assert.deepEqual(cargaSemana({ ...base, coberturaDesde: '2026-10-20' }), { prevista: 112, real: null })
-  assert.deepEqual(cargaSemana({ ...base, lunes: '2026-10-26', coberturaDesde: '2026-09-01' }), { prevista: 112, real: null })
+  assert.deepEqual(cargaSemana({ ...base, coberturaDesde: '2026-09-01' }), { prevista: 140, real: 80 })
+  assert.deepEqual(cargaSemana({ ...base, coberturaDesde: '2026-10-20' }), { prevista: 140, real: null })
+  assert.deepEqual(cargaSemana({ ...base, lunes: '2026-10-26', coberturaDesde: '2026-09-01' }), { prevista: 140, real: null })
   assert.deepEqual(cargaSemana({ ...base, sesiones: [], coberturaDesde: '2026-09-01' }), { prevista: null, real: 80 })
 })
 

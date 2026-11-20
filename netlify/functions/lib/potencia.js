@@ -1,27 +1,39 @@
-// lib/potencia.js — FTP de bici del atleta (tabla atleta_potencia, migración 021).
-// Devuelve los vatios SOLO si el atleta tiene el potenciómetro activado y un FTP
-// guardado; si no (o si la tabla aún no existe / falla) → null y la carga sigue
-// calculándose por pulso. Nunca lanza.
+// lib/potencia.js — ajustes de carga del atleta (tabla atleta_potencia,
+// migraciones 021 y 022): potenciómetro, FTP de bici y FC de umbral.
+// FUENTE ÚNICA de lectura para todas las funciones (antes había tres copias:
+// send-to-intervals, move-session y las de métricas). Nunca lanza: si la tabla
+// falla o no hay fila → sin potenciómetro, sin FTP y FC umbral por defecto.
 
-async function leerPotencia(supabaseGet, host, key, athleteId) {
-  try {
-    const res = await supabaseGet(
-      host,
-      `/rest/v1/atleta_potencia?athlete_id=eq.${athleteId}&select=potenciometro,ftp_w`,
-      key
-    )
-    const fila = Array.isArray(res.json) ? res.json[0] : null
-    return {
-      potenciometro: !!(fila && fila.potenciometro),
-      ftp: fila && fila.potenciometro && fila.ftp_w > 0 ? Number(fila.ftp_w) : null,
-    }
-  } catch {
-    return { potenciometro: false, ftp: null }
+const CAMPOS = 'potenciometro,ftp_w,fc_umbral'
+
+// Fila (o null) → { potenciometro, ftp, fcUmbral }. El FTP solo cuenta con el
+// interruptor activado (sin medidor no hay TSS por potencia).
+function ajustesDeFila(fila) {
+  const potenciometro = !!(fila && fila.potenciometro === true)
+  return {
+    potenciometro,
+    ftp: potenciometro && Number(fila.ftp_w) > 0 ? Number(fila.ftp_w) : null,
+    fcUmbral: fila && Number(fila.fc_umbral) > 0 ? Number(fila.fc_umbral) : null,
   }
+}
+
+// getFilas(pathSinRestV1) → Promise<array | null>. Cada función pasa su cliente.
+async function leerAjustes(getFilas, athleteId) {
+  try {
+    const filas = await getFilas(`atleta_potencia?athlete_id=eq.${athleteId}&select=${CAMPOS}`)
+    return ajustesDeFila(Array.isArray(filas) ? filas[0] : null)
+  } catch {
+    return ajustesDeFila(null)
+  }
+}
+
+// Con lib/supabase-rest (supabaseGet(host, path, key) → { json })
+function leerPotencia(supabaseGet, host, key, athleteId) {
+  return leerAjustes(async (path) => (await supabaseGet(host, `/rest/v1/${path}`, key)).json, athleteId)
 }
 
 async function leerFtp(supabaseGet, host, key, athleteId) {
   return (await leerPotencia(supabaseGet, host, key, athleteId)).ftp
 }
 
-module.exports = { leerFtp, leerPotencia }
+module.exports = { CAMPOS, ajustesDeFila, leerAjustes, leerPotencia, leerFtp }

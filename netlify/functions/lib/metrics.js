@@ -54,16 +54,31 @@ function zonaFc(intensidadPct) {
   return 'Z5'
 }
 
-// TSS estimado por FC (hrTSS): horas × IF² × 100, con IF = intensidad/100.
+// FC de umbral por defecto: 90 % de la FC máxima (si el atleta no la tiene
+// puesta en atleta_potencia.fc_umbral). El hrTSS se calcula contra el UMBRAL,
+// no contra la FC máxima, para estar en la misma escala que el TSS por potencia
+// (NP / FTP): una hora a umbral = 100 por pulso y por potencia (2026-11-20;
+// antes, contra la FC máx, salía ~81 y la bici "subía" sola al activar el medidor).
+const FC_UMBRAL_PCT = 90
+
+// FC de umbral efectiva: la del atleta si es válida; si no, 90 % de la FC máx.
+function fcUmbralDe(fcMax, fcUmbral) {
+  if (fcUmbral > 0) return fcUmbral
+  const max = fcMax || FC_MAX_DEFAULT
+  return max ? (max * FC_UMBRAL_PCT) / 100 : null
+}
+
+// TSS estimado por FC (hrTSS): horas × IF² × 100, con IF = FC media / FC umbral.
 // Fuente ÚNICA de verdad del TSS: dashboard y vista de atleta deben llamar
 // aquí con los MISMOS argumentos crudos (segundos de movimiento y FC media sin
 // redondear) para devolver exactamente el mismo valor. Devuelve null si falta
 // FC o duración; el llamante redondea para mostrar.
-function tssEstimado(movingTimeSec, fcMedia, fcMax) {
-  const intensidad = intensidadPct(fcMedia, fcMax)
-  if (intensidad == null || !movingTimeSec) return null
+function tssEstimado(movingTimeSec, fcMedia, fcMax, fcUmbral = null) {
+  if (!fcMedia || !movingTimeSec) return null
+  const umbral = fcUmbralDe(fcMax, fcUmbral)
+  if (!umbral) return null
   const horas = movingTimeSec / 3600
-  return horas * (intensidad / 100) ** 2 * 100
+  return horas * (fcMedia / umbral) ** 2 * 100
 }
 
 // TSS/hora aproximado por disciplina cuando NO hay FC (B2). Valores orientativos
@@ -85,13 +100,14 @@ function tssPotencia(movingTimeSec, potNormalizada, ftp) {
 }
 
 // potencia = { np, ftp, medidor } (opcional): solo aplica a la bici.
-function cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina, potencia) {
+// fcUmbral (opcional): la del atleta; sin ella, 90 % de fcMax.
+function cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina, potencia, fcUmbral = null) {
   if (disciplina === 'other') return { tss: null, estimado: false }
   if (disciplina === 'bike' && potencia && potencia.medidor) {
     const pw = tssPotencia(movingTimeSec, potencia.np, potencia.ftp)
     if (pw != null) return { tss: pw, estimado: false, fuente: 'potencia' }
   }
-  const hr = tssEstimado(movingTimeSec, fcMedia, fcMax)
+  const hr = tssEstimado(movingTimeSec, fcMedia, fcMax, fcUmbral)
   if (hr != null) return { tss: hr, estimado: false }
   const factor = TSS_POR_HORA_SIN_FC[disciplina]
   if (factor && movingTimeSec) return { tss: (movingTimeSec / 3600) * factor, estimado: true }
@@ -105,5 +121,5 @@ function potenciaDe(act, ftp) {
 
 module.exports = {
   round, mapDisciplina, intensidadPct, zonaFc, tssEstimado, tssPotencia, potenciaDe, cargaActividad,
-  fechaMadrid, TSS_POR_HORA_SIN_FC, FC_MAX_DEFAULT,
+  fechaMadrid, TSS_POR_HORA_SIN_FC, FC_MAX_DEFAULT, FC_UMBRAL_PCT, fcUmbralDe,
 }
