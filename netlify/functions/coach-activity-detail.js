@@ -10,7 +10,7 @@ const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout, httpsRequest } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
 const { getStravaAccessToken } = require('./lib/strava')
-const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, potenciaDe, fechaMadrid } = require('./lib/metrics')
+const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, tssEstimado, potenciaDe, fechaMadrid } = require('./lib/metrics')
 const { leerPotencia } = require('./lib/potencia')
 
 const CORS = {
@@ -139,6 +139,17 @@ function transformarActividad(act, fcMax, ajustes = {}) {
     intensidad_pct: intensidad != null ? round(intensidad, 0) : null,
     tss_estimado: round(carga.tss, 0),
     tss_estimado_sin_fc: carga.estimado,
+    // Con TSS por potencia, el de pulso al lado: sirve para ver si cuadran
+    // (misma escala desde 2026-11-20) y detectar un FTP o FC umbral mal puestos.
+    tss_por_potencia: carga.fuente === 'potencia',
+    tss_pulso: carga.fuente === 'potencia' && act.average_heartrate
+      ? round(tssEstimado(act.moving_time, act.average_heartrate, fcMax, ajustes.fcUmbral), 0)
+      : null,
+    // Eficiencia aeróbica (bici con medidor real): vatios normalizados por latido.
+    // Subir a igual esfuerzo = mejor forma aeróbica.
+    eficiencia: disciplina === 'bike' && act.device_watts && act.weighted_average_watts > 0 && act.average_heartrate > 0
+      ? round(act.weighted_average_watts / act.average_heartrate, 2)
+      : null,
     polyline: act.map?.polyline || act.map?.summary_polyline || null,
     splits_km: splits,
   }
@@ -256,3 +267,5 @@ exports.handler = async (event) => {
     return respuesta(500, { error: 'Error interno' })
   }
 }
+
+exports._transformarActividad = transformarActividad

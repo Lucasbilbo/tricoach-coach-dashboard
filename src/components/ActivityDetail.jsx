@@ -140,7 +140,9 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
         { etiqueta: 'Desnivel +', valor: act.desnivel_pos_m != null ? `${act.desnivel_pos_m} m` : null },
         { etiqueta: 'Desnivel −', valor: act.desnivel_neg_m != null ? `${act.desnivel_neg_m} m` : null },
         { etiqueta: 'Calorías', valor: act.calorias != null ? `${act.calorias} kcal` : null },
-        { etiqueta: 'TSS', valor: act.tss_estimado != null ? `${act.tss_estimado}` : null },
+        { etiqueta: act.tss_por_potencia ? 'TSS (potencia)' : 'TSS', valor: act.tss_estimado != null ? `${act.tss_estimado}` : null },
+        { etiqueta: 'TSS por pulso', valor: act.tss_pulso != null ? `${act.tss_pulso}` : null },
+        { etiqueta: 'Eficiencia', valor: act.eficiencia != null ? `${String(act.eficiencia).replace('.', ',')} W/ppm` : null },
       ].filter((m) => m.valor != null)
     : []
 

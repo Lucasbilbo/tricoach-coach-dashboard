@@ -55,3 +55,18 @@ test('pulso con FC umbral del atleta y potencia en la misma escala', () => {
   assert.equal(Math.round(cargaActividad(3600, 165, 190, 'bike', null, 165).tss), 100)
   assert.equal(Math.round(cargaActividad(3600, 165, 190, 'bike', { np: 250, ftp: 250, medidor: true }, 165).tss), 100)
 })
+
+test('detalle de actividad: con potencia real enseña también el TSS por pulso y la eficiencia', async () => {
+  const { default: det } = await import('../netlify/functions/coach-activity-detail.js')
+  const act = { sport_type: 'Ride', moving_time: 3600, average_heartrate: 150, weighted_average_watts: 200, device_watts: true, start_date: '2026-11-20T08:00:00Z' }
+  const a = det._transformarActividad(act, 190, { ftp: 200, fcUmbral: 150 })
+  assert.equal(a.tss_estimado, 100)
+  assert.equal(a.tss_por_potencia, true)
+  assert.equal(a.tss_pulso, 100)
+  assert.equal(a.eficiencia, 1.33)
+  // Sin medidor: TSS por pulso, sin eficiencia ni doble TSS
+  const b = det._transformarActividad({ ...act, device_watts: false }, 190, { ftp: 200, fcUmbral: 150 })
+  assert.equal(b.tss_por_potencia, false)
+  assert.equal(b.tss_pulso, null)
+  assert.equal(b.eficiencia, null)
+})
