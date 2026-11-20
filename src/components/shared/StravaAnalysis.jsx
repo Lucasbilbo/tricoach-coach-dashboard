@@ -161,7 +161,9 @@ export default function StravaAnalysis({
       : actividades.filter((a) => a.disciplina === filtroDisciplina)
   const actividadesVisibles = actividadesFiltradas.slice(0, visibles)
 
-  const stats = computeResumenStats(actividades)
+  // Memoizadas por la lista: paginar, filtrar o abrir una actividad no las
+  // recalcula (computeResumenStats recorre además la EWMA de CTL/ATL).
+  const stats = useMemo(() => computeResumenStats(actividades), [actividades])
   // CTL/ATL/TSB al último día del periodo (hoy en los presets) sobre la serie
   // larga, no sobre el rango dibujado. Memoizada: la serie no cambia con filtros,
   // paginación ni selección de actividad, y la EWMA recorre ~180 días.
@@ -169,8 +171,8 @@ export default function StravaAnalysis({
   const etiqueta = etiquetaPeriodo(periodo, hoy)
   const alFinal = rango.hasta === hoy ? null : `al ${formatDiaMes(rango.hasta)}`
   const vistaDiaria = esVistaDiaria(periodo, hoy)
-  const zonas = computeZonas(actividades)
-  const paceTrend = computePaceTrend(actividades)
+  const zonas = useMemo(() => computeZonas(actividades), [actividades])
+  const paceTrend = useMemo(() => computePaceTrend(actividades), [actividades])
   // Memoizada: paginar, filtrar por disciplina o abrir el detalle no la recalculan
   const columnas = useMemo(
     () => (vistaDiaria
