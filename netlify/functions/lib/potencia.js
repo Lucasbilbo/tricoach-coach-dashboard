@@ -6,14 +6,18 @@
 
 const CAMPOS = 'potenciometro,ftp_w,fc_umbral'
 
-// Fila (o null) → { potenciometro, ftp, fcUmbral }. El FTP solo cuenta con el
-// interruptor activado (sin medidor no hay TSS por potencia).
+// Fila (o null) → { potenciometro, ftp, fcUmbral, bikePotencia }. El FTP solo
+// cuenta con el interruptor activado (sin medidor no hay TSS por potencia).
+// bikePotencia = interruptor Y FTP: sin FTP el reloj no puede pasar las zonas de
+// potencia a vatios, así que la bici sigue yendo por pulso (2026-11-20).
 function ajustesDeFila(fila) {
   const potenciometro = !!(fila && fila.potenciometro === true)
+  const ftp = potenciometro && Number(fila.ftp_w) > 0 ? Number(fila.ftp_w) : null
   return {
     potenciometro,
-    ftp: potenciometro && Number(fila.ftp_w) > 0 ? Number(fila.ftp_w) : null,
+    ftp,
     fcUmbral: fila && Number(fila.fc_umbral) > 0 ? Number(fila.fc_umbral) : null,
+    bikePotencia: ftp != null,
   }
 }
 

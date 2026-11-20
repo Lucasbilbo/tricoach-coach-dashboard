@@ -183,7 +183,7 @@ exports.handler = async (event) => {
     // Evento (texto del reloj, tipo, piscina y hora de inicio si la tiene)
     // Potenciómetro del atleta (tabla atleta_potencia; si falla → pulso, como siempre)
     let bikePotencia = false
-    if (session.disciplina === 'bike') bikePotencia = (await leerAjustes(supabaseGet, session.athlete_id)).potenciometro
+    if (session.disciplina === 'bike') bikePotencia = (await leerAjustes(supabaseGet, session.athlete_id)).bikePotencia
     const eventBody = construirEvento(session, { bikePotencia })
 
     // Reenvío (sesión editada o reenviada): primero se CREA la versión nueva y

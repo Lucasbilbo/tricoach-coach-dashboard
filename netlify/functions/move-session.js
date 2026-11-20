@@ -69,7 +69,7 @@ const depsReales = {
   },
   // ¿El atleta tiene potenciómetro? (la bici va por potencia); false si falla
   async leerPotenciometro(athleteId) {
-    return (await leerAjustes(async (path) => (await rest('GET', path)).json, athleteId)).potenciometro
+    return (await leerAjustes(async (path) => (await rest('GET', path)).json, athleteId)).bikePotencia
   },
   // PATCH con reintentos; true solo si la BD confirma la fila.
   async guardar(id, cambios) {

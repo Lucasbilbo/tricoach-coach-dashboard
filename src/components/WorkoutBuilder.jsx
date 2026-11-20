@@ -70,10 +70,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const { datos: disponibilidad, cargada: disponibilidadCargada } = useDisponibilidadConEstado(athleteId, isOpen)
   // Atleta con potenciómetro (migración 021): la bici se prescribe por potencia
   const potenciaAtleta = usePotencia(athleteId, coachId, isOpen)
-  const bikePotencia = potenciaAtleta.potenciometro === true
-  // Potenciómetro sin FTP: el reloj recibe zonas de potencia que no puede pasar
-  // a vatios y el TSS sigue por pulso. Se avisa (no bloquea).
-  const avisoSinFtp = bikePotencia && form.disciplina === 'bike' && !potenciaAtleta.ftp_w
+  // Por potencia solo con interruptor Y FTP (igual que el backend, lib/potencia):
+  // sin FTP el reloj no puede pasar las zonas a vatios → sigue por pulso.
+  const bikePotencia = potenciaAtleta.potenciometro === true && potenciaAtleta.ftp_w > 0
+  const avisoSinFtp = potenciaAtleta.potenciometro === true && !potenciaAtleta.ftp_w && form.disciplina === 'bike'
   // Plan de nutrición (opcional). Se guarda en sesion_nutricion DESPUÉS de la
   // sesión (necesita su id). Solo si la tabla existe (migración 017).
   const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
@@ -973,7 +973,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             {avisoReloj && <Aviso style={{ marginBottom: 12 }}>{avisoReloj}</Aviso>}
             {avisoSinFtp && (
               <Aviso style={{ marginBottom: 12 }}>
-                Tiene potenciómetro pero aún no tiene FTP: el reloj no podrá pasar las zonas de potencia a vatios. Pon el FTP en «Bici y pulso» (Sesiones).
+                Tiene potenciómetro pero aún no tiene FTP: hasta que lo tenga, la bici se prescribe y llega al reloj por pulso. Pon el FTP en «Bici y pulso» (Sesiones).
               </Aviso>
             )}
 

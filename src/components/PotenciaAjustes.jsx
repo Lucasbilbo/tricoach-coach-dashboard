@@ -99,7 +99,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
         <div>
           <div style={{ fontSize: 15, fontWeight: 500 }}>{esCoach ? 'Tiene potenciómetro' : 'Tengo potenciómetro'}</div>
           <div style={{ fontSize: 13, color: COLORS.textSecondary, marginTop: 2, lineHeight: 1.4 }}>
-            {actual.potenciometro ? 'La bici se prescribe y llega al reloj por potencia.' : 'La bici va por pulso.'}
+            {!actual.potenciometro ? 'La bici va por pulso.' : ftpValido(actual.ftp) ? 'La bici se prescribe y llega al reloj por potencia.' : 'Por potencia en cuanto haya FTP; hasta entonces, por pulso.'}
           </div>
         </div>
         <Interruptor activo={actual.potenciometro} etiqueta="Potenciómetro en la bici" onChange={(v) => setForm({ ...actual, potenciometro: v })} />
@@ -140,7 +140,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
       )}
       {actual.potenciometro && !ftpValido(actual.ftp) && (
         <p style={{ margin: 0, fontSize: 13, color: COLORS.warning, lineHeight: 1.45 }}>
-          Sin FTP, el TSS de la bici sigue por pulso y el reloj no puede convertir las zonas en vatios.
+          Sin FTP la bici sigue por pulso (entrenos y TSS). Pon el FTP del test y pasará a potencia.
         </p>
       )}
       <p style={{ margin: 0, fontSize: 12.5, color: COLORS.textTertiary, lineHeight: 1.45 }}>

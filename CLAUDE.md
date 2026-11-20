@@ -396,6 +396,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   queda guardado en la app). Tests: `test/sync-ftp.test.js`.
 - **FC umbral** (migración 022, `atleta_potencia.fc_umbral`, 100–220, opcional):
   base del hrTSS. Se edita en la misma tarjeta.
+- **Por potencia = interruptor Y FTP** (`bikePotencia` de `lib/potencia`; igual en el creador): con el interruptor pero sin FTP la bici sigue por pulso (sin FTP el reloj no puede pasar las zonas a vatios).
 - **Sin potenciómetro** (apagado después de prescribir): los objetivos de
   potencia de bici ya prescritos van al reloj por PULSO con la misma zona
   (`zona_potencia` Zn → `Zn HR`; `% FTP` → su zona de Coggan → `Zn HR`).
