@@ -335,3 +335,14 @@ test('bici con potenciómetro: zona de potencia (Zn sin HR) y % del FTP', async 
   // Sin potenciómetro, los pasos sin objetivo siguen por pulso
   assert.match(buildIntervalsText(sesion), /Calentamiento 10m Z1 HR/)
 })
+
+test('bici sin potenciómetro: los objetivos de potencia ya prescritos van por pulso (misma zona)', async () => {
+  const { buildIntervalsText } = await import('../netlify/functions/lib/intervals-text.cjs')
+  const paso = (tipo, valor) => ({ disciplina: 'bike', workout_steps: { bloques: [{ tipo: 'step', cantidad: 20, unidad: 'min', objetivo_tipo: tipo, objetivo_valor: valor }] } })
+  assert.match(buildIntervalsText(paso('zona_potencia', 'Z3')), /20m Z3 HR/)
+  assert.match(buildIntervalsText(paso('potencia', '95-105')), /20m Z4 HR/)
+  assert.match(buildIntervalsText(paso('potencia', '70')), /20m Z2 HR/)
+  assert.doesNotMatch(buildIntervalsText(paso('potencia', '70')), /%/)
+  // Con medidor no cambia nada
+  assert.match(buildIntervalsText(paso('potencia', '70'), { bikePotencia: true }), /20m 70%/)
+})

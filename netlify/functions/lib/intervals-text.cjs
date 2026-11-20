@@ -123,7 +123,23 @@ function conPrefijo(prefijo, nombre) {
   return `${prefijo} · ${n}`
 }
 
-function objetivoStr(step, disciplina) {
+// % del FTP → zona de Coggan (Z1 ≤55 · Z2 ≤75 · Z3 ≤90 · Z4 ≤105 · Z5 más), con
+// la media si es un rango ("95-105" → 100 → Z4). null si no se entiende.
+function zonaDePctFtp(valor) {
+  const nums = String(valor).split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0)
+  if (!nums.length) return null
+  const pct = nums.reduce((a, b) => a + b, 0) / nums.length
+  if (pct <= 55) return 'Z1'
+  if (pct <= 75) return 'Z2'
+  if (pct <= 90) return 'Z3'
+  if (pct <= 105) return 'Z4'
+  return 'Z5'
+}
+
+// bikePotencia=false: el atleta ya NO tiene potenciómetro (o se apagó después de
+// prescribir). Un objetivo de potencia en bici iría al reloj sin medidor que lo
+// lea, así que se manda la MISMA zona por pulso (`Zn HR`; % FTP → su zona).
+function objetivoStr(step, disciplina, bikePotencia = true) {
   const tipo = step.objetivo_tipo
   const valor = step.objetivo_valor
   if (!tipo || !valor) return ''
@@ -136,8 +152,17 @@ function objetivoStr(step, disciplina) {
   }
   if (tipo === 'fc') return ` ${valor}% HR`
   // Bici con medidor: zona de potencia (Zn sin HR) o % del FTP (admite rango 70-80)
-  if (tipo === 'zona_potencia') return disciplina === 'bike' ? ` ${normalizarZona(valor)}` : ''
-  if (tipo === 'potencia') return ` ${String(valor).replace(/\s+/g, '')}%`
+  if (tipo === 'zona_potencia') {
+    if (disciplina !== 'bike') return ''
+    return bikePotencia ? ` ${normalizarZona(valor)}` : ` ${normalizarZona(valor)} HR`
+  }
+  if (tipo === 'potencia') {
+    if (disciplina === 'bike' && !bikePotencia) {
+      const z = zonaDePctFtp(valor)
+      return z ? ` ${z} HR` : ''
+    }
+    return ` ${String(valor).replace(/\s+/g, '')}%`
+  }
   if (tipo === 'ritmo') {
     // Admite ritmo exacto ('5:00') o rango ('4:50-5:10'); Intervals entiende ambos.
     const ritmo = String(valor).replace(/\s+/g, '')
@@ -350,13 +375,13 @@ function buildIntervalsText(session, options = {}) {
     if (bloque.tipo === 'pausa') {
       partes.push(lineaPausa(bloque, disciplina))
     } else if (bloque.tipo === 'warmup') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina, bikePotencia)
+      const obj = objetivoStr(bloque, disciplina, bikePotencia) || defaultZona(disciplina, bikePotencia)
       partes.push(lineaPaso(bloque, disciplina, conPrefijo('Calentamiento', bloque.nombre), obj))
     } else if (bloque.tipo === 'cooldown') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina, bikePotencia)
+      const obj = objetivoStr(bloque, disciplina, bikePotencia) || defaultZona(disciplina, bikePotencia)
       partes.push(lineaPaso(bloque, disciplina, conPrefijo('Vuelta a la calma', bloque.nombre), obj))
     } else if (bloque.tipo === 'step') {
-      const obj = objetivoStr(bloque, disciplina) || defaultZona(disciplina, bikePotencia)
+      const obj = objetivoStr(bloque, disciplina, bikePotencia) || defaultZona(disciplina, bikePotencia)
       partes.push(lineaPaso(bloque, disciplina, bloque.nombre, obj))
     } else if (bloque.tipo === 'repeat') {
       // La cabecera de la serie es texto del reloj ("Principal 1/8") y Intervals
@@ -369,7 +394,7 @@ function buildIntervalsText(session, options = {}) {
           lines.push(lineaPausa(paso, disciplina))
           continue
         }
-        lines.push(lineaPaso(paso, disciplina, paso.nombre || etiquetaPorZona(paso, disciplina), objetivoStr(paso, disciplina)))
+        lines.push(lineaPaso(paso, disciplina, paso.nombre || etiquetaPorZona(paso, disciplina), objetivoStr(paso, disciplina, bikePotencia)))
       }
       partes.push(lines.join('\n'))
     }
