@@ -157,7 +157,7 @@ export default function AthleteView() {
         )}
 
         {activeTab === 'sesiones' && coachId && (
-          <PotenciaAjustes athleteId={id} uid={coachId} />
+          <PotenciaAjustes athleteId={id} uid={coachId} modo="plegable" esCoach fcMax={datos?.atleta?.fc_maxima} />
         )}
 
         {activeTab === 'sesiones' && coachId && (

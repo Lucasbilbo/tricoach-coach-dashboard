@@ -163,6 +163,8 @@ export default function AthleteHome() {
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
+  // Ajustes (potenciómetro, FTP, FC umbral) desde el botón de la cabecera
+  const [verAjustes, setVerAjustes] = useState(false)
   // Sube al mover un entreno desde la agenda: recarga la lista de próximos
   const [recargaSesiones, setRecargaSesiones] = useState(0)
 
@@ -187,7 +189,7 @@ export default function AthleteHome() {
 
       // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
       const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback, datosNutricion] = await Promise.all([
-        supabase.from('profiles').select('nombre').eq('id', uid).maybeSingle(),
+        supabase.from('profiles').select('nombre, fc_maxima').eq('id', uid).maybeSingle(),
         misConexiones(),
         supabase
           .from('coach_sessions')
@@ -596,9 +598,20 @@ export default function AthleteHome() {
           title={perfil?.nombre ? `Hola, ${perfil.nombre}` : 'Tus entrenos'}
           subtitle="Lo que te ha preparado tu entrenador"
           topActions={
-            <button onClick={cerrarSesion} style={iconButtonStyle} aria-label="Cerrar sesión" title="Cerrar sesión">
-              <Icon name="logout" size={17} />
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => { setActiveTab('sesiones'); setVerAjustes((v) => !v) }}
+                style={{ ...iconButtonStyle, ...(verAjustes ? { color: COLORS.accent, borderColor: COLORS.accent } : {}) }}
+                aria-label="Ajustes: potenciómetro, FTP y FC umbral"
+                aria-expanded={verAjustes}
+                title="Ajustes"
+              >
+                <Icon name="settings" size={17} />
+              </button>
+              <button onClick={cerrarSesion} style={iconButtonStyle} aria-label="Cerrar sesión" title="Cerrar sesión">
+                <Icon name="logout" size={17} />
+              </button>
+            </div>
           }
         />
 
@@ -617,6 +630,14 @@ export default function AthleteHome() {
         {/* ══ TAB: ENTRENOS ══════════════════════════════════════════════ */}
         {activeTab === 'sesiones' && (
           <>
+            {verAjustes && userId && (
+              <section style={{ marginBottom: 28 }}>
+                <SectionTitle aside={<button onClick={() => setVerAjustes(false)} style={{ background: 'none', border: 'none', color: COLORS.textSecondary, fontSize: 13, cursor: 'pointer', padding: 4, fontFamily: 'inherit' }}>Cerrar</button>}>
+                  Ajustes
+                </SectionTitle>
+                <PotenciaAjustes athleteId={userId} uid={userId} fcMax={perfil?.fc_maxima} />
+              </section>
+            )}
             <section style={{ marginBottom: 28 }}>
               <SectionTitle>{deHoy.length ? 'Hoy' : 'Tu próximo entreno'}</SectionTitle>
 
@@ -736,8 +757,8 @@ export default function AthleteHome() {
 
             {/* Conexiones — al fondo */}
             <section style={{ marginTop: 32 }}>
-              <SectionTitle>Conexiones</SectionTitle>
-              {userId && <PotenciaAjustes athleteId={userId} uid={userId} />}
+              <SectionTitle>Ajustes y conexiones</SectionTitle>
+              {userId && !verAjustes && <PotenciaAjustes athleteId={userId} uid={userId} fcMax={perfil?.fc_maxima} />}
               <div style={{ ...cardStyle, padding: '4px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0' }}>
                   <div>
