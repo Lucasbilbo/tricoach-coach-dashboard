@@ -198,7 +198,11 @@ test('técnica/pies: tabla o nombre (pies, patada, técnica, drill) → acaba al
   assert.equal(esTecnica({ nombre: '6/3/6 drill', material: [] }), true)
   assert.equal(esTecnica({ nombre: 'Progresivo', material: ['palas'] }), false)
   assert.equal(esTecnica({ nombre: 'Despiés', material: [] }), false)
-  const t = buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 200, unidad: 'mtr', material: ['aletas', 'tabla'] }] } })
+  // 2026-11-20: el material solo en el nombre ("Piernas aletas con tabla") también es técnica
+  assert.equal(esTecnica({ nombre: 'Piernas aletas con tabla', material: [] }), true)
+  assert.equal(esTecnica({ nombre: '4 patadas de lado', material: [] }), true)
+  assert.equal(metrosTecnica({ bloques: [{ tipo: 'step', nombre: 'Piernas aletas con tabla', cantidad: 200, unidad: 'mtr', material: [] }] }), 200)
+  const t =buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 200, unidad: 'mtr', material: ['aletas', 'tabla'] }] } })
   assert.equal(t, '- Pulsa vuelta al acabar · Pies · aletas, tabla 200mtr press lap')
   // en carrera, "pies" no cambia nada
   assert.doesNotMatch(buildIntervalsText({ disciplina: 'run', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Pies', cantidad: 10, unidad: 'min', material: [] }] } }), /press lap/)

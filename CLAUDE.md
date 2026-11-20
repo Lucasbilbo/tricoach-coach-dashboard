@@ -189,7 +189,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   vuelta · …". Intervals no tiene campo de equipo ni de técnica (drill) en
   natación (petición abierta 2026-08): el material solo llega como texto.
 - **Natación: técnica / pies** (`esTecnica`: material `tabla` o nombre pies,
-  patada, técnica, drill, kick): el reloj no cuenta largos sin brazada, así que
+  patada, técnica, drill, kick, piernas, tabla; 2026-11-20 se añadieron piernas/tabla/patadas: «Piernas aletas con tabla» con el material solo en el nombre no sumaba): el reloj no cuenta largos sin brazada, así que
   el paso va con `press lap` ("pulsa vuelta al acabar") y no se queda esperando
   largos. El panel SUMA esos metros a la natación del día: `lib/tecnica.js`
   (`sumarTecnica`) en `coach-athlete-data` (distancia, volumen, Línea de

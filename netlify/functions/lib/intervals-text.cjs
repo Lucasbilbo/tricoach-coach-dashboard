@@ -69,7 +69,7 @@ function cueStr(nombre, material, disciplina) {
 // distancia por hecha, pero Intervals no puede mandarlos (petición abierta
 // 2026-08). Así que: en el reloj el paso acaba al PULSAR VUELTA (no se queda
 // esperando largos) y el panel suma esos metros a la actividad (lib/tecnica.js).
-const RE_TECNICA = /(^|[^a-záéíóúñ])(pies|patada|t[eé]cnica|drills?|kick)([^a-záéíóúñ]|$)/i
+const RE_TECNICA = /(^|[^a-záéíóúñ])(pies|piernas?|patadas?|t[eé]cnica|drills?|kick|tabla)([^a-záéíóúñ]|$)/i
 
 function esTecnica(paso) {
   if (!paso || paso.tipo === 'pausa' || paso.tipo === 'repeat') return false
