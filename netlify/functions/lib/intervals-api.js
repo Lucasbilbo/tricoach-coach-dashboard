@@ -57,8 +57,41 @@ function intervalsDelete(athleteId, apiKey, eventId) {
   })
 }
 
+// FTP de bici en los ajustes de Intervals (sport-settings del tipo "Ride"). Es el
+// FTP con el que Intervals convierte las zonas y los % de potencia en vatios
+// para el reloj. Resuelve { status, body }; nunca rechaza.
+function intervalsPutFtp(athleteId, apiKey, ftp) {
+  const bodyStr = JSON.stringify({ ftp })
+  return new Promise((resolve) => {
+    const req = https.request(
+      {
+        hostname: 'intervals.icu',
+        path: `/api/v1/athlete/${encodeURIComponent(athleteId)}/sport-settings/Ride`,
+        method: 'PUT',
+        headers: {
+          Authorization: authHeader(apiKey),
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(bodyStr),
+        },
+      },
+      (res) => {
+        let data = ''
+        res.on('data', (chunk) => { data += chunk })
+        res.on('end', () => {
+          try { resolve({ status: res.statusCode, body: JSON.parse(data) }) }
+          catch { resolve({ status: res.statusCode, body: null }) }
+        })
+      }
+    )
+    req.setTimeout(8000, () => req.destroy(new Error('timeout')))
+    req.on('error', (e) => resolve({ status: 0, body: { error: e.message } }))
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
 function eventoBorrado(res) {
   return !!res && ((res.status >= 200 && res.status < 300) || res.status === 404)
 }
 
-module.exports = { intervalsPost, intervalsDelete, eventoBorrado }
+module.exports = { intervalsPost, intervalsDelete, intervalsPutFtp, eventoBorrado }

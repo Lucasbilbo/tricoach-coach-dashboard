@@ -99,6 +99,8 @@ const LIMITES = {
   send_intervals: { max: 60, ventana: VENTANA_STRAVA_S },
   move_session: { max: 120, ventana: VENTANA_STRAVA_S },
   delete_session: { max: 60, ventana: VENTANA_STRAVA_S },
+  // sync-ftp: sube el FTP a Intervals (se toca al cambiar el FTP)
+  sync_ftp: { max: 30, ventana: VENTANA_STRAVA_S },
   // season upsert/delete (list y overview no cuentan)
   season_write: { max: 120, ventana: VENTANA_STRAVA_S },
 }
