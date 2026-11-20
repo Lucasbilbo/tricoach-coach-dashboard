@@ -88,9 +88,10 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
     }
   }
 
-  const resumen = p.potenciometro
+  const resumen = (p.potenciometro
     ? `Potenciómetro${p.ftp_w ? ` · FTP ${p.ftp_w} W` : ' · sin FTP'}`
-    : 'Sin potenciómetro (bici por pulso)'
+    : 'Sin potenciómetro (bici por pulso)') +
+    (p.potenciometro && p.ftp_w && ftpAntiguo(p.ftp_fecha) ? ' · FTP de hace más de 8 semanas' : '')
 
   const cuerpo = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
