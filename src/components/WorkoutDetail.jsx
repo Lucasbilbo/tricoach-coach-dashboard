@@ -2,6 +2,8 @@ import CopiarStrava from './CopiarStrava'
 import { COLORS, FONTS } from '../lib/theme'
 import { conPausas, textoPausa } from '../lib/intervalsText'
 import { adjuntoDe } from '../lib/adjuntos'
+import { metrosDeBloques } from '../lib/cumplimiento'
+import { metrosTexto } from './workout/resumen'
 import { AdjuntoVista } from './AdjuntoEntreno'
 
 // Detalle de un entreno prescrito: perfil de intensidad (como lo dibuja el
@@ -141,6 +143,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrav
   const disciplina = sesion.disciplina
   const notas = ws.notas || sesion.notas
   const bloques = ws.bloques?.length ? conPausas(ws.bloques, disciplina) : []
+  const metrosNatacion = disciplina === 'swim' && ws.bloques?.length ? metrosDeBloques(ws.bloques) : null
 
   return (
     <div style={{ marginTop: 8, padding: '12px 12px 8px', background: 'rgba(255,255,255,0.025)', borderRadius: 10 }}>
@@ -148,6 +151,13 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrav
       {bloques.length > 0 && <Perfil bloques={ws.bloques} disciplina={disciplina} />}
       {disciplina === 'swim' && ws.piscina && (
         <p style={{ margin: '0 0 6px', fontSize: 12, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
+      )}
+      {metrosNatacion && metrosNatacion.metros > 0 && (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '0 0 8px' }}>
+          <span style={{ fontSize: 12, color: COLORS.textSecondary }}>Total</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>{metrosTexto(metrosNatacion.metros)}</span>
+          {metrosNatacion.parcial && <span style={{ fontSize: 12, color: COLORS.textTertiary }}>sin contar los pasos por tiempo</span>}
+        </div>
       )}
 
       {bloques.map((bloque, idx) =>
