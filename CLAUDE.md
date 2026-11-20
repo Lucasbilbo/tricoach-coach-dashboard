@@ -120,8 +120,15 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - **`netlify/functions/lib/metrics.js`** (backend): `mapDisciplina`, `intensidadPct`
   (SIN redondear), `zonaFc` (recibe la intensidad sin redondear — 79.96 % es Z3, no
   Z4), `tssEstimado` (hrTSS), `cargaActividad`, `fechaMadrid`, `round`.
-- **TSS**: `cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina)`:
-  - con FC → hrTSS = horas × (intensidad/100)² × 100.
+- **TSS**: `cargaActividad(movingTimeSec, fcMedia, fcMax, disciplina, potencia, fcUmbral)`:
+  - bici con medidor real + FTP → TSS por potencia = horas × (NP/FTP)² × 100.
+  - con FC → hrTSS = horas × (FC media / **FC umbral**)² × 100. FC umbral =
+    `atleta_potencia.fc_umbral` o, si no hay, **90 % de la FC máx** (`fcUmbralDe`,
+    `FC_UMBRAL_PCT`). Desde 2026-11-20 (antes contra la FC máx: una hora a umbral
+    daba ~81 y la bici "subía" ~23 % al activar el potenciómetro). Cambió la
+    escala de TODO el TSS por pulso (≈ ×1,23) de golpe y para todos los atletas;
+    CTL/ATL y "relativo a lo habitual" se recalculan solos (nada se guarda).
+    `tssPrevisto` usa la misma base (IF = % FC máx / 90; potencia = % FTP / 100).
   - sin FC + disciplina de entrenamiento → estimación por `TSS_POR_HORA_SIN_FC`
     (swim 55, bike 50, run 65, strength 40), marcada `tss_estimado_sin_fc: true`
     (el frontend la muestra con `~`).
@@ -382,19 +389,38 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   convierte Zn → potencia (`zonasAPotencia`); sin objetivo por defecto `Z1`.
   `bikePotencia` pasa por `construirEvento` (send-to-intervals y move-session).
   Sesiones antiguas por `zona`/FC no cambian.
-- **FTP también en Intervals.icu** (ajustes de ciclismo): sin él el reloj no
-  convierte Zn/% a vatios. La app no lo sincroniza.
+- **FTP también en Intervals.icu**: al guardar un FTP nuevo, `PotenciaAjustes`
+  llama a `sync-ftp` (Netlify), que lee el FTP de la BD y hace
+  `PUT /api/v1/athlete/{id}/sport-settings/Ride {ftp}` con la key del atleta
+  (2026-11-20). Si falla o no hay Intervals, se avisa en la tarjeta (el FTP sí
+  queda guardado en la app). Tests: `test/sync-ftp.test.js`.
+- **FC umbral** (migración 022, `atleta_potencia.fc_umbral`, 100–220, opcional):
+  base del hrTSS. Se edita en la misma tarjeta.
+- **Sin potenciómetro** (apagado después de prescribir): los objetivos de
+  potencia de bici ya prescritos van al reloj por PULSO con la misma zona
+  (`zona_potencia` Zn → `Zn HR`; `% FTP` → su zona de Coggan → `Zn HR`).
+- Lectura ÚNICA de estos ajustes en el backend: `lib/potencia.js`
+  (`leerAjustes`/`leerPotencia` → `{ potenciometro, ftp, fcUmbral }`), usada por
+  send-to-intervals, move-session y las tres de métricas.
+- **UI**: `PotenciaAjustes.jsx` («Bici y pulso»): en /home del atleta, tarjeta
+  abierta en «Ajustes y conexiones» y con el botón de ajustes (deslizadores) de
+  la cabecera, que la pone arriba; en Sesiones del coach, plegable. Interruptor,
+  FTP (fecha del test; aviso si > 8 semanas — la fecha solo cambia si cambia el
+  FTP) y FC umbral. El creador avisa si hay potenciómetro sin FTP.
+- Detalle de actividad: con TSS por potencia enseña también el TSS por pulso
+  (para comprobar que cuadran) y la eficiencia aeróbica NP/FC (W/ppm).
 - TSS de bici: si la actividad tiene `device_watts` real, NP y el atleta tiene
   interruptor + FTP → TSS = horas × (NP/FTP)² × 100 (`tssPotencia`, `fuente:'potencia'`,
   `tss_por_potencia`); si no, hrTSS. TSS previsto: zonas Coggan (Z1 45…Z5 113 %).
 - Assioma Uno = medidor de un pedal (×2): sin balance L/R; hay que calibrar (offset).
 - **Pendiente (potenciómetro, desde 2026-11-20)**:
   - Hablar con Jon: test de FTP. Hasta que haya FTP en `atleta_potencia`, el TSS de bici sigue por pulso.
-  - Con el FTP: ponerlo en la app (plegable «Bici») Y en Intervals.icu (ajustes de ciclismo); la app no lo sincroniza (posible mejora: subirlo a Intervals por API).
+  - Con el FTP: ponerlo en la app («Bici y pulso»); se sube solo a Intervals (comprobar el aviso verde la primera vez).
   - Activar el interruptor del atleta; reenviar con «Guardar y actualizar reloj» las sesiones de bici ya enviadas.
+  - Opcional: poner la FC umbral real (test de 30 min o la de Intervals/Garmin); sin ella se usa el 90 % de la FC máx.
   - Calibrar (offset a cero) y emparejar el Assioma Uno con el Garmin; es de un solo pedal (×2, sin balance L/R).
-  - Revisar tras las primeras salidas: que `device_watts`/NP lleguen de Strava y que el TSS por potencia cuadre con el de pulso.
-  - Ideas sin hacer: eficiencia aeróbica (potencia ÷ pulso), bienestar de Intervals (sueño/FC reposo/HRV), alerta de molestias al coach.
+  - Revisar tras las primeras salidas: que `device_watts`/NP lleguen de Strava y que el TSS por potencia y el de pulso (detalle de la actividad) estén cerca; si no, FTP o FC umbral mal puestos.
+  - Ideas sin hacer: bienestar de Intervals (sueño/FC reposo/HRV), alerta de molestias al coach.
 
 ## Estructura
 
@@ -416,13 +442,21 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - `src/hooks/` — useDisponibilidad, useIsMobile.
 - `netlify/functions/` — coach-dashboard-data, coach-athlete-data,
   coach-activity-detail, send-to-intervals, move-session, delete-session,
-  season, my-connections, strava-auth, verify-intervals-key, accept-invitation;
+  season, my-connections, strava-auth, verify-intervals-key, accept-invitation,
+  set-fc-max, sync-ftp;
   `lib/` (auth, http, supabase-rest, rate-limit, oauth-state, metrics, semanas,
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
-  intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs,
+  intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs, potencia,
   season-validate).
-- `supabase/migrations/` — 001–020 (+ ficheros `PENDIENTE_*` que NO se aplican
-  solos). 017 aplicada 2026-10-29 (SQL Editor); 018 aplicada 2026-11-19; 019 aplicada 2026-11-20; 020 aplicada 2026-11-20; 021 (atleta_potencia) aplicada 2026-11-20.
+- `supabase/migrations/` — 001–022 (+ ficheros `PENDIENTE_*` que NO se aplican
+  solos). 017 aplicada 2026-10-29 (SQL Editor); 018–022 aplicadas en producción
+  (2026-11-19/20). **Nombres en el historial de Supabase ≠ nombre del fichero**
+  (se aplicaron por MCP con otro nombre): 018 → `018_productos_nutricion`,
+  019 → `nutricion_tomado_items`, 020 → `recetas_bidon`, **021 → `019_atleta_potencia`**
+  (se renumeró después), 022 → `022_fc_umbral`. En el mismo historial aparecen
+  `013_intervals_event_ids` y `014_intervals_athlete_unico`: son de **TriCoach v2**
+  (misma BD); la 014 crea el índice único `profiles_intervals_athlete_id_key`
+  (un Intervals por cuenta; `IntervalsSetup` lo explica si choca).
 - `audit/` — `recompute.mjs` (recálculo independiente de métricas). `real-data.mjs`
   está gitignoreado (actividades reales con FC).
 - `test/` — `npm test` (node --test, sin dependencias).
