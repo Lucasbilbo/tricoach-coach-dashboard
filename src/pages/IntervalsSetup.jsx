@@ -196,6 +196,13 @@ export default function IntervalsSetup() {
         // Solo avanzar si el guardado en el perfil se confirma; si no, el
         // wizard diría "conectado" pero el coach no podría enviar nada (F4a)
         const guardado = await guardarEnPerfil(apiKey.trim(), String(json.athleteId))
+        if (guardado === 'DUPLICADO') {
+          // Índice único profiles_intervals_athlete_id_key (2026-11-20): un
+          // calendario de Intervals solo puede estar en una cuenta (si no, cada
+          // entreno llegaba dos veces al reloj).
+          setErrorKey('Esta cuenta de Intervals.icu ya está conectada a otro usuario de GetRiCoach. Desconéctala allí primero o escribe a tu entrenador.')
+          return
+        }
         if (!guardado) {
           setErrorKey('La key es válida pero no se pudo guardar en tu perfil. Inténtalo de nuevo.')
           return
@@ -212,7 +219,8 @@ export default function IntervalsSetup() {
     }
   }
 
-  // Devuelve true si el perfil se actualizó correctamente, false si falló.
+  // Devuelve true si el perfil se actualizó, 'DUPLICADO' si ese Intervals ya es
+  // de otra cuenta (violación de índice único, 23505) y false si falló.
   async function guardarEnPerfil(key, athleteId) {
     setGuardando(true)
     try {
@@ -223,6 +231,7 @@ export default function IntervalsSetup() {
         .from('profiles')
         .update({ intervals_api_key: key, intervals_athlete_id: athleteId })
         .eq('id', uid)
+      if (error?.code === '23505') return 'DUPLICADO'
       return !error
     } catch {
       return false
