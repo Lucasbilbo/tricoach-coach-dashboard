@@ -705,7 +705,9 @@ numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto
   en texto (sin pastillas); filas abribles con teclado. **Detalle**
   (`ActivityDetail`): pantalla completa en móvil, métricas de 3 en 3, valores
   en mono, splits de Ink (rápido) a gris (lento), columnas vacías de vueltas
-  ocultas, Escape cierra.
+  ocultas, Escape cierra. **Orden (2026-11-22)**: en bici van primero las
+  Vueltas (el entreno hecho) y debajo los Splits por km; en carrera y natación
+  siguen Splits → Vueltas.
 - **Sin Strava**: `coach-athlete-data` responde 409 `code:'SIN_STRAVA'` con el
   nombre del atleta (nada más); la UI muestra `SinStrava` (neutro; en /home con
   "Conectar Strava") en vez de un error rojo. Cargando: `AnalisisCargando`.

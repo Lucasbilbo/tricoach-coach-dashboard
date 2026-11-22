@@ -165,6 +165,96 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
     return colorRitmo(t)
   }
 
+  const bloqueSplits = splits.length > 0 && (
+        <>
+          <p style={seccionTituloStyle}>Splits por km</p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Km</th>
+                  <th style={thStyle}>Tiempo</th>
+                  <th style={thStyle}>Ritmo</th>
+                  <th style={thStyle}>FC</th>
+                  <th style={thStyle}>Desnivel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {splits.map((s) => (
+                  <tr key={s.km}>
+                    <td style={tdStyle}>{s.km}</td>
+                    <td style={tdStyle}>{formatTiempo(s.moving_time_s)}</td>
+                    <td style={{ ...tdStyle, color: colorSplit(s.velocidad_ms), fontWeight: 600 }}>
+                      {act.disciplina === 'swim'
+                        ? s.ritmo_min_100m
+                          ? `${s.ritmo_min_100m} /100m`
+                          : '—'
+                        : s.ritmo_min_km
+                          ? `${s.ritmo_min_km} /km`
+                          : '—'}
+                    </td>
+                    <td style={tdStyle}>{s.fc_media != null ? `${s.fc_media} ppm` : '—'}</td>
+                    <td style={tdStyle}>{s.desnivel_m != null ? `${s.desnivel_m} m` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+  )
+
+  const bloqueVueltas = vueltas.length > 1 && (
+        <>
+          <p style={seccionTituloStyle}>Vueltas</p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>#</th>
+                  <th style={thStyle}>Nombre</th>
+                  <th style={thStyle}>Distancia</th>
+                  <th style={thStyle}>Tiempo</th>
+                  <th style={thStyle}>
+                    {act.disciplina === 'run' || act.disciplina === 'swim' ? 'Ritmo' : 'Vel.'}
+                  </th>
+                  {colFc && <th style={thStyle}>FC</th>}
+                  {colPotencia && <th style={thStyle}>Potencia</th>}
+                  {colCadencia && <th style={thStyle}>Cadencia</th>}
+                  {colDesnivel && <th style={thStyle}>Desnivel</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {vueltas.map((v) => (
+                  <tr key={v.indice}>
+                    <td style={tdStyle}>{v.indice}</td>
+                    <td style={{ ...tdStyle, fontFamily: FONTS.sans }}>{v.nombre}</td>
+                    <td style={tdStyle}>{formatDistanciaVuelta(v, act.disciplina)}</td>
+                    <td style={tdStyle}>{formatTiempo(v.moving_time_s)}</td>
+                    <td style={tdStyle}>
+                      {act.disciplina === 'run'
+                        ? v.ritmo_min_km
+                          ? `${v.ritmo_min_km} /km`
+                          : '—'
+                        : act.disciplina === 'swim'
+                          ? v.ritmo_min_100m
+                            ? `${v.ritmo_min_100m} /100m`
+                            : '—'
+                          : v.velocidad_media_kmh != null
+                            ? `${v.velocidad_media_kmh} km/h`
+                            : '—'}
+                    </td>
+                    {colFc && <td style={tdStyle}>{v.fc_media != null ? `${v.fc_media} ppm` : '—'}</td>}
+                    {colPotencia && <td style={tdStyle}>{v.potencia_media != null ? `${v.potencia_media} W` : '—'}</td>}
+                    {colCadencia && <td style={tdStyle}>{v.cadencia_media != null ? v.cadencia_media : '—'}</td>}
+                    {colDesnivel && <td style={tdStyle}>{v.desnivel_m != null ? `${v.desnivel_m} m` : '—'}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+  )
+
   return (
     <div
       onClick={onClose}
@@ -278,93 +368,17 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
               </>
             )}
 
-            {splits.length > 0 && (
+            {/* En bici manda el entrenamiento hecho (vueltas); los splits por km
+                son un extra y van debajo. En carrera y natación se mantiene el orden. */}
+            {act.disciplina === 'bike' ? (
               <>
-                <p style={seccionTituloStyle}>Splits por km</p>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>Km</th>
-                        <th style={thStyle}>Tiempo</th>
-                        <th style={thStyle}>Ritmo</th>
-                        <th style={thStyle}>FC</th>
-                        <th style={thStyle}>Desnivel</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {splits.map((s) => (
-                        <tr key={s.km}>
-                          <td style={tdStyle}>{s.km}</td>
-                          <td style={tdStyle}>{formatTiempo(s.moving_time_s)}</td>
-                          <td style={{ ...tdStyle, color: colorSplit(s.velocidad_ms), fontWeight: 600 }}>
-                            {act.disciplina === 'swim'
-                              ? s.ritmo_min_100m
-                                ? `${s.ritmo_min_100m} /100m`
-                                : '—'
-                              : s.ritmo_min_km
-                                ? `${s.ritmo_min_km} /km`
-                                : '—'}
-                          </td>
-                          <td style={tdStyle}>{s.fc_media != null ? `${s.fc_media} ppm` : '—'}</td>
-                          <td style={tdStyle}>{s.desnivel_m != null ? `${s.desnivel_m} m` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {bloqueVueltas}
+                {bloqueSplits}
               </>
-            )}
-
-            {vueltas.length > 1 && (
+            ) : (
               <>
-                <p style={seccionTituloStyle}>Vueltas</p>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>#</th>
-                        <th style={thStyle}>Nombre</th>
-                        <th style={thStyle}>Distancia</th>
-                        <th style={thStyle}>Tiempo</th>
-                        <th style={thStyle}>
-                          {act.disciplina === 'run' || act.disciplina === 'swim' ? 'Ritmo' : 'Vel.'}
-                        </th>
-                        {colFc && <th style={thStyle}>FC</th>}
-                        {colPotencia && <th style={thStyle}>Potencia</th>}
-                        {colCadencia && <th style={thStyle}>Cadencia</th>}
-                        {colDesnivel && <th style={thStyle}>Desnivel</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vueltas.map((v) => (
-                        <tr key={v.indice}>
-                          <td style={tdStyle}>{v.indice}</td>
-                          <td style={{ ...tdStyle, fontFamily: FONTS.sans }}>{v.nombre}</td>
-                          <td style={tdStyle}>{formatDistanciaVuelta(v, act.disciplina)}</td>
-                          <td style={tdStyle}>{formatTiempo(v.moving_time_s)}</td>
-                          <td style={tdStyle}>
-                            {act.disciplina === 'run'
-                              ? v.ritmo_min_km
-                                ? `${v.ritmo_min_km} /km`
-                                : '—'
-                              : act.disciplina === 'swim'
-                                ? v.ritmo_min_100m
-                                  ? `${v.ritmo_min_100m} /100m`
-                                  : '—'
-                                : v.velocidad_media_kmh != null
-                                  ? `${v.velocidad_media_kmh} km/h`
-                                  : '—'}
-                          </td>
-                          {colFc && <td style={tdStyle}>{v.fc_media != null ? `${v.fc_media} ppm` : '—'}</td>}
-                          {colPotencia && <td style={tdStyle}>{v.potencia_media != null ? `${v.potencia_media} W` : '—'}</td>}
-                          {colCadencia && <td style={tdStyle}>{v.cadencia_media != null ? v.cadencia_media : '—'}</td>}
-                          {colDesnivel && <td style={tdStyle}>{v.desnivel_m != null ? `${v.desnivel_m} m` : '—'}</td>}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {bloqueSplits}
+                {bloqueVueltas}
               </>
             )}
           </>
