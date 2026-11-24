@@ -119,8 +119,8 @@ function CamposNumero({ campos, form, onCambiar }) {
 // Campos del PLAN: productos de la despensa del atleta + cómo tomarlo, en
 // blanco para que los rellene el coach. Compartido con el creador de sesiones
 // (WorkoutBuilder).
-export function CamposPlanNutricion({ athleteId, form, onCambiar, minutos }) {
-  return <PlanProductos athleteId={athleteId} form={form} onCambiar={onCambiar} minutos={minutos} />
+export function CamposPlanNutricion({ athleteId, form, onCambiar, minutos, puedeEditarDespensa = false }) {
+  return <PlanProductos athleteId={athleteId} form={form} onCambiar={onCambiar} minutos={minutos} puedeEditarDespensa={puedeEditarDespensa} />
 }
 
 function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, extra }) {
@@ -303,7 +303,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
             {apuntaTomado && <p style={subtitulo}>Plan</p>}
             {editaPlan ? (
               <>
-                <CamposPlanNutricion athleteId={sesion.athlete_id} form={plan} onCambiar={cambiarPlan} minutos={minutos} />
+                <CamposPlanNutricion athleteId={sesion.athlete_id} form={plan} onCambiar={cambiarPlan} minutos={minutos} puedeEditarDespensa={uid === sesion.athlete_id} />
                 <Botonera
                   puedeGuardar={!!filaPlan && planSucio}
                   guardando={guardando === 'plan'}

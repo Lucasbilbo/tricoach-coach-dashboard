@@ -12,7 +12,7 @@ import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from
 import { LIMITE_NOTAS, resumenNutricion } from '../lib/nutricion'
 import {
   LIMITES_PRODUCTO, MAX_CANTIDAD, MAX_MINUTO, TIPOS, detalleProducto, itemDeProducto, lineaTiempo, minutoComoHora,
-  normalizarItems, normalizarProducto, porHora, tonicidadBidon, repartirMinutos, resumenTotales, textoReceta, totalesItems,
+  gruposProductos, normalizarItems, normalizarProducto, porHora, tonicidadBidon, repartirMinutos, resumenTotales, textoReceta, totalesItems,
 } from '../lib/productosNutricion'
 import { useProductosNutricion } from '../hooks/useProductosNutricion'
 import Icon from './ui/Icon'
@@ -301,10 +301,10 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
 
 // form: { productos, notas, …legacy }. onCambiar(campo, valor) con campo
 // 'productos' | 'notas'. minutos: duración prevista de la sesión (o null).
-export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
+// puedeEditarDespensa: solo el atleta toca su despensa; el coach elige de ella.
+export default function PlanProductos({ athleteId, form, onCambiar, minutos, puedeEditarDespensa = false }) {
   const { productos, disponible, anadir, editar, quitar } = useProductosNutricion(athleteId)
   const [gestorAbierto, setGestorAbierto] = useState(false)
-  const [selectorAbierto, setSelectorAbierto] = useState(false)
   const items = Array.isArray(form.productos) ? form.productos : []
   const itemDe = (id) => items.find((i) => i.producto_id === id)
 
@@ -346,27 +346,36 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
         <>
           {productos.length === 0 && huerfanos.length === 0 && (
             <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.45 }}>
-              Aún no hay productos. Añade los que tiene el atleta (geles, bidones…) y elige cuántos lleva.
+              {puedeEditarDespensa
+                ? 'Aún no hay productos. Añade los que usas (geles, bidones…) y elige cuántos llevas.'
+                : 'El atleta aún no ha añadido productos a su despensa.'}
             </p>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {productos.filter((p) => (Number(itemDe(p.id)?.cantidad) || 0) > 0).map((p) => {
-              const item = itemDe(p.id)
-              const cantidad = item ? Number(item.cantidad) || 0 : 0
-              return (
-                <div key={p.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48 }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: cantidad ? COLORS.textPrimary : COLORS.textSecondary, lineHeight: 1.3 }}>
-                      {p.nombre}
-                      <span style={{ display: 'block', fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textTertiary }}>{detalleProducto(p)}</span>
-                    </span>
-                    <Stepper cantidad={cantidad} nombre={p.nombre} onMenos={() => cambiarCantidad(p, -1)} onMas={() => cambiarCantidad(p, 1)} />
-                  </div>
-                  {item && p.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => cambiarItem(item, campo, valor)} />}
-                  {item && cantidad > 0 && <Momentos item={item} minutos={minutos} onCambiar={(v) => cambiarItem(item, 'minutos', v)} />}
-                </div>
-              )
-            })}
+          {/* Despensa entera a la vista, con +/−: primero geles (y guayaba), luego
+              bidones. Sin pasos intermedios: se ve qué hay y se elige cuántos. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {gruposProductos(productos).map((g) => (
+              <div key={g.clave}>
+                <p style={{ ...etiqueta, margin: '4px 0 2px' }}>{g.titulo}</p>
+                {g.productos.map((p) => {
+                  const item = itemDe(p.id)
+                  const cantidad = item ? Number(item.cantidad) || 0 : 0
+                  return (
+                    <div key={p.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48 }}>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: cantidad ? COLORS.textPrimary : COLORS.textSecondary, lineHeight: 1.3 }}>
+                          {p.nombre}
+                          <span style={{ display: 'block', fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textTertiary }}>{detalleProducto(p)}</span>
+                        </span>
+                        <Stepper cantidad={cantidad} nombre={p.nombre} onMenos={() => cambiarCantidad(p, -1)} onMas={() => cambiarCantidad(p, 1)} />
+                      </div>
+                      {item && cantidad > 0 && p.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => cambiarItem(item, campo, valor)} />}
+                      {item && cantidad > 0 && <Momentos item={item} minutos={minutos} onCambiar={(v) => cambiarItem(item, 'minutos', v)} />}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
             {huerfanos.map((item, i) => (
               <div key={`h${i}`}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48 }}>
@@ -382,33 +391,6 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
             ))}
           </div>
 
-          {/* Solo se ven los productos que lleva; el resto, al pulsar «Añadir producto»
-              (la despensa entera con +/− alargaba mucho el formulario). */}
-          {(() => {
-            const sinUsar = productos.filter((p) => !(Number(itemDe(p.id)?.cantidad) > 0))
-            if (sinUsar.length === 0) return null
-            return selectorAbierto ? (
-              <div style={{ display: 'flex', flexDirection: 'column', border: `1px solid ${COLORS.cardBorder}`, borderRadius: 10, padding: 4 }}>
-                {sinUsar.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => { cambiarCantidad(p, 1); setSelectorAbierto(false) }}
-                    style={{ ...textoBtn, minHeight: 44, padding: '0 10px', justifyContent: 'space-between', width: '100%', color: COLORS.textPrimary, fontSize: 14 }}
-                  >
-                    <span>{p.nombre}</span>
-                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textTertiary }}>{detalleProducto(p)}</span>
-                  </button>
-                ))}
-                <button type="button" onClick={() => setSelectorAbierto(false)} style={{ ...textoBtn, minHeight: 40, padding: '0 10px', color: COLORS.textTertiary }}>Cancelar</button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => setSelectorAbierto(true)} style={{ ...textoBtn, alignSelf: 'flex-start' }}>
-                <Icon name="plus" size={15} /> Añadir producto
-              </button>
-            )
-          })()}
-
           {textoTotal && (
             <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.5 }}>
               Total: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoTotal}</span>
@@ -420,13 +402,13 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
 
           <LineaTiempo items={limpios} minutos={minutos} />
 
-          {gestorAbierto ? (
+          {puedeEditarDespensa && (gestorAbierto ? (
             <Gestor productos={productos} anadir={anadir} editar={editar} quitar={quitar} onCerrar={() => setGestorAbierto(false)} />
           ) : (
             <button type="button" onClick={() => setGestorAbierto(true)} style={{ ...textoBtn, alignSelf: 'flex-start' }}>
               <Icon name="edit" size={15} /> {productos.length ? 'Editar despensa' : 'Añadir productos'}
             </button>
-          )}
+          ))}
         </>
       )}
 
@@ -437,7 +419,7 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos }) {
           onChange={(e) => onCambiar('notas', e.target.value)}
           maxLength={LIMITE_NOTAS}
           rows={2}
-          placeholder="Ej.: gel en el min 40 y cada 30'; isotónica en el bidón"
+          placeholder="Ej.: gel en el min 40 y cada 30'; si quieres más hidratos por hora, anótalo aquí"
           style={{ ...inputStyle, resize: 'vertical', minHeight: 56, lineHeight: 1.4 }}
         />
       </label>
