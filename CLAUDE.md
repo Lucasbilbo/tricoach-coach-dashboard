@@ -295,7 +295,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   cafeína mg, sodio mg, volumen ml; **desde 2026-11-24 (migración 023) solo la
   escribe el atleta** — el coach la LEE y elige de ella; semilla con los de
   Lucas). Bidones de natación/rodillo renombrados «Isotónico pequeño» /
-  «Isotónico grande» (migración 024). Sin campo de hidratos extra: Jon lo anota
+  «Isotónico grande» (migración 024); los bidones sin receta, «Agua 500/750/800 ml» (025). Sin campo de hidratos extra: Jon lo anota
   en «Cómo tomarlo». El plan de la sesión es `sesion_nutricion.productos`
   (jsonb, items COPIADOS del producto con valores por unidad + cantidad: editar la
   despensa no cambia planes hechos). Los g/h, ml/h y sodio/h se CALCULAN al pintar
@@ -452,9 +452,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs, potencia,
   season-validate).
-- `supabase/migrations/` — 001–024 (+ ficheros `PENDIENTE_*` que NO se aplican
+- `supabase/migrations/` — 001–025 (+ ficheros `PENDIENTE_*` que NO se aplican
   solos). 017 aplicada 2026-10-29 (SQL Editor); 018–022 aplicadas en producción
-  (2026-11-19/20); 023–024 aplicadas por MCP el 2026-11-24 (nombres iguales al fichero). **Nombres en el historial de Supabase ≠ nombre del fichero**
+  (2026-11-19/20); 023–025 aplicadas por MCP el 2026-11-24 (nombres iguales al fichero). **Nombres en el historial de Supabase ≠ nombre del fichero**
   (se aplicaron por MCP con otro nombre): 018 → `018_productos_nutricion`,
   019 → `nutricion_tomado_items`, 020 → `recetas_bidon`, **021 → `019_atleta_potencia`**
   (se renumeró después), 022 → `022_fc_umbral`. En el mismo historial aparecen
