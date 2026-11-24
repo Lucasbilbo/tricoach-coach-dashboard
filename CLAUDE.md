@@ -224,7 +224,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
     plantillas solo si hay; «Guardar como plantilla» solo con bloques.
   - **«Así llega al reloj»** = perfil de intensidad (`Perfil` de
     WorkoutDetail) + texto exacto a un clic.
-  - **«Más opciones»** (notas + nutrición), plegado salvo que tengan algo.
+  - **Notas y nutrición a la vista** (2026-11-24; antes «Más opciones» plegado).
   - **Pie fijo** con avisos y botones («Guardar sin enviar» · «Guardar y
     enviar al reloj»).
 
@@ -292,8 +292,11 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   atleta no ve la línea de Nutrición en sesiones futuras hasta que hay plan.
 - **Despensa por atleta** (2026-11-19, migración 018): tabla
   `atleta_productos_nutricion` (nombre, tipo gel/sólido/bidón, hidratos g,
-  cafeína mg, sodio mg, volumen ml; los editan atleta y coach, RLS como 017;
-  semilla con los de Lucas). El plan de la sesión es `sesion_nutricion.productos`
+  cafeína mg, sodio mg, volumen ml; **desde 2026-11-24 (migración 023) solo la
+  escribe el atleta** — el coach la LEE y elige de ella; semilla con los de
+  Lucas). Bidones de natación/rodillo renombrados «Isotónico pequeño» /
+  «Isotónico grande» (migración 024). Sin campo de hidratos extra: Jon lo anota
+  en «Cómo tomarlo». El plan de la sesión es `sesion_nutricion.productos`
   (jsonb, items COPIADOS del producto con valores por unidad + cantidad: editar la
   despensa no cambia planes hechos). Los g/h, ml/h y sodio/h se CALCULAN al pintar
   con la duración prevista (`planEfectivo` en `lib/productosNutricion.js`); las
@@ -449,9 +452,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs, potencia,
   season-validate).
-- `supabase/migrations/` — 001–022 (+ ficheros `PENDIENTE_*` que NO se aplican
+- `supabase/migrations/` — 001–024 (+ ficheros `PENDIENTE_*` que NO se aplican
   solos). 017 aplicada 2026-10-29 (SQL Editor); 018–022 aplicadas en producción
-  (2026-11-19/20). **Nombres en el historial de Supabase ≠ nombre del fichero**
+  (2026-11-19/20); 023–024 aplicadas por MCP el 2026-11-24 (nombres iguales al fichero). **Nombres en el historial de Supabase ≠ nombre del fichero**
   (se aplicaron por MCP con otro nombre): 018 → `018_productos_nutricion`,
   019 → `nutricion_tomado_items`, 020 → `recetas_bidon`, **021 → `019_atleta_potencia`**
   (se renumeró después), 022 → `022_fc_umbral`. En el mismo historial aparecen
@@ -589,8 +592,10 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
     Enviar todas» (envía en serie a `send-to-intervals`); la tarjeta solo pone
     «Sin enviar». Estado de sesión pasada sin actividad: «Sin hacer» (igual que
     el atleta), ya no «Pendiente».
-  - `PlanProductos`: solo se ven los productos con cantidad > 0; el resto, en
-    «Añadir producto». «Editar despensa» abre el gestor.
+  - `PlanProductos`: (2026-11-24) la despensa entera a la vista con +/−, en dos
+    grupos — «Geles y guayaba» y luego «Bidones» (`gruposProductos`, respeta el
+    `orden` del atleta dentro de cada grupo). Sin botón «Añadir producto». «Editar
+    despensa» (gestor) solo lo ve el ATLETA (`puedeEditarDespensa`); Jon solo elige.
 - **Atleta: esfuerzo en un toque y copiar para Strava (2026-11-20)**:
   - «Hechos y pendientes»: las sesiones Hechas sin feedback muestran debajo una
     fila RPE 1–10 (`FeedbackRapido` en `FeedbackSesion.jsx`); un toque guarda ya
