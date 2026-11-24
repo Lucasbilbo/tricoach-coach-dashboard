@@ -23,7 +23,7 @@ import Aviso from './ui/Aviso'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import { CamposPlanNutricion } from './NutricionSesion'
 import { duracionPrevista } from '../lib/tssPrevisto'
-import { formPlanDe, normalizarNutricion, resumenPlan, tienePlan } from '../lib/nutricion'
+import { formPlanDe, normalizarNutricion, tienePlan } from '../lib/nutricion'
 import { guardarNutricion, nutricionDisponible, quitarParte } from '../lib/nutricionApi'
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -79,8 +79,6 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const [nutri, setNutri] = useState(() => formPlanDe(nutricionExistente))
   const [nutriSucio, setNutriSucio] = useState(false)
   const [nutriDisponible, setNutriDisponible] = useState(false)
-  // Notas y nutrición van en "Más opciones" (plegado salvo que ya tengan algo)
-  const [masAbierto, setMasAbierto] = useState(() => !!initForm(sessionExistente).notas || tienePlan(nutricionExistente))
   // El texto exacto que llega al reloj, plegado (se ve el perfil de intensidad)
   const [verTexto, setVerTexto] = useState(false)
   useEffect(() => {
@@ -110,7 +108,6 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       setNutri(formPlanDe(nutricionExistente))
       // Al duplicar, el plan copiado hay que guardarlo en la sesión nueva
       setNutriSucio(!sessionExistente?.id && tienePlan(nutricionExistente))
-      setMasAbierto(!!f.notas || tienePlan(nutricionExistente))
       setVerTexto(false)
       // Mostrar input si la fecha existente no está en los próximos 14 días
       setMostrarInputFecha(
@@ -872,48 +869,31 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </div>
           )}
 
-          {/* Más opciones: notas y nutrición. Plegado, salvo que ya tengan algo */}
+          {/* Notas y nutrición, siempre a la vista (antes iban tras «Más opciones»). */}
           <div style={{ marginBottom: 16 }}>
-            <button
-              type="button"
-              onClick={() => setMasAbierto((v) => !v)}
-              aria-expanded={masAbierto}
-              style={{ ...separadorSection, display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${COLORS.cardBorder}`, cursor: 'pointer', padding: '0 0 6px', textAlign: 'left', fontFamily: FONTS.sans }}
-            >
-              <Icon name="chevronDown" size={15} style={{ transform: masAbierto ? 'rotate(180deg)' : 'none' }} />
-              Más opciones
-              {!masAbierto && (
-                <span style={{ fontWeight: 400, fontSize: 12, color: COLORS.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  · {[form.notas?.trim() ? 'Notas' : null, normalizarNutricion(nutri) ? `Nutrición ${resumenPlan(normalizarNutricion(nutri), duracionFinal) || 'con notas'}` : null].filter(Boolean).join(' · ') || 'notas y nutrición'}
-                </span>
-              )}
-            </button>
-            {masAbierto && (
-              <div style={{ paddingTop: 4 }}>
-                <label style={{ ...sectionLabel, marginTop: 4 }}>Notas para el atleta</label>
-                <textarea
-                  value={form.notas}
-                  onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
-                  rows={3}
-                  placeholder="Indicaciones técnicas, material extra..."
-                  style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: 16 }}
+            <label style={{ ...sectionLabel, marginTop: 4 }}>Notas para el atleta</label>
+            <textarea
+              value={form.notas}
+              onChange={(e) => setForm((prev) => ({ ...prev, notas: e.target.value }))}
+              rows={3}
+              placeholder="Indicaciones técnicas, material extra..."
+              style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: 16 }}
+            />
+            {/* Nutrición (opcional): se ve en la app, no va al reloj. La despensa es
+                del atleta: aquí el coach solo elige de ella (no la edita). */}
+            {nutriDisponible && form.disciplina !== 'other' && (
+              <div style={{ marginBottom: 4 }}>
+                <label style={sectionLabel}>Nutrición</label>
+                <CamposPlanNutricion
+                  athleteId={athleteId}
+                  minutos={duracionFinal}
+                  form={nutri}
+                  puedeEditarDespensa={coachId === athleteId}
+                  onCambiar={(campo, valor) => {
+                    setNutri((f) => ({ ...f, [campo]: valor }))
+                    setNutriSucio(true)
+                  }}
                 />
-                {/* Nutrición (opcional): se ve en la app, no va al reloj. Dentro de
-                    "Más opciones" ya no lleva su propio plegable (eran dos clics). */}
-                {nutriDisponible && form.disciplina !== 'other' && (
-                  <div style={{ marginBottom: 4 }}>
-                    <label style={sectionLabel}>Nutrición</label>
-                    <CamposPlanNutricion
-                      athleteId={athleteId}
-                      minutos={duracionFinal}
-                      form={nutri}
-                      onCambiar={(campo, valor) => {
-                        setNutri((f) => ({ ...f, [campo]: valor }))
-                        setNutriSucio(true)
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             )}
           </div>
