@@ -15,6 +15,7 @@ export const ESTADO = {
   programada: 'programada',
   pendiente: 'pendiente',
   sinDatos: 'sin_datos',
+  descanso: 'descanso', // día de descanso prescrito: no hay nada que hacer ni que comprobar
 }
 
 // Empareja sesiones con actividades. Dentro de cada (fecha, disciplina) asigna
@@ -83,6 +84,7 @@ export function asignarActividades(sesiones, actividades) {
 //    nunca un falso "pendiente")
 //  - pendiente: pasada, con datos, y sin actividad
 export function estadoDeSesion(sesion, actividad, hoy, coberturaDesde) {
+  if (sesion.disciplina === 'rest') return ESTADO.descanso
   if (actividad) return ESTADO.completada
   if (sesion.fecha >= hoy) return ESTADO.programada
   if (!coberturaDesde || sesion.fecha < coberturaDesde) return ESTADO.sinDatos

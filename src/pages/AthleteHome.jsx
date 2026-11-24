@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { tieneEntreno } from '../lib/adjuntos'
+import { esDescanso } from '../lib/descanso'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
@@ -55,6 +56,7 @@ const DISC_LABELS_HOME = {
   swim: 'Natación',
   strength: 'Fuerza',
   other: 'Otro',
+  rest: 'Descanso',
 }
 
 // "Hoy", "Mañana" o el día de la semana para los próximos 6 días.
@@ -115,6 +117,7 @@ function EstadoPasada({ estado }) {
         Hecho
       </span>
     )
+  if (estado === ESTADO.descanso) return <span style={{ color: COLORS.textTertiary }}>Descanso</span>
   if (estado === ESTADO.pendiente) return <span style={{ color: COLORS.textSecondary }}>Sin hacer</span>
   return <span style={{ color: COLORS.textTertiary }} title="Sin datos de Strava para esa fecha">—</span>
 }
@@ -414,6 +417,7 @@ export default function AthleteHome() {
     const abierta = !!expandidas[sesion.id]
     const relativo = diaRelativo(sesion.fecha)
     const enviada = !!sesion.enviado_a_garmin
+    const descanso = esDescanso(sesion)
     return (
       <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 10px 18px', ...railStyle(sesion.disciplina) }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
@@ -430,10 +434,12 @@ export default function AthleteHome() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
-            <Icon name="watch" size={15} />
-            {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
-          </span>
+          {!descanso && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
+              <Icon name="watch" size={15} />
+              {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
+            </span>
+          )}
           {tieneDetalle && (
             <button onClick={() => toggleDetalle(sesion.id)} style={textoBtn} aria-expanded={abierta}>
               <Icon name="chevronDown" size={16} style={{ transform: abierta ? 'rotate(180deg)' : 'none' }} />
@@ -442,7 +448,7 @@ export default function AthleteHome() {
           )}
         </div>
 
-        {nutricion.disponible && (
+        {nutricion.disponible && !descanso && (
           <NutricionSesion
             key={sesion.id}
             sesion={sesion}
@@ -453,7 +459,7 @@ export default function AthleteHome() {
           />
         )}
 
-        {relativo === 'Hoy' && (
+        {relativo === 'Hoy' && !descanso && (
           <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
             {/* Sin feedback aún: botón de verdad (es lo que el atleta tiene que hacer
                 al acabar). Con feedback: una línea que lo resume y lo reabre. */}
@@ -518,7 +524,8 @@ export default function AthleteHome() {
     const enviada = !!sesion.enviado_a_garmin
     // "Aún no está en tu reloj" solo importa si toca hoy o mañana; para la
     // semana que viene es normal (el entrenador lo manda más cerca).
-    const avisarReloj = !enviada && (relativo === 'Hoy' || relativo === 'Mañana')
+    const descanso = esDescanso(sesion)
+    const avisarReloj = !descanso && !enviada && (relativo === 'Hoy' || relativo === 'Mañana')
     const plan = nutricion.disponible ? nutricion.mapa.get(sesion.id) : null
     return (
       <div key={sesion.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}` }}>
@@ -550,11 +557,13 @@ export default function AthleteHome() {
         {abierta && (
           <div style={{ padding: '0 16px 14px 31px' }}>
             {sesion.notas && <p style={{ margin: '0 0 8px', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
-              <Icon name="watch" size={15} />
-              {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
-            </span>
-            {intervalsOk && !enviada && (
+            {!descanso && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
+                <Icon name="watch" size={15} />
+                {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
+              </span>
+            )}
+            {intervalsOk && !enviada && !descanso && (
               <div style={{ marginTop: 8 }}>
                 {erroresGarmin[sesion.id] && <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>}
                 <button
@@ -572,7 +581,7 @@ export default function AthleteHome() {
                 <WorkoutDetail sesion={sesion} mostrarNotas={false} copiarStrava />
               </div>
             )}
-            {nutricion.disponible && (
+            {nutricion.disponible && !descanso && (
               <div style={{ marginTop: 10, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
                 <NutricionSesion key={sesion.id} sesion={sesion} uid={userId} quien="atleta" inicial={plan} onCambio={actualizarNutricion} />
               </div>
@@ -723,8 +732,9 @@ export default function AthleteHome() {
                         )}
                         {abierta && (
                           <div style={{ padding: '0 16px 14px 31px' }}>
-                            <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />
-                            {nutricion.disponible && (
+                            {!esDescanso(sesion) && <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />}
+                            {sesion.notas && esDescanso(sesion) && <p style={{ margin: 0, fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>}
+                            {nutricion.disponible && !esDescanso(sesion) && (
                               <div style={{ marginTop: 12, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
                                 <NutricionSesion
                                   key={sesion.id}

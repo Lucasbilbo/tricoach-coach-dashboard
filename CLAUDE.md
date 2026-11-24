@@ -555,6 +555,15 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   - Listas (coach y atleta) ordenadas por fecha y hora.
   - Ojo dev: Vite en modo dev no expone los named de un `.cjs` fuera de
     node_modules (el build sí). Para ver la agenda en local, build + preview.
+- **Descanso (2026-11-24)**: dos sitios. (1) Bloque «+ Descanso» en el creador:
+  paso `Descanso` de 30 s (1 min si la disciplina no admite segundos), que ya se
+  reconoce como descanso (en natación, nativo del reloj). (2) Disciplina
+  `rest` («Descanso», `src/lib/descanso.js`): día sin entreno, solo marca el día
+  y admite notas. Sin hora, bloques, nutrición, feedback ni envío al reloj;
+  `estadoDeSesion` devuelve `ESTADO.descanso` (nunca «Sin hacer»); color neutro
+  `DISCIPLINE_COLORS.rest`. No hay CHECK de disciplina en `coach_sessions`, así
+  que sin migración. No se puede convertir en descanso una sesión que ya está en
+  el reloj (chip deshabilitado). Tests: `test/descanso.test.js`.
 - **No se ofrecen combinaciones imposibles** (2026-10): en el calendario, un día
   sin NINGUNA disciplina posible (`no_disponible` o con datos pero sin tramos) no
   es botón; en `WorkoutBuilder`, los chips de fecha y los botones de disciplina que

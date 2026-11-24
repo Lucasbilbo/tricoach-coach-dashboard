@@ -2,7 +2,7 @@
 // Sirven para pintar cada bloque PLEGADO ("Calentamiento · 15′ Z1") y para
 // proponer un nombre cuando el coach no escribe uno ("Carrera · 6×3′ Z4").
 
-const DISCIPLINA_NOMBRE = { swim: 'Natación', bike: 'Ciclismo', run: 'Carrera', strength: 'Fuerza', other: 'Entreno' }
+const DISCIPLINA_NOMBRE = { swim: 'Natación', bike: 'Ciclismo', run: 'Carrera', strength: 'Fuerza', other: 'Entreno', rest: 'Descanso' }
 
 export function cantidadTexto(cantidad, unidad) {
   if (cantidad == null || cantidad === '') return ''

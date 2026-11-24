@@ -33,6 +33,7 @@ const DISC_LABELS = {
   bike: 'Ciclismo',
   strength: 'Fuerza',
   other: 'Otro',
+  rest: 'Descanso',
 }
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -61,6 +62,7 @@ function estadoSesion(sesion, actividad, coberturaDesde) {
   const estado = estadoDeSesion(sesion, actividad, hoyMadrid(), coberturaDesde)
   if (estado === ESTADO.completada) return { texto: '✓ Completada', color: COLORS.accent, actividadStrava: actividad }
   if (estado === ESTADO.programada) return { texto: 'Programada', color: COLORS.textSecondary, actividadStrava: null }
+  if (estado === ESTADO.descanso) return { texto: 'Día de descanso', color: COLORS.textSecondary, actividadStrava: null }
   if (estado === ESTADO.sinDatos) return { texto: 'Sin datos en el rango', color: COLORS.textTertiary, actividadStrava: null }
   return { texto: 'Sin hacer', color: COLORS.textSecondary, actividadStrava: null }
 }
@@ -432,7 +434,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     const pasada = sesion.fecha < hoy
     const nutri = nutricion.mapa.get(sesion.id)
     // Nutrición: en futuras siempre (para planificar); en pasadas solo si hay algo
-    const mostrarNutri = nutricion.disponible && sesion.disciplina !== 'other' && (!pasada || tienePlan(nutri) || tieneTomado(nutri))
+    const mostrarNutri = nutricion.disponible && sesion.disciplina !== 'other' && sesion.disciplina !== 'rest' && (!pasada || tienePlan(nutri) || tieneTomado(nutri))
     const nutriEf = nutricionEfectiva(nutri, duracionPrevista(sesion)?.min ?? null)
     const avisoNutri = avisoTomado(nutriEf)
     // Chip: g/h del plan; con productos y sin duración conocida, los hidratos totales
@@ -515,7 +517,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             {estado.texto.replace('✓ ', '')}
           </span>
           {completada && <Cumplimiento sesion={sesion} actividad={estado.actividadStrava} />}
-          {!pasada && (
+          {!pasada && sesion.disciplina !== 'rest' && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: enviada ? COLORS.textSecondary : COLOR_PENDIENTE }}>
               <Icon name="watch" size={15} />
               {enviada ? 'En el reloj' : 'Sin enviar'}

@@ -32,6 +32,7 @@ export const DISCIPLINE_COLORS = {
   run: '#E85D5D', // Exertion Coral
   strength: '#8B7FD1', // Load violet (fuerza no es disciplina de triatlón)
   other: '#5C6270', // Mist oscuro
+  rest: '#3A4152', // día de descanso: neutro, sin protagonismo
 }
 
 export const DISCIPLINE_LABELS = {
@@ -40,6 +41,7 @@ export const DISCIPLINE_LABELS = {
   swim: 'Natación',
   strength: 'Fuerza',
   other: 'Otro',
+  rest: 'Descanso',
 }
 
 export const cardStyle = {

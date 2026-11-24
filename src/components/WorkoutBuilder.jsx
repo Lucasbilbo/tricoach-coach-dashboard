@@ -7,7 +7,8 @@ import { authHeaders } from '../lib/authHeaders'
 import { invalidarDatosAtleta } from '../lib/athleteData'
 import { COLORS, DISCIPLINE_COLORS, FONTS, inputStyle } from '../lib/theme'
 import { buildIntervalsText, problemaEntreno } from '../lib/intervalsText'
-import { DISCIPLINAS, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
+import { DISCIPLINA_DESCANSO, pasoDescanso } from '../lib/descanso'
+import { DISCIPLINAS, UNIDADES, defaultUnidad, duracionTotalMin, initForm, proximosDias, ritmosInvalidos, usaZonaNatacion } from './workout/constants'
 import { sectionLabel, separadorSection, addBtnStyle, chipStyle, chipDisciplinaStyle } from './workout/styles'
 import { BloqueSimple, BloqueRepeat } from './workout/WorkoutBlocks'
 import { metrosTexto, nombrePorDefecto } from './workout/resumen'
@@ -243,7 +244,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
     const base = { objetivo_tipo: null, objetivo_valor: null, nombre: null, material: [] }
 
     const nuevoBloque =
-      tipo === 'repeat'
+      tipo === 'rest'
+        ? pasoDescanso(UNIDADES[form.disciplina] || [])
+        : tipo === 'repeat'
         ? {
             tipo: 'repeat',
             nombre: '',
@@ -266,6 +269,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   const yaEnviada = !!sessionExistente?.intervals_event_id
 
   // Solo fuerza admite el entreno "tal cual" (captura / texto, p. ej. Hyrox)
+  // Día de descanso: solo marca el día (y notas). Sin entreno, hora, reloj ni nutrición.
+  const esRest = form.disciplina === DISCIPLINA_DESCANSO
   const conAdjunto = form.disciplina === 'strength'
   const adjunto = conAdjunto ? adjuntoDe({ adjunto: form.adjunto }) : null
   // Natación: total de metros de los bloques (series × repeticiones, sin descansos)
@@ -284,8 +289,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       // Sin nombre escrito, el propuesto («Carrera · 6×3′ Z4»)
       descripcion: form.nombre?.trim() || nombrePorDefecto(form.disciplina, form.bloques),
       notas: form.notas || null,
-      duracion_min: duracionFinal,
-      workout_steps: form.bloques.length > 0 || adjunto
+      duracion_min: esRest ? null : duracionFinal,
+      workout_steps: !esRest && (form.bloques.length > 0 || adjunto)
         ? { bloques: form.bloques, notas: form.notas || '', ...(form.disciplina === 'swim' ? { piscina: form.piscina } : {}), ...(adjunto ? { adjunto } : {}) }
         : null,
       // Al editar una sesión ya enviada se marca como pendiente hasta que el
@@ -294,7 +299,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
       ...(sessionId && yaEnviada ? { enviado_a_garmin: false } : {}),
       // La columna solo se manda si hay hora (o la había): así guardar sin hora
       // sigue funcionando aunque la migración 013 aún no esté aplicada.
-      ...(horaNueva != null || horaAntes != null ? { hora_inicio_min: horaNueva } : {}),
+      ...(horaNueva != null || horaAntes != null ? { hora_inicio_min: esRest ? null : horaNueva } : {}),
       // Si el coach recoloca una sesión que había movido el atleta, la marca
       // "movida por" deja de ser cierta.
       ...(sessionExistente?.movida_por && (form.fecha !== sessionExistente.fecha || horaNueva !== horaAntes)
@@ -553,6 +558,27 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   </button>
                 )
               })}
+              {/* Descanso: siempre disponible (no depende de las franjas). Si la
+                  sesión ya está en el reloj, primero hay que quitarla de ahí. */}
+              {!esperandoDisponibilidad && (() => {
+                const sel = esRest
+                const bloqueo = !sel && sessionExistente?.intervals_event_id ? 'Está en el reloj: elimina la sesión y crea un descanso nuevo' : null
+                return (
+                  <button
+                    type="button"
+                    disabled={!!bloqueo}
+                    title={bloqueo || undefined}
+                    aria-pressed={sel}
+                    onClick={() => {
+                      if (!sel) setAbiertos(new Set())
+                      setForm((prev) => (prev.disciplina === DISCIPLINA_DESCANSO ? prev : { ...prev, disciplina: DISCIPLINA_DESCANSO, bloques: [], hora: null, adjunto: null, duracionManual: null }))
+                    }}
+                    style={chipDisciplinaStyle(sel, DISCIPLINE_COLORS.rest, { bloqueado: !!bloqueo })}
+                  >
+                    Descanso
+                  </button>
+                )
+              })()}
             </div>
             {alaHora && alaHora.length === 0 && (
               <p style={{ margin: '6px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
@@ -660,7 +686,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </div>
           </div>
 
-          {form.fecha && (
+          {form.fecha && !esRest && (
             <div style={{ marginBottom: 14 }}>
               <label style={sectionLabel}>Hora <span style={{ textTransform: 'none', fontWeight: 400, color: COLORS.textTertiary }}>(opcional)</span></label>
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
@@ -757,6 +783,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </div>
           )}
 
+          {!esRest && (<>
           <PotenciaContext.Provider value={bikePotencia}>
           {/* Atajos: escritura rápida y plantillas */}
           <AtajosBuilder
@@ -815,6 +842,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               { tipo: 'repeat', label: '+ Serie' },
               { tipo: 'step', label: '+ Paso libre' },
               { tipo: 'cooldown', label: '+ Vuelta calma' },
+              { tipo: 'rest', label: '+ Descanso' },
             ].map(({ tipo, label }) => (
               <button key={tipo} type="button" onClick={() => addBloque(tipo)} style={{ ...addBtnStyle, minHeight: 34 }}>
                 {label}
@@ -869,6 +897,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </div>
           )}
 
+          </>)}
+
           {/* Notas y nutrición, siempre a la vista (antes iban tras «Más opciones»). */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ ...sectionLabel, marginTop: 4 }}>Notas para el atleta</label>
@@ -881,7 +911,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             />
             {/* Nutrición (opcional): se ve en la app, no va al reloj. La despensa es
                 del atleta: aquí el coach solo elige de ella (no la edita). */}
-            {nutriDisponible && form.disciplina !== 'other' && (
+            {nutriDisponible && form.disciplina !== 'other' && !esRest && (
               <div style={{ marginBottom: 4 }}>
                 <label style={sectionLabel}>Nutrición</label>
                 <CamposPlanNutricion
@@ -981,8 +1011,9 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   opacity: guardando || enviando ? 0.6 : 1,
                 }}
               >
-                {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : 'Guardar sin enviar'}
+                {guardando ? (yaEnviada ? 'Actualizando reloj...' : 'Guardando...') : yaEnviada ? 'Guardar y actualizar reloj' : esRest ? 'Guardar descanso' : 'Guardar sin enviar'}
               </button>
+              {!esRest && (
               <button
                 onClick={handleEnviarGarmin}
                 disabled={guardando || enviando}
@@ -1002,6 +1033,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               >
                 {enviando ? 'Enviando…' : 'Guardar y enviar al reloj'}
               </button>
+              )}
             </div>
           </div>
         )}
