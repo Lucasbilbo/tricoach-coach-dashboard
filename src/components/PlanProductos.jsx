@@ -413,13 +413,13 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
       )}
 
       <label style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={etiqueta}>Cómo tomarlo</span>
+        <span style={etiqueta}>Notas</span>
         <textarea
           value={form.notas}
           onChange={(e) => onCambiar('notas', e.target.value)}
           maxLength={LIMITE_NOTAS}
           rows={2}
-          placeholder="Ej.: gel en el min 40 y cada 30'; si quieres más hidratos por hora, anótalo aquí"
+          placeholder="Ej.: gel en el min 40 y cada 30'; más hidratos por hora si el atleta lo aguanta"
           style={{ ...inputStyle, resize: 'vertical', minHeight: 56, lineHeight: 1.4 }}
         />
       </label>
