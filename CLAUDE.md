@@ -295,8 +295,10 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   cafeína mg, sodio mg, volumen ml; **desde 2026-11-24 (migración 023) solo la
   escribe el atleta** — el coach la LEE y elige de ella; semilla con los de
   Lucas). Bidones de natación/rodillo renombrados «Isotónico pequeño» /
-  «Isotónico grande» (migración 024); los bidones sin receta, «Agua 500/750/800 ml» (025). Sin campo de hidratos extra: Jon lo anota
-  en «Cómo tomarlo». El plan de la sesión es `sesion_nutricion.productos`
+  «Isotónico grande» (migración 024). Los bidones SIN receta (Bidón 500/750/800) son los «a medida»: Jon
+  escribe los hidratos y el sodio POR BIDÓN en cada sesión (así sube los g/bote).
+  Se probó renombrarlos «Agua N ml» (025) y se revirtió (026), que además quitó los
+  tres hipertónicos de la semilla (menos opciones). El plan de la sesión es `sesion_nutricion.productos`
   (jsonb, items COPIADOS del producto con valores por unidad + cantidad: editar la
   despensa no cambia planes hechos). Los g/h, ml/h y sodio/h se CALCULAN al pintar
   con la duración prevista (`planEfectivo` en `lib/productosNutricion.js`); las
@@ -333,9 +335,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   solo por hidratos; con receta propia usa sus gramos exactos). Sale en el
   detalle del producto, en la línea de receta del plan y en la vista del atleta
   ("7,3 % · isotónico"). Natación 500 ml (3,9 %) sale isotónico. La semilla de
-  Lucas añade tres bidones HIPERTÓNICOS de 800 ml por hidratos que Jon elige:
-  80 / 90 / 100 g (malto:fructosa 2:1 + 2,5 g Evolytes) y deja la despensa en
-  orden guayaba → bidones → geles (su prioridad).
+  Lucas añadió tres bidones HIPERTÓNICOS (80 / 90 / 100 g) que se QUITARON el
+  2026-11-24 (026): para más hidratos, un bidón a medida.
   **Receta del bidón** (`recetaBidon`/`textoReceta`): de los hidratos y el sodio
   del bidón salen los GRAMOS a pesar: maltodextrina + fructosa en 2:1 (la que
   usa Lucas; constante `RATIO_MALTO_FRUCTOSA`), con maltodextrina HSN 95 g
@@ -452,9 +453,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs, potencia,
   season-validate).
-- `supabase/migrations/` — 001–025 (+ ficheros `PENDIENTE_*` que NO se aplican
+- `supabase/migrations/` — 001–026 (+ ficheros `PENDIENTE_*` que NO se aplican
   solos). 017 aplicada 2026-10-29 (SQL Editor); 018–022 aplicadas en producción
-  (2026-11-19/20); 023–025 aplicadas por MCP el 2026-11-24 (nombres iguales al fichero). **Nombres en el historial de Supabase ≠ nombre del fichero**
+  (2026-11-19/20); 023–026 aplicadas por MCP el 2026-11-24 (nombres iguales al fichero). **Nombres en el historial de Supabase ≠ nombre del fichero**
   (se aplicaron por MCP con otro nombre): 018 → `018_productos_nutricion`,
   019 → `nutricion_tomado_items`, 020 → `recetas_bidon`, **021 → `019_atleta_potencia`**
   (se renumeró después), 022 → `022_fc_umbral`. En el mismo historial aparecen
