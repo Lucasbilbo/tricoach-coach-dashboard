@@ -28,6 +28,19 @@ const entero = (v, max) => {
 
 export const etiquetaTipo = (t) => TIPOS.find((x) => x.value === t)?.label || ''
 
+// Despensa en los grupos con que se enseña al elegir: primero geles (con la
+// guayaba y demás sólidos) y después bidones. Dentro de cada grupo se respeta
+// el `orden` del atleta; los grupos vacíos no salen.
+export function gruposProductos(productos) {
+  const lista = Array.isArray(productos) ? productos : []
+  const porOrden = (a, b) => (a.orden ?? 0) - (b.orden ?? 0)
+  const grupos = [
+    { clave: 'geles', titulo: 'Geles y guayaba', productos: lista.filter((p) => p.tipo !== 'bidon').sort(porOrden) },
+    { clave: 'bidones', titulo: 'Bidones', productos: lista.filter((p) => p.tipo === 'bidon').sort(porOrden) },
+  ]
+  return grupos.filter((g) => g.productos.length > 0)
+}
+
 // Gramos con un decimal (13,5 g de maltodextrina), 0 si no vale
 const gramos = (v) => {
   if (v === '' || v == null) return 0

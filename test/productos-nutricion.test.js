@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  detalleProducto, itemDeProducto, itemsDe, normalizarItems, normalizarProducto, planEfectivo, porHora,
+  detalleProducto, gruposProductos, itemDeProducto, itemsDe, normalizarItems, normalizarProducto, planEfectivo, porHora,
   recetaBidon, resumenItems, resumenTotales, textoReceta, totalesItems,
 } from '../src/lib/productosNutricion.js'
 import { formPlanDe, normalizarNutricion, resumenPlan, tienePlan, avisoTomado } from '../src/lib/nutricion.js'
@@ -261,4 +261,22 @@ test('tonicidadBidon: bidón a medida usa sus hidratos; agua o gel → null', ()
 
 test('detalleProducto de un bidón incluye su tonicidad', () => {
   assert.match(detalleProducto({ tipo: 'bidon', volumen_ml: 800, carbohidratos_g: 58, sodio_mg: 356, receta: { maltodextrina_g: 40, fructosa_g: 20, sales_g: 2.5 } }), /7,3 % · isotónico/)
+})
+
+test('gruposProductos: primero geles y guayaba, luego bidones, cada grupo por su orden', () => {
+  const lista = [
+    { id: 'b1', nombre: 'Bidón bici larga', tipo: 'bidon', orden: 2 },
+    { id: 'g2', nombre: 'Gel 45 g', tipo: 'gel', orden: 12 },
+    { id: 'gu', nombre: 'Guayaba', tipo: 'solido', orden: 1 },
+    { id: 'b0', nombre: 'Isotónico', tipo: 'bidon', orden: 1 },
+    { id: 'g1', nombre: 'Gel 30 g', tipo: 'gel', orden: 11 },
+  ]
+  const grupos = gruposProductos(lista)
+  assert.deepEqual(grupos.map((g) => g.clave), ['geles', 'bidones'])
+  assert.deepEqual(grupos[0].productos.map((p) => p.id), ['gu', 'g1', 'g2'])
+  assert.deepEqual(grupos[1].productos.map((p) => p.id), ['b0', 'b1'])
+  // Sin bidones, el grupo no sale; sin nada, tampoco
+  assert.deepEqual(gruposProductos(lista.filter((p) => p.tipo !== 'bidon')).map((g) => g.clave), ['geles'])
+  assert.deepEqual(gruposProductos([]), [])
+  assert.deepEqual(gruposProductos(null), [])
 })
