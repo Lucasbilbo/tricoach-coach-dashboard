@@ -36,7 +36,7 @@ const sesiones = [
   ses(-2, 'strength', 'Hyrox', null, { duracion_min: 60, workout_steps: { bloques: [], adjunto: { texto: '4 rondas:\n- 1000 m remo\n- 20 wall balls\n- 50 m sled push', imagenes: [] } } }),
   ses(-1, 'run', 'Fartlek', [step(15, 'min', 'Z1'), rep(8, [step(1, 'min', 'Z5'), step(1, 'min', 'Z1')]), step(10, 'min', 'Z1')], { duracion_min: 41, movida_por: 'atleta', movida_at: new Date().toISOString() }),
   // ── hoy ──
-  ses(0, 'bike', 'Rodillo Z2', [step(75, 'min', 'Z2')], { duracion_min: 75, hora_inicio_min: 1110, enviado_a_garmin: true, intervals_event_id: '113' }),
+  ses(0, 'bike', 'Rodillo Z2', [step(10, 'min', 'Z1', { tipo: 'warmup' }), rep(3, [step(15, 'min', 'Z2'), step(3, 'min', 'Z1')]), step(11, 'min', 'Z1', { tipo: 'cooldown' })], { duracion_min: 75, hora_inicio_min: 1110, enviado_a_garmin: true, intervals_event_id: '113' }),
   // ── futuras ──
   ses(1, 'swim', 'Nado 2000', [step(2000, 'mtr', null, { nombre: 'Continuo' })], { hora_inicio_min: 420 }),
   ses(2, 'run', 'Tirada 21 km', [step(21, 'km', 'Z2')], { hora_inicio_min: 540 }),

@@ -7,12 +7,13 @@ import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta } from '../lib/athleteData'
 import { misConexiones } from '../lib/connections'
 import { ESTADO, asignarActividades, estadoDeSesion, fechaHaceSemanas, semanasNecesarias } from '../lib/estadoSesion'
-import { formatDiaMes, hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
-import { COLORS, DISCIPLINE_COLORS, FONTS, buttonStyle, cardStyle, ghostButtonStyle, iconButtonStyle, pageStyle, railStyle } from '../lib/theme'
+import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
+import { COLORS, DISCIPLINE_COLORS, buttonStyle, cardStyle, displayStyle, ghostButtonStyle, iconButtonStyle, pageStyle } from '../lib/theme'
 import Icon from '../components/ui/Icon'
 import { PageHeader, SectionTitle, Tabs } from '../components/ui/Layout'
 import SelectorPeriodo from '../components/ui/SelectorPeriodo'
-import WorkoutDetail from '../components/WorkoutDetail'
+import WorkoutDetail, { Perfil } from '../components/WorkoutDetail'
+import { resumenBloque } from '../components/workout/resumen'
 import PotenciaAjustes from '../components/PotenciaAjustes'
 import WeekCompare from '../components/WeekCompare'
 import StravaAnalysis from '../components/shared/StravaAnalysis'
@@ -70,18 +71,33 @@ function diaRelativo(fecha) {
   return null
 }
 
-const textoBtn = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 5,
-  background: 'transparent',
-  border: 'none',
-  color: COLORS.textSecondary,
-  padding: '8px 0',
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: 'pointer',
-  minHeight: 36,
+// Fecha en bloque (de la dirección B «Boya»): el número del día grande y
+// condensado, como un dorsal, sobre el color de la disciplina. Se escanea
+// mejor que «Viernes · 27 Nov». En lo pasado va apagado.
+function BloqueFecha({ fecha, disciplina, apagado = false }) {
+  const color = DISCIPLINE_COLORS[disciplina] || DISCIPLINE_COLORS.other
+  const [y, m, d] = fecha.split('-').map(Number)
+  const dia = DIAS_CORTOS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: 50, height: 52, flexShrink: 0, borderRadius: 14,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: apagado ? 'rgba(255,255,255,0.04)' : `${color}26`,
+        boxShadow: `inset 0 0 0 1.5px ${apagado ? 'rgba(255,255,255,0.06)' : `${color}73`}`,
+      }}
+    >
+      <span style={{ fontSize: 25, fontWeight: 900, fontStretch: '72%', lineHeight: 0.95, color: apagado ? COLORS.textSecondary : COLORS.textPrimary }}>{d}</span>
+      <span style={{ fontSize: 11.5, fontWeight: 600, color: apagado ? COLORS.textTertiary : COLORS.textSoft, marginTop: 2 }}>{dia}</span>
+    </span>
+  )
+}
+
+// «Miércoles, 25 de noviembre» en hora de Madrid: la cabecera de /home.
+function fechaDeHoy() {
+  const t = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Madrid' }).format(new Date())
+  return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
 const PAGINA_PASADAS = 10
@@ -418,105 +434,144 @@ export default function AthleteHome() {
     navigate('/')
   }
 
-  // Tarjeta de una sesión próxima (hoy o futura)
+  // La sesión protagonista (hoy, o la próxima si hoy no hay nada). Rediseño
+  // 2026-11 (dirección A «Pulso»): el nombre en grande, la duración y el perfil
+  // de intensidad a lo ancho con el color de la disciplina, el plan en una
+  // línea y las dos acciones del día como botones de verdad.
   const renderProxima = (sesion) => {
     const tieneDetalle = tieneEntreno(sesion.workout_steps)
     const abierta = !!expandidas[sesion.id]
     const relativo = diaRelativo(sesion.fecha)
     const enviada = !!sesion.enviado_a_garmin
     const descanso = esDescanso(sesion)
+    const esHoy = relativo === 'Hoy'
+    const color = DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other
+    const hora = Number.isInteger(sesion.hora_inicio_min) ? formatHora(sesion.hora_inicio_min) : null
+    const dp = duracionPrevista(sesion)
+    const bloques = sesion.workout_steps?.bloques || []
+    const plan = bloques.map(resumenBloque).filter(Boolean)
+    const cuando = relativo
+      ? `${relativo}${hora ? ` a las ${hora}` : ''}`
+      : `${formatFechaLarga(sesion.fecha)}${hora ? ` · ${hora}` : ''}`
+    const conFeedback = feedbacks.has(sesion.id)
     return (
-      <article key={sesion.id} style={{ ...cardStyle, padding: '18px 16px 12px 24px', ...railStyle(sesion.disciplina) }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
-          {relativo && <span style={{ color: relativo === 'Hoy' ? COLORS.accent : COLORS.textPrimary, fontWeight: 600 }}>{relativo}</span>}
-          <span style={{ fontFamily: FONTS.mono }}>
-            {formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
-          </span>
-          <span>{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
-          <DuracionSesion sesion={sesion} />
-        </div>
-        <h3 style={{ margin: '6px 0 0', fontSize: 17, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
-        {sesion.notas && (
-          <p style={{ margin: '6px 0 0', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-          {!descanso && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
-              <Icon name="watch" size={15} />
-              {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
-            </span>
+      <article
+        key={sesion.id}
+        style={{
+          ...cardStyle,
+          padding: 0,
+          overflow: 'hidden',
+          borderRadius: 24,
+          background: descanso ? COLORS.card : `radial-gradient(120% 70% at 50% 0%, ${color}2E, ${color}00 65%), ${COLORS.card}`,
+        }}
+      >
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, color: descanso ? COLORS.textSecondary : color }}>
+            <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 4, background: descanso ? COLORS.textTertiary : color, flexShrink: 0 }} />
+            <span>{cuando} · {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}</span>
+          </div>
+          <h3 style={{ ...displayStyle, margin: '10px 0 0', fontSize: 'clamp(32px, 9vw, 46px)', overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
+          {(dp || !descanso) && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap', marginTop: 14 }}>
+              {dp && (
+                <span title={dp.estimada ? 'Estimada con los ritmos de cada paso' : undefined}>
+                  <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.01em' }}>{dp.estimada ? '~' : ''}{dp.min}</span>
+                  <span style={{ fontSize: 15, color: COLORS.textSecondary, marginLeft: 4 }}>min</span>
+                </span>
+              )}
+              {!descanso && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, marginLeft: 'auto', color: enviada ? COLORS.accent : AVISO_RELOJ }}>
+                  <Icon name="watch" size={16} />
+                  {enviada ? 'En tu reloj' : 'Aún no está en tu reloj'}
+                </span>
+              )}
+            </div>
           )}
-          {tieneDetalle && (
-            <button onClick={() => toggleDetalle(sesion.id)} style={textoBtn} aria-expanded={abierta}>
-              <Icon name="chevronDown" size={16} style={{ transform: abierta ? 'rotate(180deg)' : 'none' }} />
-              {abierta ? 'Ocultar' : 'Ver entreno'}
-            </button>
+          {sesion.notas && (
+            <p style={{ margin: '12px 0 0', fontSize: 15, color: COLORS.textSoft, lineHeight: 1.5 }}>{sesion.notas}</p>
           )}
         </div>
 
-        {nutricion.disponible && !descanso && (
-          <NutricionSesion
-            key={sesion.id}
-            sesion={sesion}
-            uid={userId}
-            quien="atleta"
-            inicial={nutricion.mapa.get(sesion.id)}
-            onCambio={actualizarNutricion}
-          />
-        )}
-
-        {relativo === 'Hoy' && !descanso && (
-          <div style={{ borderTop: `1px solid ${COLORS.cardBorder}`, marginTop: 6, paddingTop: 2 }}>
-            {/* Sin feedback aún: botón de verdad (es lo que el atleta tiene que hacer
-                al acabar). Con feedback: una línea que lo resume y lo reabre. */}
-            {feedbacks.has(sesion.id) || feedbackAbierto[sesion.id] ? (
-              <button
-                onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
-                style={{ ...textoBtn, color: feedbacks.has(sesion.id) ? COLORS.textSecondary : COLORS.textPrimary }}
-                aria-expanded={!!feedbackAbierto[sesion.id]}
-              >
-                <Icon name="chevronDown" size={16} style={{ transform: feedbackAbierto[sesion.id] ? 'rotate(180deg)' : 'none' }} />
-                {feedbacks.has(sesion.id) ? `Tu feedback: ${resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}` : '¿Cómo te fue?'}
-              </button>
-            ) : (
-              <button
-                onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: true }))}
-                aria-expanded={false}
-                style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 6, padding: '8px 14px', fontSize: 13.5 }}
-              >
-                <Icon name="check" size={15} />
-                ¿Cómo te fue?
-              </button>
-            )}
-            {feedbackAbierto[sesion.id] && (
-              <div style={{ padding: '4px 0 8px' }}>
-                <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
-              </div>
+        {bloques.length > 0 && (
+          <div style={{ padding: '14px 16px 0' }}>
+            <Perfil bloques={bloques} disciplina={sesion.disciplina} alto={84} tinte={color} separacion={3} style={{ marginBottom: 0 }} />
+            {plan.length > 0 && (
+              <p style={{ margin: '12px 4px 0', fontSize: 14, lineHeight: 1.5, color: COLORS.textSoft }}>{plan.join('  ·  ')}</p>
             )}
           </div>
         )}
 
-        {abierta && tieneDetalle && (
-          <div style={{ marginTop: 6, paddingBottom: 4 }}>
-            <WorkoutDetail sesion={sesion} mostrarNotas={false} copiarStrava />
-            {intervalsOk && !enviada && (
-              <div style={{ marginTop: 10 }}>
-                {erroresGarmin[sesion.id] && (
-                  <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>
-                )}
-                <button
-                  onClick={() => enviarAGarmin(sesion)}
-                  disabled={enviandoGarmin[sesion.id]}
-                  style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: enviandoGarmin[sesion.id] ? 0.6 : 1 }}
-                >
-                  <Icon name="send" size={15} />
-                  {enviandoGarmin[sesion.id] ? 'Enviando…' : 'Enviar a mi reloj'}
+        <div style={{ padding: '16px 16px 16px' }}>
+          {(esHoy && !descanso) || tieneDetalle ? (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {esHoy && !descanso && (
+                conFeedback ? (
+                  <button
+                    onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+                    aria-expanded={!!feedbackAbierto[sesion.id]}
+                    style={{ ...ghostButtonStyle, flex: '1 1 auto', minHeight: 52, justifyContent: 'flex-start' }}
+                  >
+                    <Icon name="check" size={16} style={{ color: COLORS.accent }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Tu feedback: {resumenFeedback(feedbacks.get(sesion.id)) || 'enviado'}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setFeedbackAbierto((p) => ({ ...p, [sesion.id]: !p[sesion.id] }))}
+                    aria-expanded={!!feedbackAbierto[sesion.id]}
+                    style={{ ...buttonStyle, flex: '1 1 auto', minHeight: 52, fontSize: 17 }}
+                  >
+                    ¿Cómo te fue?
+                  </button>
+                )
+              )}
+              {tieneDetalle && (
+                <button onClick={() => toggleDetalle(sesion.id)} aria-expanded={abierta} style={{ ...ghostButtonStyle, minHeight: 52, flex: esHoy && !descanso ? '0 0 auto' : '1 1 auto' }}>
+                  {abierta ? 'Ocultar entreno' : 'Ver entreno'}
                 </button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          ) : null}
+
+          {feedbackAbierto[sesion.id] && esHoy && !descanso && (
+            <div style={{ marginTop: 14 }}>
+              <FeedbackEditor sesion={sesion} athleteId={userId} inicial={feedbacks.get(sesion.id)} onCambio={actualizarFeedback} />
+            </div>
+          )}
+
+          {abierta && tieneDetalle && (
+            <div style={{ marginTop: 12 }}>
+              <WorkoutDetail sesion={sesion} mostrarNotas={false} copiarStrava />
+              {intervalsOk && !enviada && (
+                <div style={{ marginTop: 10 }}>
+                  {erroresGarmin[sesion.id] && (
+                    <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 6px' }}>{erroresGarmin[sesion.id]}</p>
+                  )}
+                  <button
+                    onClick={() => enviarAGarmin(sesion)}
+                    disabled={enviandoGarmin[sesion.id]}
+                    style={{ ...buttonStyle, opacity: enviandoGarmin[sesion.id] ? 0.6 : 1 }}
+                  >
+                    <Icon name="send" size={15} />
+                    {enviandoGarmin[sesion.id] ? 'Enviando…' : 'Enviar a mi reloj'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {nutricion.disponible && !descanso && (
+            <div style={{ marginTop: 6 }}>
+              <NutricionSesion
+                key={sesion.id}
+                sesion={sesion}
+                uid={userId}
+                quien="atleta"
+                inicial={nutricion.mapa.get(sesion.id)}
+                onCambio={actualizarNutricion}
+              />
+            </div>
+          )}
+        </div>
       </article>
     )
   }
@@ -539,19 +594,18 @@ export default function AthleteHome() {
         <button
           onClick={() => toggleDetalle(sesion.id)}
           aria-expanded={abierta}
-          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: 'pointer', color: COLORS.textPrimary }}
+          style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px 12px 12px', cursor: 'pointer', color: COLORS.textPrimary }}
         >
-          <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other }} />
+          <BloqueFecha fecha={sesion.fecha} disciplina={sesion.disciplina} />
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
-            <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
-              {/* "Sábado · 31 Oct", no "Sábado · Sáb 31 Oct" */}
-              {relativo && <span style={{ color: COLORS.textPrimary, fontWeight: 600 }}>{relativo} · </span>}
-              <span style={{ fontFamily: FONTS.mono }}>
-                {relativo ? formatDiaMes(sesion.fecha) : formatFechaLarga(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
-              </span>
-              {' · '}{DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
-              {duracionPrevista(sesion) && <> · <DuracionSesion sesion={sesion} /></>}
+            <span style={{ display: 'block', fontSize: 17, fontWeight: 650, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
+            <span style={{ display: 'block', fontSize: 14, color: COLORS.textSecondary, marginTop: 3 }}>
+              {relativo && <span style={{ color: COLORS.textSoft, fontWeight: 600 }}>{relativo}</span>}
+              {relativo && (Number.isInteger(sesion.hora_inicio_min) || duracionPrevista(sesion)) ? ' · ' : ''}
+              {Number.isInteger(sesion.hora_inicio_min) ? formatHora(sesion.hora_inicio_min) : ''}
+              {Number.isInteger(sesion.hora_inicio_min) && duracionPrevista(sesion) ? ' · ' : ''}
+              {duracionPrevista(sesion) && <DuracionSesion sesion={sesion} />}
+              {!relativo && !Number.isInteger(sesion.hora_inicio_min) && !duracionPrevista(sesion) && (DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina)}
             </span>
           </span>
           {avisarReloj && (
@@ -562,8 +616,8 @@ export default function AthleteHome() {
           <Icon name="chevronDown" size={16} style={{ color: COLORS.textTertiary, flexShrink: 0, transform: abierta ? 'rotate(180deg)' : 'none' }} />
         </button>
         {abierta && (
-          <div style={{ padding: '0 16px 14px 31px' }}>
-            {sesion.notas && <p style={{ margin: '0 0 8px', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>}
+          <div style={{ padding: '0 16px 16px 76px' }}>
+            {sesion.notas && <p style={{ margin: '0 0 8px', fontSize: 15, color: COLORS.textSoft, lineHeight: 1.5 }}>{sesion.notas}</p>}
             {!descanso && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: enviada ? COLORS.textSecondary : AVISO_RELOJ }}>
                 <Icon name="watch" size={15} />
@@ -611,13 +665,12 @@ export default function AthleteHome() {
     <div style={pageStyle}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <PageHeader
-          title={perfil?.nombre ? `Hola, ${perfil.nombre}` : 'Tus entrenos'}
-          subtitle="Lo que te ha preparado tu entrenador"
+          brandSub={fechaDeHoy()}
           topActions={
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => { setActiveTab('sesiones'); setVerAjustes((v) => !v) }}
-                style={{ ...iconButtonStyle, ...(verAjustes ? { color: COLORS.accent, borderColor: COLORS.accent } : {}) }}
+                style={{ ...iconButtonStyle, ...(verAjustes ? { color: COLORS.background, background: COLORS.textPrimary } : {}) }}
                 aria-label="Ajustes: potenciómetro, FTP y FC umbral"
                 aria-expanded={verAjustes}
                 title="Ajustes"
@@ -655,7 +708,8 @@ export default function AthleteHome() {
               </section>
             )}
             <section style={{ marginBottom: 28 }}>
-              <SectionTitle>{deHoy.length ? 'Hoy' : 'Tu próximo entreno'}</SectionTitle>
+              {/* Hoy: la propia tarjeta lo dice («Hoy a las 18:30»), sin título encima */}
+              {deHoy.length ? <h2 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Hoy</h2> : <SectionTitle>Tu próximo entreno</SectionTitle>}
 
               {cargandoSesiones ? (
                 <p style={{ color: COLORS.textSecondary }}>Cargando…</p>
@@ -714,15 +768,15 @@ export default function AthleteHome() {
                         <button
                           onClick={() => toggleDetalle(sesion.id)}
                           aria-expanded={abierta}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px', cursor: 'pointer', color: COLORS.textPrimary }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '12px 16px 12px 12px', cursor: 'pointer', color: COLORS.textPrimary }}
                         >
-                          <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: DISCIPLINE_COLORS[sesion.disciplina] || DISCIPLINE_COLORS.other }} />
+                          <BloqueFecha fecha={sesion.fecha} disciplina={sesion.disciplina} apagado={estado !== ESTADO.completada} />
                           <span style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ display: 'block', fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
-                            <span style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
-                              <span style={{ fontFamily: FONTS.mono }}>{formatFechaLarga(sesion.fecha)}</span> · {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
+                            <span style={{ display: 'block', fontSize: 17, fontWeight: 650, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tituloSesion(sesion)}</span>
+                            <span style={{ display: 'block', fontSize: 14, color: COLORS.textSecondary, marginTop: 3 }}>
+                              {DISC_LABELS_HOME[sesion.disciplina] || sesion.disciplina}
                               {fb ? (
-                                <span style={{ color: COLORS.textPrimary }}> · {resumenFeedback(fb) || 'Feedback enviado'}</span>
+                                <span style={{ color: COLORS.textSoft }}> · {resumenFeedback(fb) || 'Feedback enviado'}</span>
                               ) : null}
                             </span>
                           </span>
@@ -733,12 +787,12 @@ export default function AthleteHome() {
                         </button>
                         {/* Hecho y sin feedback: esfuerzo en un toque, sin abrir la fila */}
                         {!abierta && !fb && estado === ESTADO.completada && (
-                          <div style={{ padding: '0 16px 12px 31px' }}>
+                          <div style={{ padding: '0 16px 14px 76px' }}>
                             <FeedbackRapido sesion={sesion} athleteId={userId} onCambio={actualizarFeedback} />
                           </div>
                         )}
                         {abierta && (
-                          <div style={{ padding: '0 16px 14px 31px' }}>
+                          <div style={{ padding: '0 16px 16px 76px' }}>
                             {!esDescanso(sesion) && <FeedbackEditor sesion={sesion} athleteId={userId} inicial={fb} onCambio={actualizarFeedback} />}
                             {sesion.notas && esDescanso(sesion) && <p style={{ margin: 0, fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>{sesion.notas}</p>}
                             {nutricion.disponible && !esDescanso(sesion) && (

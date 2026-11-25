@@ -55,12 +55,15 @@ function aplanar(bloques) {
 }
 
 // También lo usa el creador como vista previa de lo que verá el reloj.
-export function Perfil({ bloques, disciplina }) {
+// `tinte`: en vez de la rampa de colores por zona, el color de la disciplina
+// con más opacidad cuanto más intenso (la tarjeta de hoy del atleta). `alto`
+// en px.
+export function Perfil({ bloques, disciplina, alto = 36, tinte = null, separacion = 1, style }) {
   const pasos = aplanar(bloques)
   const total = pasos.reduce((s, p) => s + pesoPaso(p, disciplina), 0)
   if (!total) return null
   return (
-    <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: 1, height: 36, marginBottom: 12 }}>
+    <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: separacion, height: alto, marginBottom: 12, ...style }}>
       {pasos.map((p, i) => {
         const nivel = nivelPaso(p)
         return (
@@ -71,8 +74,9 @@ export function Perfil({ bloques, disciplina }) {
               flexBasis: 0,
               minWidth: 2,
               height: `${20 + nivel * 16}%`,
-              background: COLOR_NIVEL[nivel],
-              borderRadius: 2,
+              background: tinte || COLOR_NIVEL[nivel],
+              opacity: tinte ? OPACIDAD_NIVEL[nivel] : 1,
+              borderRadius: tinte ? '5px 5px 2px 2px' : 2,
             }}
           />
         )
@@ -80,6 +84,8 @@ export function Perfil({ bloques, disciplina }) {
     </div>
   )
 }
+
+const OPACIDAD_NIVEL = { 1: 0.38, 2: 0.62, 3: 0.8, 4: 0.92, 5: 1 }
 
 function formatCant(cant, unidad) {
   if (!cant && cant !== 0) return ''
