@@ -27,6 +27,11 @@ horizontal (si no, `SCROLL ancho>viewport` y/o los errores).
   futuras, con un doble de carrera, Hyrox, sesiones por distancia, feedback y
   nutrición (plan y lo tomado).
 
+Vistas: por defecto móvil (375) y escritorio (1280). `REPASO_VISTAS=iphone,ipad`
+saca iPhone (393×852) e iPad (820×1180) a 2× y con táctil, que es como usan la
+app Lucas y Jon. `REPASO_SOLO=<regex>` limita las pantallas por nombre
+(p. ej. `REPASO_SOLO='^home$|dashboard'`).
+
 Para añadir una pantalla, añade una entrada a `PANTALLAS` en `repaso.cjs`. Los
 pasos posibles son `tab:<nombre>`, `semanas:<4|8|12|24>`, `nutricion`,
 `historial`, `editar`, `actividad` (abre el detalle de la primera carrera),
