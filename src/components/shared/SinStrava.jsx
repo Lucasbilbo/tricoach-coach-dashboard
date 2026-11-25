@@ -11,7 +11,7 @@ export default function SinStrava({ nombre, onConectar }) {
       <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: COLORS.textPrimary }}>
         {esAtleta ? 'Conecta Strava para ver tu análisis' : `${nombre || 'Este atleta'} aún no ha conectado Strava`}
       </p>
-      <p style={{ margin: '8px auto 0', maxWidth: 420, fontSize: 13.5, lineHeight: 1.5, color: COLORS.textSecondary }}>
+      <p style={{ margin: '8px auto 0', maxWidth: 420, fontSize: 15, lineHeight: 1.5, color: COLORS.textSecondary }}>
         {esAtleta
           ? 'Tu forma, el volumen por semana y tus actividades salen de Strava. Se conecta una vez y llegan solas.'
           : 'Su forma, el volumen por semana y sus actividades salen de Strava. Puede conectarlo desde su pantalla de inicio, en Conexiones. Las sesiones se pueden planificar igualmente.'}

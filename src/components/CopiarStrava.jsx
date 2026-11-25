@@ -42,7 +42,7 @@ export default function CopiarStrava({ sesion }) {
     <button
       type="button"
       onClick={alPulsar}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', padding: '8px 0', minHeight: 36, fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer', color: estado === 'ok' ? COLORS.accent : estado === 'error' ? COLORS.error : COLORS.textSecondary }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', padding: '8px 0', minHeight: 36, fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer', color: estado === 'ok' ? COLORS.accent : estado === 'error' ? COLORS.error : COLORS.textSecondary }}
     >
       <Icon name={estado === 'ok' ? 'check' : 'copy'} size={15} strokeWidth={estado === 'ok' ? 2.2 : 1.8} />
       {estado === 'ok' ? 'Copiado, pégalo en Strava' : estado === 'error' ? 'No se pudo copiar' : 'Copiar para Strava'}

@@ -26,12 +26,12 @@ import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
 import PlanProductos, { LineaTiempo } from './PlanProductos'
 
-const etiqueta = { fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
-const subtitulo = { fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }
+const etiqueta = { fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
+const subtitulo = { fontSize: 14.5, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }
 
 const textoBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '8px 0',
-  minHeight: 36, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+  minHeight: 36, fontSize: 14.5, fontWeight: 500, cursor: 'pointer',
 }
 
 const CAMPOS_TOMADO_UI = [
@@ -68,7 +68,7 @@ function ChecklistTomado({ unidades, marcadas, onAlternar }) {
             onClick={() => onAlternar(u.clave)}
             style={{
               display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 48, padding: '8px 12px', textAlign: 'left',
-              borderRadius: RADIUS.sm, cursor: 'pointer', fontSize: 14,
+              borderRadius: RADIUS.sm, cursor: 'pointer', fontSize: 15,
               border: `1px solid ${on ? COLORS.accent : COLORS.cardBorder}`,
               background: on ? 'rgba(47,191,175,0.10)' : 'transparent',
               color: on ? COLORS.textPrimary : COLORS.textSecondary,
@@ -81,12 +81,12 @@ function ChecklistTomado({ unidades, marcadas, onAlternar }) {
               {on && <Icon name="check" size={16} strokeWidth={2.6} />}
             </span>
             <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>{u.nombre}</span>
-            {u.min != null && <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>Min {u.min}</span>}
+            {u.min != null && <span style={{ fontFamily: FONTS.mono, fontSize: 13.5, color: COLORS.textTertiary }}>Min {u.min}</span>}
           </button>
         )
       })}
       {unidades.some((u) => u.tipo === 'bidon') && (
-        <p style={{ margin: 0, fontSize: 12, color: COLORS.textTertiary }}>El bidón, márcalo cuando lo termines.</p>
+        <p style={{ margin: 0, fontSize: 13.5, color: COLORS.textTertiary }}>El bidón, márcalo cuando lo termines.</p>
       )}
     </div>
   )
@@ -136,7 +136,7 @@ function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, 
       </button>
       {extra}
       {onQuitar && (
-        <button type="button" onClick={onQuitar} disabled={guardando} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13, color: COLORS.textSecondary, marginLeft: 'auto' }}>
+        <button type="button" onClick={onQuitar} disabled={guardando} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 14.5, color: COLORS.textSecondary, marginLeft: 'auto' }}>
           Quitar
         </button>
       )}
@@ -269,7 +269,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
     // Con lo tomado delante basta: ya lleva el plan al lado ("35 de 60 g/h")
     if (hayTomado) partes.push(`${esAtleta ? 'tomaste' : 'tomó'} ${resumenTomado(efectivo)}`)
     else partes.push(resumenPlan(inicial, minutos) || 'ver notas')
-    resumenCabecera = <span style={{ fontFamily: FONTS.mono, fontSize: 12 }}>{partes.join(' · ')}</span>
+    resumenCabecera = <span style={{ fontFamily: FONTS.mono, fontSize: 13.5 }}>{partes.join(' · ')}</span>
   } else if (apuntaTomado) {
     resumenCabecera = <span style={{ color: COLORS.textSecondary }}>¿qué tomaste?</span>
   } else {
@@ -311,7 +311,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                   textoGuardar="Guardar plan"
                   onQuitar={hayPlan ? quitarPlan : null}
                   extra={!planSucio && hayPlan && (
-                    <span style={{ fontSize: 12, color: COLORS.textSecondary }}>
+                    <span style={{ fontSize: 13.5, color: COLORS.textSecondary }}>
                       {editadoPorOtro ? `Editado por ${otroNombre || (esAtleta ? 'tu entrenador' : 'el atleta')}` : 'Editado por ti'}
                     </span>
                   )}
@@ -319,7 +319,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
               </>
             ) : hayPlan ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <p style={{ margin: 0, fontSize: 13, color: COLORS.textPrimary, lineHeight: 1.45 }}>
+                <p style={{ margin: 0, fontSize: 14.5, color: COLORS.textPrimary, lineHeight: 1.45 }}>
                   <span style={{ fontFamily: FONTS.mono }}>{resumenPlan(inicial, minutos)}</span>
                   {inicial.notas ? <span style={{ color: COLORS.textSecondary }}> · {inicial.notas}</span> : null}
                 </p>
@@ -327,7 +327,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                 {itemsDe(inicial).map((it, i) => {
                   const receta = textoReceta(it)
                   return receta ? (
-                    <p key={i} style={{ margin: 0, fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+                    <p key={i} style={{ margin: 0, fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.45 }}>
                       {it.nombre}, cada uno: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{receta}</span>
                       {tonicidadBidon(it) && <span style={{ fontFamily: FONTS.mono }}> · {tonicidadBidon(it).texto}</span>}
                     </p>
@@ -335,7 +335,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                 })}
               </div>
             ) : (
-              <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>No había plan de nutrición.</p>
+              <p style={{ margin: 0, fontSize: 14.5, color: COLORS.textSecondary }}>No había plan de nutrición.</p>
             )}
           </div>
 
@@ -362,7 +362,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                         aria-checked={sel}
                         onClick={() => cambiarTomado('estomago', sel ? null : e.value)}
                         style={{
-                          flex: 1, minWidth: 0, height: 36, borderRadius: RADIUS.sm, padding: 0, cursor: 'pointer', fontSize: 13,
+                          flex: 1, minWidth: 0, height: 36, borderRadius: RADIUS.sm, padding: 0, cursor: 'pointer', fontSize: 14.5,
                           border: `1px solid ${sel ? color : COLORS.cardBorder}`,
                           background: sel ? 'rgba(237,238,242,0.08)' : 'transparent',
                           color: sel ? color : COLORS.textSecondary,
@@ -397,11 +397,11 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           )}
 
           {!esAtleta && hayTomado && (
-            <div style={{ paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13, lineHeight: 1.5 }}>
+            <div style={{ paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 14.5, lineHeight: 1.5 }}>
               <p style={{ ...subtitulo, marginBottom: 4 }}>Lo que tomó {otroNombre || 'el atleta'}</p>
-              <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 12, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(efectivo)}</p>
+              <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 13.5, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(efectivo)}</p>
               {modoLista && Array.isArray(inicial.tomado_items) && tomadasValidas(itemsDe(inicial), inicial.tomado_items).length < unidades.length && (
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+                <p style={{ margin: '4px 0 0', fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.45 }}>
                   Sin tomar: {unidades.filter((u) => !inicial.tomado_items.includes(u.clave)).map((u) => `${u.nombre}${u.min != null ? ` (min ${u.min})` : ''}`).join(' · ')}
                 </p>
               )}
@@ -411,7 +411,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
             </div>
           )}
 
-          {error && <p style={{ color: COLORS.error, fontSize: 13, margin: 0 }}>{error}</p>}
+          {error && <p style={{ color: COLORS.error, fontSize: 14.5, margin: 0 }}>{error}</p>}
         </div>
       )}
     </div>

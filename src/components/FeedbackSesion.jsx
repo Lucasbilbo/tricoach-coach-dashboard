@@ -8,7 +8,7 @@ import {
 import { borrarFeedback, guardarFeedback } from '../lib/feedbackApi'
 import Icon from './ui/Icon'
 
-const etiqueta = { fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
+const etiqueta = { fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
 
 function chip(sel, color = COLORS.textPrimary) {
   return {
@@ -19,7 +19,7 @@ function chip(sel, color = COLORS.textPrimary) {
     border: `1px solid ${sel ? color : COLORS.cardBorder}`,
     background: sel ? 'rgba(237,238,242,0.08)' : 'transparent',
     color: sel ? color : COLORS.textSecondary,
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: sel ? 600 : 500,
     cursor: 'pointer',
     padding: 0,
@@ -117,7 +117,7 @@ export function FeedbackEditor({ sesion, athleteId, inicial, onCambio }) {
       </div>
 
       <div>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer', minHeight: 32 }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, cursor: 'pointer', minHeight: 32 }}>
           <input
             type="checkbox"
             checked={form.molestias}
@@ -151,7 +151,7 @@ export function FeedbackEditor({ sesion, athleteId, inicial, onCambio }) {
         />
       </div>
 
-      {error && <p style={{ color: COLORS.error, fontSize: 13, margin: 0 }}>{error}</p>}
+      {error && <p style={{ color: COLORS.error, fontSize: 14.5, margin: 0 }}>{error}</p>}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <button
@@ -162,13 +162,13 @@ export function FeedbackEditor({ sesion, athleteId, inicial, onCambio }) {
           {guardando ? 'Guardando…' : inicial ? 'Guardar cambios' : 'Enviar a tu entrenador'}
         </button>
         {!sucio && inicial && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: COLORS.accent }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14.5, color: COLORS.accent }}>
             <Icon name="check" size={14} strokeWidth={2.2} />
             Enviado
           </span>
         )}
         {inicial && (
-          <button onClick={borrar} disabled={guardando} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13, color: COLORS.textSecondary, marginLeft: 'auto' }}>
+          <button onClick={borrar} disabled={guardando} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 14.5, color: COLORS.textSecondary, marginLeft: 'auto' }}>
             Borrar
           </button>
         )}
@@ -217,7 +217,7 @@ export function FeedbackRapido({ sesion, athleteId, onCambio }) {
           </button>
         ))}
       </div>
-      {error && <p style={{ color: COLORS.error, fontSize: 13, margin: '6px 0 0' }}>{error}</p>}
+      {error && <p style={{ color: COLORS.error, fontSize: 14.5, margin: '6px 0 0' }}>{error}</p>}
     </div>
   )
 }
@@ -228,7 +228,7 @@ export function FeedbackLinea({ feedback, nombre }) {
   if (!feedback) return null
   const sens = etiquetaSensacion(feedback.sensacion)
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14.5 }}>
       {feedback.rpe ? (
         <span title={`Esfuerzo percibido de ${nombre || 'el atleta'}: ${etiquetaRpe(feedback.rpe)}`} style={{ color: COLORS.load, fontWeight: 600 }}>
           RPE <span style={{ fontFamily: FONTS.mono }}>{feedback.rpe}</span>
@@ -249,7 +249,7 @@ export function FeedbackLinea({ feedback, nombre }) {
 export function FeedbackTexto({ feedback }) {
   if (!feedback || (!feedback.comentario && !feedback.molestias_texto)) return null
   return (
-    <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: RADIUS.sm, background: 'rgba(237,238,242,0.04)', fontSize: 14, lineHeight: 1.45 }}>
+    <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: RADIUS.sm, background: 'rgba(237,238,242,0.04)', fontSize: 15, lineHeight: 1.45 }}>
       {feedback.molestias && feedback.molestias_texto && (
         <p style={{ margin: 0, color: COLORS.error }}>Molestias: {feedback.molestias_texto}</p>
       )}

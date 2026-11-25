@@ -52,7 +52,7 @@ function formatDistanciaVuelta(vuelta, disciplina) {
 const thStyle = {
   textAlign: 'left',
   padding: '8px 12px',
-  fontSize: 12,
+  fontSize: 13.5,
   fontWeight: 600,
   color: COLORS.textSecondary,
   borderBottom: `1px solid ${COLORS.cardBorder}`,
@@ -61,7 +61,7 @@ const thStyle = {
 
 const tdStyle = {
   padding: '8px 12px',
-  fontSize: 13,
+  fontSize: 14.5,
   color: COLORS.textPrimary,
   borderBottom: `1px solid ${COLORS.cardBorder}`,
   whiteSpace: 'nowrap',
@@ -70,7 +70,7 @@ const tdStyle = {
 
 const seccionTituloStyle = {
   color: COLORS.textPrimary,
-  fontSize: 14,
+  fontSize: 15,
   margin: '24px 0 8px',
   fontWeight: 600,
 }
@@ -321,12 +321,12 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                 {act.nombre || 'Actividad'}
               </h2>
               {/* Deporte en texto + filo de color (sin pastilla rellena) */}
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
+              <p style={{ margin: '4px 0 0', fontSize: 14.5, color: COLORS.textSecondary }}>
                 {DISCIPLINE_LABELS[act.disciplina] || act.tipo}
                 {act.fecha && <> · <span style={{ fontFamily: FONTS.mono }}>{fechaLarga(act.fecha)}</span></>}
               </p>
               {act.descripcion && (
-                <p style={{ margin: '8px 0 0', fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' }}>
+                <p style={{ margin: '8px 0 0', fontSize: 14.5, color: COLORS.textSecondary, fontStyle: 'italic' }}>
                   {act.descripcion}
                 </p>
               )}
@@ -354,7 +354,7 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                   <p style={{ margin: 0, fontSize: isMobile ? 14 : 17, fontWeight: 600, color: COLORS.textPrimary, fontFamily: FONTS.mono, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {m.valor}
                   </p>
-                  <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.textSecondary }}>
+                  <p style={{ margin: '2px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
                     {m.etiqueta}
                   </p>
                 </div>

@@ -98,7 +98,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500 }}>{esCoach ? 'Tiene potenciómetro' : 'Tengo potenciómetro'}</div>
-          <div style={{ fontSize: 13, color: COLORS.textSecondary, marginTop: 2, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 14.5, color: COLORS.textSecondary, marginTop: 2, lineHeight: 1.4 }}>
             {!actual.potenciometro ? 'La bici va por pulso.' : ftpValido(actual.ftp) ? 'La bici se prescribe y llega al reloj por potencia.' : 'Por potencia en cuanto haya FTP; hasta entonces, por pulso.'}
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <label style={{ display: 'flex', flexDirection: 'column', flex: '1 1 140px', maxWidth: 220 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }}>FTP (vatios)</span>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }}>FTP (vatios)</span>
           <input
             type="number" inputMode="numeric" min="50" max="700"
             value={actual.ftp}
@@ -119,7 +119,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
           />
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', flex: '1 1 140px', maxWidth: 220 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }}>FC umbral (lpm)</span>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }}>FC umbral (lpm)</span>
           <input
             type="number" inputMode="numeric" min="100" max="220"
             value={actual.umbral}
@@ -133,23 +133,23 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
       </div>
 
       {p.ftp_w && p.ftp_fecha && !form && (
-        <p style={{ margin: 0, fontSize: 13, color: ftpAntiguo(p.ftp_fecha) ? COLORS.warning : COLORS.textSecondary }}>
+        <p style={{ margin: 0, fontSize: 14.5, color: ftpAntiguo(p.ftp_fecha) ? COLORS.warning : COLORS.textSecondary }}>
           FTP del <span style={{ fontFamily: FONTS.mono }}>{formatDiaMes(p.ftp_fecha)}</span>
           {ftpAntiguo(p.ftp_fecha) ? ' · tiene más de 8 semanas: conviene repetir el test.' : ''}
         </p>
       )}
       {actual.potenciometro && !ftpValido(actual.ftp) && (
-        <p style={{ margin: 0, fontSize: 13, color: COLORS.warning, lineHeight: 1.45 }}>
+        <p style={{ margin: 0, fontSize: 14.5, color: COLORS.warning, lineHeight: 1.45 }}>
           Sin FTP la bici sigue por pulso (entrenos y TSS). Pon el FTP del test y pasará a potencia.
         </p>
       )}
-      <p style={{ margin: 0, fontSize: 12.5, color: COLORS.textTertiary, lineHeight: 1.45 }}>
+      <p style={{ margin: 0, fontSize: 14, color: COLORS.textTertiary, lineHeight: 1.45 }}>
         El TSS por pulso se calcula con {tu} FC umbral (si no se pone, el 90 % de {tu} FC máxima) y el de potencia con el FTP: una hora a umbral son 100 en los dos. El FTP se pone solo en Intervals.icu al guardarlo.
       </p>
-      {!ftpOk && <p style={{ margin: 0, fontSize: 13, color: COLORS.error }}>El FTP va de 50 a 700 W.</p>}
-      {!umbralOk && <p style={{ margin: 0, fontSize: 13, color: COLORS.error }}>La FC umbral va de 100 a 220 lpm.</p>}
-      {error && <p style={{ margin: 0, fontSize: 13, color: COLORS.error }}>{error}</p>}
-      {aviso && !form && <p role="status" style={{ margin: 0, fontSize: 13, color: aviso.color, lineHeight: 1.45 }}>{aviso.texto}</p>}
+      {!ftpOk && <p style={{ margin: 0, fontSize: 14.5, color: COLORS.error }}>El FTP va de 50 a 700 W.</p>}
+      {!umbralOk && <p style={{ margin: 0, fontSize: 14.5, color: COLORS.error }}>La FC umbral va de 100 a 220 lpm.</p>}
+      {error && <p style={{ margin: 0, fontSize: 14.5, color: COLORS.error }}>{error}</p>}
+      {aviso && !form && <p role="status" style={{ margin: 0, fontSize: 14.5, color: aviso.color, lineHeight: 1.45 }}>{aviso.texto}</p>}
       <div>
         <button
           type="button"
@@ -166,7 +166,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
   if (modo === 'tarjeta') {
     return (
       <div id="ajustes-bici" style={{ ...cardStyle, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, marginBottom: 12, letterSpacing: 0.2 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, marginBottom: 12, letterSpacing: 0.2 }}>
           Bici y pulso · {resumen}
         </div>
         {cuerpo}
@@ -180,7 +180,7 @@ export default function PotenciaAjustes({ athleteId, uid, fcMax = null, modo = '
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', padding: '8px 0', minHeight: 36, color: COLORS.textSecondary, fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', padding: '8px 0', minHeight: 36, color: COLORS.textSecondary, fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}
       >
         <Icon name="chevronDown" size={16} style={{ transform: abierto ? 'rotate(180deg)' : 'none' }} />
         Bici y pulso: {resumen}

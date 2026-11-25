@@ -17,7 +17,7 @@ const DIAS_A_LA_VISTA = 14
 const diaSemana = (fecha) => new Date(fecha + 'T00:00:00Z').getUTCDay()
 const fmtDur = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 
-const etiqueta = { fontSize: 11, letterSpacing: '0.08em', color: COLORS.textTertiary, fontWeight: 600, margin: '0 0 8px' }
+const etiqueta = { fontSize: 13, letterSpacing: '0.08em', color: COLORS.textTertiary, fontWeight: 600, margin: '0 0 8px' }
 
 function chip(sel, extra = {}) {
   return {
@@ -79,8 +79,8 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
           background: '#181C26', border: '1px solid #232A38', borderRadius: 10,
           boxShadow: `inset 3px 0 0 ${DISCIPLINE_COLORS[sesion.disciplina] || COLORS.textTertiary}`, padding: '9px 12px 9px 14px',
         }}>
-          <span style={{ fontSize: 14, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titulo}</span>
-          <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 15, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titulo}</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}>
             {dur ? `${duracionPrevista(sesion).estimada ? '~' : ''}${fmtDur(dur)}` : 'sin duración'}
           </span>
         </div>
@@ -102,7 +102,7 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
                   ...(libre && !sel ? { background: 'repeating-linear-gradient(135deg,#1B202C 0 4px,transparent 4px 9px)', color: COLORS.textTertiary } : {}),
                 })}
               >
-                <div style={{ fontSize: 11 }}>{INICIAL[diaSemana(f)]}</div>
+                <div style={{ fontSize: 13 }}>{INICIAL[diaSemana(f)]}</div>
                 <div style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, marginTop: 1 }}>{Number(f.slice(8))}</div>
               </button>
             )
@@ -119,7 +119,7 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
                 type="button"
                 onClick={() => { setHora(h); setError(null) }}
                 aria-pressed={sel}
-                style={chip(sel, { padding: '10px 0', fontFamily: h == null ? FONTS.sans : FONTS.mono, fontSize: 13, fontWeight: sel ? 700 : 500 })}
+                style={chip(sel, { padding: '10px 0', fontFamily: h == null ? FONTS.sans : FONTS.mono, fontSize: 14.5, fontWeight: sel ? 700 : 500 })}
               >
                 {h == null ? 'Sin hora' : formatHora(h)}
               </button>
@@ -127,10 +127,10 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
           })}
         </div>
         {sugeridas.length === 0 && (
-          <p style={{ margin: '0 0 12px', fontSize: 12.5, color: COLORS.textTertiary }}>Ese día no hay franjas para esta disciplina.</p>
+          <p style={{ margin: '0 0 12px', fontSize: 14, color: COLORS.textTertiary }}>Ese día no hay franjas para esta disciplina.</p>
         )}
 
-        <div role="status" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, lineHeight: 1.45, marginBottom: 16, minHeight: 18, color: sinCambios ? COLORS.textTertiary : !valido.ok || aviso ? '#E8B84A' : COLORS.textSecondary }}>
+        <div role="status" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 14, lineHeight: 1.45, marginBottom: 16, minHeight: 18, color: sinCambios ? COLORS.textTertiary : !valido.ok || aviso ? '#E8B84A' : COLORS.textSecondary }}>
           {!sinCambios && <Icon name={!valido.ok || aviso ? 'alert' : 'check'} size={16} color={!valido.ok || aviso ? '#E8B84A' : COLORS.accent} />}
           <span>
             {!valido.ok
@@ -140,7 +140,7 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
           </span>
         </div>
 
-        {error && <p role="alert" style={{ margin: '0 0 12px', fontSize: 13, color: COLORS.error }}>{error}</p>}
+        {error && <p role="alert" style={{ margin: '0 0 12px', fontSize: 14.5, color: COLORS.error }}>{error}</p>}
 
         <button
           type="button"
@@ -155,12 +155,12 @@ export default function HojaMover({ sesion, titulo, datos, ahora, onMover, onCer
           {guardando ? 'Moviendo…' : `Mover a ${nombreDia}${hora != null ? `, ${formatHora(hora)}` : ''}`}
         </button>
         {onEditar && (
-          <button type="button" onClick={onEditar} style={{ display: 'block', margin: '12px auto 0', background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 13, cursor: 'pointer', fontFamily: FONTS.sans }}>
+          <button type="button" onClick={onEditar} style={{ display: 'block', margin: '12px auto 0', background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 14.5, cursor: 'pointer', fontFamily: FONTS.sans }}>
             Editar el entreno
           </button>
         )}
         {sesion.intervals_event_id && (
-          <p style={{ margin: '10px 0 0', textAlign: 'center', fontSize: 11.5, color: COLORS.textTertiary }}>También se mueve en el reloj.</p>
+          <p style={{ margin: '10px 0 0', textAlign: 'center', fontSize: 13.5, color: COLORS.textTertiary }}>También se mueve en el reloj.</p>
         )}
       </div>
     </div>

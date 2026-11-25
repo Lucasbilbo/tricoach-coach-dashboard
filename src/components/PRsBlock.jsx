@@ -50,7 +50,7 @@ export default function PRsBlock({ records, etiqueta }) {
       <p
         style={{
           color: COLORS.textPrimary,
-          fontSize: 14,
+          fontSize: 15,
           marginTop: 0,
           marginBottom: 14,
           fontWeight: 600,
@@ -66,7 +66,7 @@ export default function PRsBlock({ records, etiqueta }) {
           if (filas.length === 0) return null
           return (
             <div key={seccion.grupo} style={{ flex: 1, minWidth: 180 }}>
-              <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: seccion.color }}>
+              <p style={{ margin: '0 0 10px', fontSize: 14.5, fontWeight: 700, color: seccion.color }}>
                 {seccion.titulo}
               </p>
               {filas.map((fila) => {
@@ -82,11 +82,11 @@ export default function PRsBlock({ records, etiqueta }) {
                       borderBottom: `1px solid ${COLORS.cardBorder}`,
                     }}
                   >
-                    <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{fila.label}</span>
+                    <span style={{ fontSize: 13.5, color: COLORS.textSecondary }}>{fila.label}</span>
                     <span
                       style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: 600,
                         color: valor != null ? seccion.color : COLORS.textSecondary,
                       }}
@@ -101,7 +101,7 @@ export default function PRsBlock({ records, etiqueta }) {
         })}
       </div>
 
-      <p style={{ margin: '16px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
+      <p style={{ margin: '16px 0 0', fontSize: 13.5, color: COLORS.textTertiary }}>
         Mejor ritmo medio en actividades de esa distancia, en el periodo elegido
       </p>
     </div>

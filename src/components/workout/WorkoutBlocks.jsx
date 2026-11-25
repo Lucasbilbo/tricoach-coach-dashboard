@@ -58,9 +58,9 @@ function CabeceraBloque({ titulo, color, bloque, abierto, onToggle, children }) 
       >
         <Icon name="chevronDown" size={15} style={{ flexShrink: 0, color: COLORS.textTertiary, transform: abierto ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
         <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: color || COLORS.textPrimary }}>{titulo}</span>
+          <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: color || COLORS.textPrimary }}>{titulo}</span>
           {!abierto && (
-            <span style={{ display: 'block', marginTop: 2, fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ display: 'block', marginTop: 2, fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {resumenBloque(bloque)}
             </span>
           )}
@@ -174,7 +174,7 @@ export function PasoRepeat({ paso, pasoIdx, repeatIdx, disciplina, onUpdatePaso,
   return (
     <div style={{ marginBottom: 10, paddingLeft: 12, borderLeft: '2px solid rgba(139,127,209,0.35)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 11, letterSpacing: '0.04em', color: COLORS.textTertiary, fontWeight: 600 }}>Paso {pasoIdx + 1}</span>
+        <span style={{ fontSize: 13, letterSpacing: '0.04em', color: COLORS.textTertiary, fontWeight: 600 }}>Paso {pasoIdx + 1}</span>
         <button type="button" onClick={() => onRemovePaso(repeatIdx, pasoIdx)} style={iconBtn} aria-label={`Quitar paso ${pasoIdx + 1}`}>
           <Icon name="trash" size={14} />
         </button>
@@ -203,7 +203,7 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
     <div style={{ ...tarjeta, padding: abierto ? 12 : '10px 12px' }}>
       <CabeceraBloque titulo={bloque.nombre?.trim() ? `Serie · ${bloque.nombre.trim()}` : 'Serie'} color={COLORS.load} bloque={bloque} abierto={abierto} onToggle={onToggle}>
         {abierto && (
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, fontSize: 13, color: COLORS.textSecondary }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, fontSize: 14.5, color: COLORS.textSecondary }}>
             <input
               type="number"
               min="1"
@@ -227,7 +227,7 @@ export function BloqueRepeat({ bloque, idx, disciplina, total, onUpdate, onRemov
             onChange={(e) => onUpdate(idx, { nombre: e.target.value })}
             placeholder="Nombre de la serie (opcional)"
             aria-label="Nombre de la serie"
-            style={{ ...campo, marginBottom: 12, fontSize: 13 }}
+            style={{ ...campo, marginBottom: 12, fontSize: 14.5 }}
           />
 
           {(bloque.pasos || []).map((paso, pi) => (

@@ -109,11 +109,11 @@ function formatObjetivo(tipo, valor) {
 function Pausa({ paso }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
-      <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary, width: 58, flexShrink: 0, textAlign: 'right' }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 13.5, color: COLORS.textTertiary, width: 58, flexShrink: 0, textAlign: 'right' }}>
         vuelta
       </span>
       <span style={{ width: 8, height: 8, borderRadius: 4, border: `1px solid ${COLORS.textTertiary}`, flexShrink: 0 }} />
-      <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: COLORS.textTertiary, fontStyle: 'italic' }}>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: COLORS.textTertiary, fontStyle: 'italic' }}>
         Pulsa vuelta · {textoPausa(paso)}
       </span>
     </div>
@@ -127,11 +127,11 @@ function Paso({ paso, etiqueta, disciplina }) {
   const texto = [etiqueta, paso.nombre].filter(Boolean).join(' · ')
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '5px 0' }}>
-      <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, width: 58, flexShrink: 0, textAlign: 'right' }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 14.5, color: COLORS.textPrimary, width: 58, flexShrink: 0, textAlign: 'right' }}>
         {formatCant(paso.cantidad, paso.unidad)}
       </span>
       <span style={{ width: 8, height: 8, borderRadius: 2, background: COLOR_NIVEL[nivel], flexShrink: 0, alignSelf: 'center' }} />
-      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: COLORS.textSecondary, lineHeight: 1.4 }}>
         {obj && <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary, marginRight: 6 }}>{obj}</span>}
         {texto}
         {mat && <span style={{ color: COLORS.textTertiary }}> — {mat}</span>}
@@ -156,13 +156,13 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrav
       {adjunto && <AdjuntoVista adjunto={adjunto} />}
       {bloques.length > 0 && <Perfil bloques={ws.bloques} disciplina={disciplina} />}
       {disciplina === 'swim' && ws.piscina && (
-        <p style={{ margin: '0 0 6px', fontSize: 12, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
+        <p style={{ margin: '0 0 6px', fontSize: 13.5, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
       )}
       {metrosNatacion && metrosNatacion.metros > 0 && (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '0 0 8px' }}>
-          <span style={{ fontSize: 12, color: COLORS.textSecondary }}>Total</span>
+          <span style={{ fontSize: 13.5, color: COLORS.textSecondary }}>Total</span>
           <span style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>{metrosTexto(metrosNatacion.metros)}</span>
-          {metrosNatacion.parcial && <span style={{ fontSize: 12, color: COLORS.textTertiary }}>sin contar los pasos por tiempo</span>}
+          {metrosNatacion.parcial && <span style={{ fontSize: 13.5, color: COLORS.textTertiary }}>sin contar los pasos por tiempo</span>}
         </div>
       )}
 
@@ -172,10 +172,10 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrav
         ) : bloque.tipo === 'repeat' ? (
           <div key={idx} style={{ margin: '4px 0', padding: '4px 0 4px 0', borderLeft: `2px solid ${COLORS.load}`, borderRadius: 1 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '2px 0' }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 13, fontWeight: 600, color: COLORS.load, width: 56, textAlign: 'right' }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: 14.5, fontWeight: 600, color: COLORS.load, width: 56, textAlign: 'right' }}>
                 {bloque.repeticiones} ×
               </span>
-              <span style={{ fontSize: 13, color: COLORS.textSecondary }}>{bloque.nombre || 'Serie'}</span>
+              <span style={{ fontSize: 14.5, color: COLORS.textSecondary }}>{bloque.nombre || 'Serie'}</span>
             </div>
             {(bloque.pasos || []).map((paso, pi) =>
               paso.tipo === 'pausa' ? <Pausa key={pi} paso={paso} /> : <Paso key={pi} paso={paso} disciplina={disciplina} />
@@ -193,8 +193,8 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrav
 
       {mostrarNotas && notas && (
         <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.cardBorder}`, background: COLORS.background }}>
-          <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>Nota del entrenador</p>
-          <p style={{ margin: 0, fontSize: 14, color: COLORS.textPrimary, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{notas}</p>
+          <p style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary }}>Nota del entrenador</p>
+          <p style={{ margin: 0, fontSize: 15, color: COLORS.textPrimary, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{notas}</p>
         </div>
       )}
       {copiarStrava && <CopiarStrava sesion={sesion} />}
