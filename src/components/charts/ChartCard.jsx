@@ -7,10 +7,11 @@ export default function ChartCard({ title, children, flush = false }) {
       <p
         style={{
           color: COLORS.textPrimary,
-          fontSize: 14,
+          fontSize: 17,
           marginTop: 0,
-          marginBottom: 12,
-          fontWeight: 600,
+          marginBottom: 14,
+          fontWeight: 700,
+          fontStretch: '108%',
         }}
       >
         {title}

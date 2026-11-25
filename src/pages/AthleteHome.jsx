@@ -883,7 +883,7 @@ export default function AthleteHome() {
                   setPeriodo(p)
                 }}
               />
-              <button onClick={() => setComparadorAbierto(true)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13 }}>
+              <button onClick={() => setComparadorAbierto(true)} style={ghostButtonStyle}>
                 Comparar semanas
               </button>
             </div>
