@@ -101,15 +101,16 @@ export function mediaMovil(valores, ventana) {
 }
 
 // Estilos comunes de ejes y tooltip para Recharts
-export const tickStyle = { fill: COLORS.textSecondary, fontSize: 11 }
+export const tickStyle = { fill: COLORS.textSecondary, fontSize: 12.5 }
 
 export const gridStroke = 'rgba(255,255,255,0.04)'
 
 export const tooltipBoxStyle = {
-  background: COLORS.card,
-  border: `1px solid ${COLORS.cardBorder}`,
-  borderRadius: 8,
-  padding: '10px 12px',
-  fontSize: 12,
+  background: '#1A1E27',
+  border: 'none',
+  borderRadius: 14,
+  boxShadow: '0 12px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+  padding: '12px 14px',
+  fontSize: 14,
   color: COLORS.textPrimary,
 }

@@ -71,7 +71,7 @@ function Miniaturas({ rutas, onQuitar }) {
             >
               {urls[r]
                 ? <img src={urls[r]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
-                : <span style={{ fontSize: 11, color: COLORS.textTertiary }}>Cargando…</span>}
+                : <span style={{ fontSize: 13, color: COLORS.textTertiary }}>Cargando…</span>}
             </button>
             {onQuitar && (
               <button type="button" onClick={() => onQuitar(r)} aria-label={`Quitar captura ${i + 1}`}
@@ -93,7 +93,7 @@ export function AdjuntoVista({ adjunto }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
       {adjunto.texto && (
-        <pre style={{ margin: 0, padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.cardBorder}`, background: COLORS.background, color: COLORS.textPrimary, fontFamily: FONTS.mono, fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        <pre style={{ margin: 0, padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.cardBorder}`, background: COLORS.background, color: COLORS.textPrimary, fontFamily: FONTS.mono, fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           {adjunto.texto}
         </pre>
       )}
@@ -148,25 +148,25 @@ export function AdjuntoEditor({ athleteId, valor, onChange }) {
         onChange={(e) => onChange({ texto: e.target.value, imagenes })}
         rows={6}
         placeholder={'Pega aquí el entreno tal cual, p. ej.:\n1000 m SkiErg\n50 m Sled push\n80 m Burpee broad jump…'}
-        style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: FONTS.mono, fontSize: 13, lineHeight: 1.5 }}
+        style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: FONTS.mono, fontSize: 14.5, lineHeight: 1.5 }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={imagenes.length >= MAX_IMAGENES}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, color: COLORS.textSecondary, padding: '8px 12px', fontSize: 13, cursor: 'pointer', fontFamily: FONTS.sans, opacity: imagenes.length >= MAX_IMAGENES ? 0.4 : 1 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, color: COLORS.textSecondary, padding: '8px 12px', fontSize: 14.5, cursor: 'pointer', fontFamily: FONTS.sans, opacity: imagenes.length >= MAX_IMAGENES ? 0.4 : 1 }}
         >
           <Icon name="plus" size={15} />
           Subir captura
         </button>
-        <span style={{ fontSize: 12, color: COLORS.textTertiary }}>
+        <span style={{ fontSize: 13.5, color: COLORS.textTertiary }}>
           {subiendo > 0 ? `Subiendo ${subiendo}…` : 'o pégala aquí con Ctrl+V / ⌘V'}
         </span>
         <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={(e) => { subir(e.target.files); e.target.value = '' }} />
       </div>
       <Miniaturas rutas={imagenes} onQuitar={(r) => onChange({ texto, imagenes: imagenes.filter((x) => x !== r) })} />
-      {error && <p role="alert" style={{ margin: 0, fontSize: 12.5, color: COLORS.error }}>{error}</p>}
+      {error && <p role="alert" style={{ margin: 0, fontSize: 14, color: COLORS.error }}>{error}</p>}
     </div>
   )
 }

@@ -69,10 +69,38 @@ function etiquetaActividad(act) {
 }
 
 const seccionLabel = {
-  fontSize: 14,
-  fontWeight: 600,
+  fontSize: 17,
+  fontWeight: 700,
+  fontStretch: '108%',
   color: COLORS.textPrimary,
   marginBottom: 14,
+}
+
+// Escala de forma bajo el TSB: los cuatro tramos de estadoForma (lib/carga)
+// en proporción y una marca donde está el atleta. Violeta de carga para
+// «Cargando», ámbar tenue para «Fatiga alta»: nunca colores de disciplina.
+const TRAMOS_FORMA = [
+  { desde: -50, hasta: -30, fondo: 'rgba(232,184,74,0.32)' },
+  { desde: -30, hasta: -10, fondo: 'rgba(139,127,209,0.55)' },
+  { desde: -10, hasta: 5, fondo: '#2C3140' },
+  { desde: 5, hasta: 25, fondo: '#3A4152' },
+]
+function EscalaForma({ tsb }) {
+  if (tsb == null || !Number.isFinite(tsb)) return null
+  const pct = ((Math.min(Math.max(tsb, -50), 25) + 50) / 75) * 100
+  return (
+    <div aria-hidden="true" style={{ marginTop: 10 }}>
+      <div style={{ position: 'relative', display: 'flex', gap: 2, height: 6 }}>
+        {TRAMOS_FORMA.map((t, i) => (
+          <span key={i} style={{ flexGrow: t.hasta - t.desde, flexBasis: 0, background: t.fondo, borderRadius: i === 0 ? '3px 0 0 3px' : i === 3 ? '0 3px 3px 0' : 0 }} />
+        ))}
+        <span style={{ position: 'absolute', left: `calc(${pct}% - 7px)`, top: -4, width: 14, height: 14, borderRadius: 7, background: COLORS.textPrimary, boxShadow: `0 0 0 3px ${COLORS.card}` }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: COLORS.textTertiary }}>
+        <span>Fatiga</span><span>Fresco</span>
+      </div>
+    </div>
+  )
 }
 
 // Actividades visibles de entrada; "Ver más" añade otra página.
@@ -197,10 +225,11 @@ export default function StravaAnalysis({
   // carrera ya está en "Ritmo medio de carrera", más abajo.
   const statCards = [
     { label: 'Volumen', valor: stats.volumen, color: COLORS.textPrimary, nota: etiqueta, hero: true },
-    { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.load, nota: etiqueta },
+    { label: 'TSS acumulado', valor: `${stats.tssAcum}`, color: COLORS.loadText, nota: etiqueta },
     { label: 'CTL · ATL', valor: `${carga.ctl ?? '—'} · ${carga.atl ?? '—'}`, color: COLORS.textPrimary, nota: alFinal ? `forma · fatiga · ${alFinal}` : 'forma · fatiga' },
     {
       label: 'TSB',
+      escala: carga.tsb,
       valor: carga.tsb != null ? (carga.tsb > 0 ? `+${carga.tsb}` : `${carga.tsb}`) : '—',
       color: COLORS.textPrimary,
       nota: forma ? (alFinal ? `${forma.texto} · ${alFinal}` : forma.texto) : 'sin datos',
@@ -235,22 +264,23 @@ export default function StravaAnalysis({
           <div
             key={s.label}
             style={{
-              background: COLORS.card,
-              border: `1px solid ${s.hero && !isMobile ? 'rgba(237,238,242,0.1)' : COLORS.cardBorder}`,
-              borderRadius: isMobile ? 10 : 12,
-              padding: isMobile ? 14 : s.hero ? '20px 24px' : '16px 20px',
+              ...cardStyle,
+              borderRadius: 20,
+              padding: isMobile ? 16 : '20px 22px',
               display: 'flex',
               flexDirection: 'column',
-              gap: isMobile ? 4 : 5,
+              gap: 4,
             }}
           >
-            <span style={{ fontSize: isMobile ? 12 : 12.5, color: COLORS.textSecondary }}>{s.label}</span>
+            <span style={{ fontSize: isMobile ? 13.5 : 14, color: COLORS.textSecondary }}>{s.label}</span>
             <span style={{
               ...metricNumberStyle,
-              fontSize: isMobile ? (s.hero ? 22 : 18) : (s.hero ? 32 : 22),
+              fontSize: isMobile ? 26 : 34,
+              fontWeight: 800,
               color: s.color,
             }}>{s.valor}</span>
-            <span style={{ fontSize: isMobile ? 11 : 11.5, color: s.notaColor || COLORS.textTertiary }}>{s.nota}</span>
+            <span style={{ fontSize: 13, color: s.notaColor || COLORS.textTertiary }}>{s.nota}</span>
+            {'escala' in s && <EscalaForma tsb={s.escala} />}
           </div>
         ))}
       </div>
@@ -292,7 +322,7 @@ export default function StravaAnalysis({
             showLegend
             showStatusLabel={!isMobile}
             maxLabels={vistaDiaria ? (isMobile ? 7 : 14) : (isMobile ? 5 : 12)}
-            dowFontSize={isMobile ? 10 : 11}
+            dowFontSize={isMobile ? 11.5 : 12.5}
           />
         </div>
       )}
@@ -304,20 +334,20 @@ export default function StravaAnalysis({
             <div style={{ ...seccionLabel, marginBottom: 4 }}>Tiempo por zona de pulso</div>
             {/* Honesto con el dato: no es tiempo en zona segundo a segundo, sino
                 la duración de cada actividad en la zona de su FC media. */}
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: COLORS.textTertiary, lineHeight: 1.4 }}>
+            <p style={{ margin: '0 0 14px', fontSize: 13.5, color: COLORS.textTertiary, lineHeight: 1.4 }}>
               Cada actividad cuenta en la zona de su pulso medio
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
               {zonas.map((z) => (
                 <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
-                  <span style={{ width: isMobile ? 22 : 26, fontSize: isMobile ? 11 : 12, color: COLORS.textSecondary, fontFamily: FONTS.mono }}>{z.label}</span>
-                  <div style={{ flex: 1, background: COLORS.background, borderRadius: 4, height: isMobile ? 12 : 16, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${z.pct}%`, background: z.color, borderRadius: 4, transition: 'width 180ms ease' }} />
+                  <span style={{ width: 26, fontSize: 13.5, fontWeight: 700, color: COLORS.textSecondary, fontFamily: FONTS.mono }}>{z.label}</span>
+                  <div style={{ flex: 1, background: COLORS.sunken, borderRadius: 6, height: isMobile ? 14 : 18, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${z.pct}%`, background: z.color, borderRadius: 6, transition: 'width 180ms ease' }} />
                   </div>
-                  <span style={{ width: isMobile ? 64 : 76, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 13, color: z.minutos > 0 ? COLORS.textPrimary : COLORS.textTertiary, whiteSpace: 'nowrap' }}>
+                  <span style={{ width: isMobile ? 66 : 76, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 13 : 14, fontWeight: 600, color: z.minutos > 0 ? COLORS.textPrimary : COLORS.textTertiary, whiteSpace: 'nowrap' }}>
                     {z.minutesLabel}
                   </span>
-                  <span style={{ width: isMobile ? 30 : 36, textAlign: 'right', fontFamily: FONTS.mono, fontSize: isMobile ? 11 : 12, color: COLORS.textTertiary }}>
+                  <span style={{ width: isMobile ? 36 : 40, textAlign: 'right', fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textTertiary }}>
                     {z.pctTotal} %
                   </span>
                 </div>
@@ -342,9 +372,9 @@ export default function StravaAnalysis({
             >
               {paceTrend.map((p, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', gap: 6 }}>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textSecondary }}>{p.pace}</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, fontWeight: 600, color: COLORS.textSoft }}>{p.pace}</span>
                   <div style={{ width: '100%', maxWidth: 28, height: `${p.heightPct}%`, background: DISCIPLINE_COLORS.run, borderRadius: '4px 4px 0 0', opacity: p.opacity, transition: 'height 180ms ease' }} />
-                  <span style={{ fontSize: 10, color: COLORS.textTertiary }}>{p.label}</span>
+                  <span style={{ fontSize: 11.5, color: COLORS.textTertiary }}>{p.label}</span>
                 </div>
               ))}
             </div>
@@ -364,8 +394,8 @@ export default function StravaAnalysis({
 
       {/* Filtros + CSV */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '24px 0 10px' }}>
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Actividades</h2>
-        <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>{actividadesFiltradas.length}</span>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, fontStretch: '110%' }}>Actividades</h2>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textTertiary }}>{actividadesFiltradas.length}</span>
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 12, paddingBottom: 2 }}>
         {FILTROS_DISCIPLINA.map((filtro) => {
@@ -383,8 +413,9 @@ export default function StravaAnalysis({
                 color: activo ? COLORS.textPrimary : COLORS.textSecondary,
                 border: `1px solid ${activo ? 'rgba(237,238,242,0.25)' : COLORS.cardBorder}`,
                 borderRadius: 999,
-                padding: '6px 13px',
-                fontSize: 13,
+                padding: '0 15px',
+                minHeight: 40,
+                fontSize: 14,
                 fontWeight: activo ? 600 : 500,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -405,8 +436,9 @@ export default function StravaAnalysis({
             color: COLORS.textSecondary,
             border: `1px solid ${COLORS.cardBorder}`,
             borderRadius: 999,
-            padding: '6px 13px',
-            fontSize: 13,
+            padding: '0 15px',
+            minHeight: 40,
+            fontSize: 14,
             fontWeight: 500,
             whiteSpace: 'nowrap',
             flexShrink: 0,
@@ -443,28 +475,28 @@ export default function StravaAnalysis({
                   background: 'none',
                   border: 'none',
                   borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}`,
-                  padding: '12px 16px',
+                  padding: '14px 16px',
                   cursor: act.id ? 'pointer' : 'default',
                   color: COLORS.textPrimary,
                 }}
               >
-                <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: color }} />
+                <span aria-hidden="true" style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: color }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 16, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {act.nombre_actividad || DISCIPLINE_LABELS[act.disciplina] || '—'}
                     </span>
-                    <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 13.5, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}>
                       {act.fecha ? formatDiaMes(act.fecha) : '—'}
                     </span>
                   </span>
-                  <span style={{ display: 'flex', gap: 14, marginTop: 4, fontFamily: FONTS.mono, fontSize: 12.5, color: COLORS.textSecondary }}>
+                  <span style={{ display: 'flex', gap: 14, marginTop: 4, fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSecondary }}>
                     <span style={{ color: COLORS.textPrimary }} title={act.metros_tecnica ? `Incluye ${act.metros_tecnica} m de técnica/pies que el reloj no cuenta` : undefined}>
                       {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
                       {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary }}> · {act.metros_tecnica} m téc.</span> : null}
                     </span>
                     <span>{formatEffort(act)}</span>
-                    <span title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : act.tss_por_potencia ? 'TSS por potencia' : undefined} style={{ color: COLORS.load }}>
+                    <span title={act.tss_estimado_sin_fc ? 'TSS estimado (sin FC)' : act.tss_por_potencia ? 'TSS por potencia' : undefined} style={{ color: COLORS.loadText }}>
                       TSS {tssTexto(act)}
                     </span>
                   </span>

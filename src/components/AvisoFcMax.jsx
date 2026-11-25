@@ -82,9 +82,9 @@ export default function AvisoFcMax({ athleteId, fcMaxima, porDefecto, nombre, es
   }
 
   return (
-    <div style={{ ...margen, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: COLORS.textSecondary }}>
+    <div style={{ ...margen, display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: COLORS.textSecondary }}>
       <span>FC máxima <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{fcMaxima} ppm</span></span>
-      <button type="button" onClick={() => setEditando(true)} style={{ ...ghostButtonStyle, padding: '4px 8px', fontSize: 12.5, color: COLORS.textSecondary }}>
+      <button type="button" onClick={() => setEditando(true)} style={{ background: 'none', border: 'none', padding: '10px 4px', minHeight: 40, fontSize: 14, fontWeight: 600, color: COLORS.accent, cursor: 'pointer', fontFamily: 'inherit' }}>
         Cambiar
       </button>
     </div>

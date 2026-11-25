@@ -499,11 +499,11 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>
-              {sessionId ? 'Editar entrenamiento' : 'Prescribir entrenamiento'}
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, fontStretch: '115%', letterSpacing: '-0.015em', color: COLORS.textPrimary }}>
+              {sessionId ? 'Editar entreno' : 'Nuevo entreno'}
             </h2>
             {(atletaNombre || form.fecha) && (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+              <p style={{ margin: '4px 0 0', fontSize: 15, color: COLORS.textSecondary }}>
                 {[atletaNombre, form.fecha ? fechaCorta(form.fecha) + (form.hora != null ? ` · ${formatHora(form.hora)}` : '') : null].filter(Boolean).join(' · ')}
               </p>
             )}
@@ -998,14 +998,15 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 disabled={guardando || enviando}
                 style={{
                   flex: 1,
-                  background: 'transparent',
+                  background: '#1E2330',
                   // Ink, no Mist: en gris parecía un botón deshabilitado
                   color: COLORS.textPrimary,
-                  border: '1px solid #2A3040',
-                  borderRadius: 8,
-                  padding: '10px 16px',
-                  fontSize: 14,
-                  fontWeight: 600,
+                  border: 'none',
+                  borderRadius: 999,
+                  padding: '0 16px',
+                  minHeight: 52,
+                  fontSize: 15,
+                  fontWeight: 650,
                   cursor: guardando ? 'wait' : 'pointer',
                   fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
                   opacity: guardando || enviando ? 0.6 : 1,
@@ -1020,12 +1021,13 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 style={{
                   flex: 1,
                   background: COLORS.accent,
-                  color: '#0B0D12',
+                  color: COLORS.onAccent,
                   border: 'none',
-                  borderRadius: 8,
-                  padding: '10px 16px',
-                  fontSize: 14,
-                  fontWeight: 600,
+                  borderRadius: 999,
+                  padding: '0 16px',
+                  minHeight: 52,
+                  fontSize: 15,
+                  fontWeight: 750,
                   cursor: enviando ? 'wait' : 'pointer',
                   fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
                   opacity: guardando || enviando ? 0.6 : 1,

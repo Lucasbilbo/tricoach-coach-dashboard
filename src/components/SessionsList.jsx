@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { authHeaders } from '../lib/authHeaders'
 import { pedirDatosAtleta, invalidarDatosAtleta } from '../lib/athleteData'
 import { ESTADO, asignarActividades, estadoDeSesion } from '../lib/estadoSesion'
-import { COLORS, DISCIPLINE_LABELS, FONTS, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_LABELS, FONTS, buttonStyle, cardStyle, ghostButtonStyle, iconButtonStyle, railStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { MESES_CORTOS, lunesDeSemana, formatDiaMes, hoyMadrid } from '../lib/chartUtils'
 import WorkoutBuilder from './WorkoutBuilder'
@@ -83,11 +83,11 @@ const textoBtnStyle = {
   background: 'transparent',
   border: 'none',
   color: COLORS.textSecondary,
-  padding: '8px 6px 8px 0',
-  fontSize: 13,
+  padding: '10px 8px 10px 0',
+  fontSize: 15,
   fontWeight: 500,
   cursor: 'pointer',
-  minHeight: 36,
+  minHeight: 44,
 }
 
 // Botón de icono compacto de la cabecera de la tarjeta (sin caja: 3 seguidos
@@ -108,9 +108,9 @@ const itemMenuStyle = {
   padding: '0 12px',
   background: 'transparent',
   border: 'none',
-  borderRadius: 8,
+  borderRadius: 10,
   color: COLORS.textPrimary,
-  fontSize: 14,
+  fontSize: 15,
   fontFamily: 'inherit',
   textAlign: 'left',
   cursor: 'pointer',
@@ -142,10 +142,10 @@ function CargaSemana({ prevista, real }) {
   return (
     <span
       title="TSS de la semana: hecho frente a lo previsto con lo prescrito (estimado con las sesiones que ya ha hecho el atleta)"
-      style={{ fontSize: 12, fontWeight: 500, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}
+      style={{ fontSize: 14, fontWeight: 500, color: COLORS.textSecondary, whiteSpace: 'nowrap' }}
     >
       TSS{' '}
-      {real != null && <span style={{ ...mono, color: COLORS.load, fontWeight: 600 }}>{real}</span>}
+      {real != null && <span style={{ ...mono, color: COLORS.loadText, fontWeight: 700 }}>{real}</span>}
       {real != null && prevista != null && ' de '}
       {prevista != null && <span style={{ ...mono, color: COLORS.textPrimary }}>~{prevista}</span>}
       {real == null && prevista != null && ' previsto'}
@@ -154,9 +154,11 @@ function CargaSemana({ prevista, real }) {
 }
 
 const cabeceraSemanaStyle = {
-  margin: '0 0 10px',
-  fontSize: 14,
-  fontWeight: 600,
+  margin: '0 0 12px',
+  fontSize: 20,
+  fontWeight: 700,
+  fontStretch: '110%',
+  letterSpacing: '-0.01em',
   color: COLORS.textPrimary,
 }
 
@@ -448,8 +450,8 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             (así nunca se van a una línea propia en el móvil). */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0, paddingTop: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
-              <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 14, color: COLORS.textSecondary }}>
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.textSoft, fontWeight: 600 }}>
                 {formatFechaSesion(sesion.fecha)}{Number.isInteger(sesion.hora_inicio_min) ? ` · ${formatHora(sesion.hora_inicio_min)}` : ''}
               </span>
               <span>{DISC_LABELS[sesion.disciplina] || sesion.disciplina}</span>
@@ -462,7 +464,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 </span>
               )}
             </div>
-            <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 600, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
+            <h3 style={{ margin: '6px 0 0', fontSize: 21, fontWeight: 750, fontStretch: '108%', letterSpacing: '-0.01em', lineHeight: 1.2, overflowWrap: 'anywhere' }}>{tituloSesion(sesion)}</h3>
           </div>
           <div style={{ display: 'flex', gap: 4, flexShrink: 0, position: 'relative' }}>
             <button onClick={() => setSesionEditando(sesion)} style={accionIconoStyle} aria-label="Editar sesión" title="Editar">
@@ -483,7 +485,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             {menuId === sesion.id && (
               <>
                 <div onClick={() => setMenuId(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-                <div role="menu" style={{ position: 'absolute', top: 40, right: 0, zIndex: 21, minWidth: 190, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 10, padding: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
+                <div role="menu" style={{ position: 'absolute', top: 48, right: 0, zIndex: 21, minWidth: 210, background: '#1A1E27', borderRadius: 16, padding: 6, boxShadow: '0 16px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
                   <button
                     role="menuitem"
                     onClick={() => {
@@ -511,7 +513,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 8, fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 10, fontSize: 15 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: estado.color, fontWeight: 500 }}>
             {completada && <Icon name="check" size={15} strokeWidth={2.2} />}
             {estado.texto.replace('✓ ', '')}
@@ -551,7 +553,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 <Icon name={avisoNutri ? 'alert' : 'chevronDown'} size={16} style={{ transform: !avisoNutri && nutriAbierta ? 'rotate(180deg)' : 'none' }} />
                 Nutrición
                 {chipNutri && !avisoNutri && (
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary }}>{chipNutri}</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSoft }}>{chipNutri}</span>
                 )}
               </button>
             )}
@@ -560,7 +562,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             <button
               onClick={() => handleReenviarGarmin(sesion)}
               disabled={reenviando === sesion.id}
-              style={{ ...iconButtonStyle, width: 'auto', padding: '0 12px', gap: 6, color: COLORS.accent, borderColor: 'rgba(47,191,175,0.45)', fontSize: 13, fontWeight: 600, opacity: reenviando === sesion.id ? 0.6 : 1 }}
+              style={{ ...ghostButtonStyle, color: COLORS.accent, opacity: reenviando === sesion.id ? 0.6 : 1 }}
             >
               <Icon name="send" size={15} />
               {reenviando === sesion.id ? 'Enviando…' : 'Enviar al reloj'}
@@ -670,7 +672,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         />
       )}
       {plegada ? null : sesionesGrupo.length === 0 && (esActual || planificable) ? (
-        <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 14, padding: 16 }}>
+        <div style={{ ...cardStyle, color: COLORS.textSecondary, fontSize: 15, padding: 18 }}>
           {esActual ? 'Sin sesiones esta semana' : 'Sin sesiones'} · pulsa un día para planificar
         </div>
       ) : (
@@ -701,29 +703,30 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
       {error && <p style={{ color: COLORS.error }}>{error}</p>}
       {avisoReloj && <Aviso onCerrar={() => setAvisoReloj(null)} style={{ marginBottom: 16 }}>{avisoReloj}</Aviso>}
       {sinEnviar.length >= 2 && (
-        <Aviso style={{ marginBottom: 16, alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-            <span>{sinEnviar.length} sesiones sin enviar al reloj</span>
-            <button
-              type="button"
-              onClick={() => handleEnviarTodas(sinEnviar)}
-              disabled={enviandoTodas || reenviando !== null}
-              style={{ ...iconButtonStyle, width: 'auto', padding: '0 12px', gap: 6, color: COLORS.accent, borderColor: 'rgba(47,191,175,0.45)', fontSize: 13, fontWeight: 600, opacity: enviandoTodas ? 0.6 : 1 }}
-            >
-              <Icon name="send" size={15} />
-              {enviandoTodas ? 'Enviando…' : 'Enviar todas'}
-            </button>
+        <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 20, padding: '12px 12px 12px 16px', borderRadius: 18, background: 'rgba(232,184,74,0.1)' }}>
+          <Icon name="watch" size={20} color={COLOR_PENDIENTE} style={{ flexShrink: 0 }} />
+          <span style={{ flex: '1 1 160px', fontSize: 15, lineHeight: 1.4, color: '#F1D79A' }}>
+            {sinEnviar.length} sesiones aún no están en su reloj
           </span>
-        </Aviso>
+          <button
+            type="button"
+            onClick={() => handleEnviarTodas(sinEnviar)}
+            disabled={enviandoTodas || reenviando !== null}
+            style={{ ...buttonStyle, background: COLOR_PENDIENTE, color: '#2A1F05', opacity: enviandoTodas ? 0.6 : 1 }}
+          >
+            <Icon name="send" size={16} />
+            {enviandoTodas ? 'Enviando…' : `Enviar las ${sinEnviar.length}`}
+          </button>
+        </div>
       )}
 
       {sesiones.length === 0 && (
         // B4: estado vacío claro para el coach (en vez de solo "Sin sesiones esta semana").
         <div style={{ ...cardStyle, textAlign: 'center', padding: 32, marginBottom: 24 }}>
-          <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
+          <p style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: COLORS.textPrimary }}>
             Aún no has prescrito sesiones a este atleta
           </p>
-          <p style={{ margin: 0, fontSize: 13, color: COLORS.textSecondary }}>
+          <p style={{ margin: 0, fontSize: 15, color: COLORS.textSecondary }}>
             Usa «Prescribir entreno» o pulsa un día de la semana para crear la primera.
           </p>
         </div>
@@ -745,7 +748,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             setSemanasAbiertas((prev) => new Set(prev).add(nueva))
             setSemanasExtra((n) => n + 1)
           }}
-          style={{ ...ghostButtonStyle, alignSelf: 'flex-start', padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          style={{ ...ghostButtonStyle, alignSelf: 'flex-start' }}
         >
           <Icon name="plus" size={15} strokeWidth={2} />
           Planificar otra semana
@@ -761,12 +764,14 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                background: 'transparent',
-                border: `1px solid ${COLORS.cardBorder}`,
-                borderRadius: 10,
+                background: COLORS.card,
+                border: 'none',
+                boxShadow: `inset 0 1px 0 ${COLORS.highlight}`,
+                borderRadius: 18,
                 color: COLORS.textSecondary,
-                padding: '12px 14px',
-                fontSize: 14,
+                padding: '0 16px',
+                minHeight: 52,
+                fontSize: 15,
                 fontWeight: 500,
                 cursor: 'pointer',
                 width: '100%',

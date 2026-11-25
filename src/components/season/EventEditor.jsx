@@ -8,7 +8,7 @@ import { Chip, SportDot } from './SeasonBits'
 
 const sectionLabel = {
   display: 'block',
-  fontSize: 13,
+  fontSize: 14.5,
   fontWeight: 600,
   color: COLORS.textPrimary,
   marginBottom: 8,
@@ -113,7 +113,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
               {esNuevo ? 'Añadir prueba' : 'Editar prueba'}
             </h2>
             {atletaNombre && (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>Temporada de {atletaNombre}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 13.5, color: COLORS.textSecondary }}>Temporada de {atletaNombre}</p>
             )}
           </div>
           <button
@@ -152,7 +152,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Campo label="Fecha" flex="1 1 160px">
               <input type="date" value={form.fecha} onChange={set('fecha')} style={{ ...inputStyle, fontFamily: FONTS.mono, colorScheme: 'dark' }} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13, color: COLORS.textSecondary, cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 14.5, color: COLORS.textSecondary, cursor: 'pointer' }}>
                 <input type="checkbox" checked={form.fecha_aprox} onChange={set('fecha_aprox')} style={{ accentColor: COLORS.accent }} />
                 Aproximada (aún sin publicar)
               </label>
@@ -215,7 +215,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
                 <option key={e} value={e} />
               ))}
             </datalist>
-            <p style={{ margin: '6px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
+            <p style={{ margin: '6px 0 0', fontSize: 13.5, color: COLORS.textTertiary }}>
               Agrupa pruebas de un plan alternativo para compararlos con un filtro.
             </p>
           </Campo>
@@ -235,7 +235,7 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
             />
           </Campo>
 
-          {error && <p style={{ color: COLORS.error, fontSize: 13, margin: '0 0 8px' }}>{error}</p>}
+          {error && <p style={{ color: COLORS.error, fontSize: 14.5, margin: '0 0 8px' }}>{error}</p>}
         </div>
 
         <div
@@ -255,26 +255,26 @@ export default function EventEditor({ athleteId, atletaNombre, evento, escenario
                 type="button"
                 onClick={() => setConfirmarBorrado(true)}
                 disabled={guardando}
-                style={{ background: 'none', border: 'none', color: COLORS.error, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans }}
+                style={{ background: 'none', border: 'none', color: COLORS.error, fontSize: 14.5, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans }}
               >
                 Borrar prueba
               </button>
             )}
             {confirmarBorrado && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 14.5 }}>
                 <span style={{ color: COLORS.textSecondary }}>¿Seguro?</span>
                 <button
                   type="button"
                   onClick={borrar}
                   disabled={guardando}
-                  style={{ background: 'none', border: 'none', color: COLORS.error, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans, fontSize: 13 }}
+                  style={{ background: 'none', border: 'none', color: COLORS.error, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans, fontSize: 14.5 }}
                 >
                   Sí, borrar
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmarBorrado(false)}
-                  style={{ background: 'none', border: 'none', color: COLORS.textSecondary, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans, fontSize: 13 }}
+                  style={{ background: 'none', border: 'none', color: COLORS.textSecondary, cursor: 'pointer', padding: 0, fontFamily: FONTS.sans, fontSize: 14.5 }}
                 >
                   No
                 </button>

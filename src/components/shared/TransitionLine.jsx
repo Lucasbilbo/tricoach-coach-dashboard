@@ -61,7 +61,7 @@ export default function TransitionLine({
             gap: 8,
           }}
         >
-          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
             {titulo}
           </span>
           {leyenda.length > 0 && (
@@ -69,7 +69,7 @@ export default function TransitionLine({
               {leyenda.map((l) => (
                 <span
                   key={l.label}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: COLORS.textSecondary }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, color: COLORS.textSecondary }}
                 >
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, display: 'inline-block' }} />
                   {l.label}
@@ -147,7 +147,7 @@ export default function TransitionLine({
               </div>
             )}
             {conEstado && showLabels && (
-              <div style={{ fontSize: 10, color: COLORS.textTertiary, textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 12, color: COLORS.textTertiary, textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
                 {col.statusLabel}
               </div>
             )}

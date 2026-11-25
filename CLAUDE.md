@@ -135,8 +135,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   uno de esos campos desde el navegador, que lo haga por una función de backend.
   RLS de profiles: 3 políticas (ver/crear/editar la propia), sin DELETE.
 - Cabeceras (`netlify.toml`): X-Frame-Options DENY, nosniff, Referrer-Policy,
-  Permissions-Policy y CSP con los únicos orígenes que usa la app (Supabase y
-  Google Fonts). `/assets/*` inmutable 1 año (llevan hash). Si se añade un
+  Permissions-Policy y CSP con los únicos orígenes que usa la app (Supabase; las
+  fuentes van en el bundle desde 2026-11). `/assets/*` inmutable 1 año (llevan hash). Si se añade un
   origen nuevo (imágenes, otra API) hay que añadirlo a la CSP.
 - Contraseña de alta: mínimo 8 caracteres (JoinPage + accept-invitation).
 - `VITE_COACH_SECRET`/`COACH_FUNCTION_SECRET` están OBSOLETOS; el código no los usa.
@@ -658,34 +658,64 @@ Backend (Netlify env): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (⚠️ no
 `fc_maxima` (int, ⚠️ no `fc_max`), `intervals_api_key`, `intervals_athlete_id`,
 `nombre`, `email`.
 
-## Design system (dirección visual aprobada 2026-07)
+## Design system (rediseño 2026-11, dirección A «Pulso»)
 
-Color **por disciplina** sobre fondo oscuro Void. Constantes en `src/lib/theme.js`
-(COLORS, FONTS, DISCIPLINE_COLORS, cardStyle) — no hardcodear.
+Evolución de la dirección de 2026-07: mismo ADN (fondo oscuro, color por
+disciplina) con más profundidad, titulares anchos y objetivos táctiles de
+iPhone. Se eligió entre dos direcciones (A «Pulso» y B «Boya», lienzo de
+diseño en Claude); de la B se trajeron la cuenta atrás de las pruebas y la
+fecha en bloque. Constantes en `src/lib/theme.js` — no hardcodear.
 
 | Token | Hex | Uso |
 |---|---|---|
-| Void (background) | `#0B0D12` | Fondo |
-| Slate (card) | `#12151C` | Superficie de cards |
-| Border | `#1B202C` | Bordes/separadores |
-| Ink (textPrimary) | `#EDEEF2` | Texto primario, números |
-| Mist (textSecondary) | `#8A90A0` | Texto secundario |
-| Mist oscuro (textTertiary) | `#5C6270` | Terciario |
-| Swim · Neritic Teal | `#2FBFAF` | Natación · `accent` de marca |
+| Void (background) | `#0A0C11` | Fondo |
+| Slate (card) | `#12151C` | Superficies |
+| raised | `#1A1E27` | Botón secundario, controles, menús |
+| sunken | `#0E1117` | Inputs y bloques dentro de una tarjeta |
+| highlight | `rgba(255,255,255,0.06)` | Luz del borde superior (`inset 0 1px 0`) |
+| Border | `#1B202C` | Separadores |
+| Ink / textSoft / Mist / terciario | `#EDEEF2` / `#C9CCD6` / `#8A90A0` / `#7A808F` | Texto |
+| Swim · Neritic Teal | `#2FBFAF` | Natación · acción principal (texto encima `onAccent` `#06231F`) |
 | Bike · Asphalt Amber | `#E8934A` | Ciclismo |
 | Run · Exertion Coral | `#E85D5D` | Running · `error` |
-| Load · Dusk Violet | `#8B7FD1` | TSS/carga (`strength` también) |
-| Aviso (warning) | `#E8B84A` | Avisos (`COLORS.warning`); NO es el ámbar de bici |
+| Load · Dusk Violet | `#8B7FD1` (`loadText` `#A79DE6` para números) | TSS/carga (`strength` también) |
+| Aviso (warning) | `#E8B84A` (texto sobre su tinte `#F1D79A`) | Avisos; NO es el ámbar de bici |
 
-Tipografía (Google Fonts en `index.html`): **JetBrains Mono** para TODO valor
-numérico (km, ritmo, TSS, FC, fechas); **Archivo** para nombres, labels y texto.
+**Tipografía** (alojada en la app con `@fontsource`, sin Google Fonts):
+**Archivo variable** con eje de anchura para todo, incluidos los números
+(cifras tabulares globales en `index.css`). `FONTS.mono` es hoy Archivo (se
+mantuvo el nombre por sus ~120 usos); **JetBrains Mono** (`FONTS.code`) solo
+para lo que se escribe tal cual: escritura rápida y texto exacto del reloj.
+Titulares con `displayStyle` (800, `fontStretch: 118%`). Números protagonistas
+de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
 
-### Sistema de UI (2026-10)
-- Marca única **GetRiCoach** (`Brand` en `src/components/ui/Layout.jsx`: tres trazos
-  natación/bici/carrera + nombre). No usar "TriCoach" en este panel.
-- **Sello visual: el filo de color por disciplina** a la izquierda de cada sesión,
-  actividad o prueba (`railStyle(disciplina)` en theme.js, `SportRail` en season).
-  Nada de pastillas rellenas de deporte: texto + filo o punto.
+### Sistema de UI (2026-11)
+- Superficies sin borde gris: `cardStyle` lleva luz arriba y radio 20. Botón
+  principal = píldora teal rellena (una por pantalla); secundario = píldora
+  `raised`; botones de icono = círculo de 44 px. Nada táctil por debajo de 44 px.
+- Inputs a 16 px y regla global en `index.css`: en pantallas táctiles ningún
+  campo baja de 16 px (Safari en iPhone hacía zoom). `:active`/hover también
+  en `index.css` (los inline styles no pueden).
+- **Pestañas** (`Tabs`): en el móvil barra flotante ABAJO; en tablet y
+  escritorio grupo de píldoras fijo arriba. `pageStyle` deja sitio abajo.
+- Marca **GetRiCoach** (`Brand`/`BrandMark` en `ui/Layout.jsx`): ola (natación),
+  línea (bici) y zancadas discontinuas (carrera). Mismo símbolo en
+  `public/favicon.svg` y `public/apple-touch-icon.png`. No usar "TriCoach".
+- **Filo por disciplina** (`railStyle`): marca vertical DENTRO de la tarjeta
+  (background-image); si un componente cambia el fondo al pasar el ratón,
+  que use `backgroundColor`. Nada de pastillas rellenas de deporte.
+- **/home**: la sesión de hoy es la protagonista (titular, duración, perfil de
+  intensidad a lo ancho con `Perfil tinte`, plan en una línea, «¿Cómo te fue?»).
+  Próximos y Hechos con `BloqueFecha` (número de dorsal sobre el tinte de la
+  disciplina). Cabecera = fecha de hoy.
+- **Panel de Jon**: cada atleta con su sesión de HOY (consulta directa a
+  `coach_sessions` desde el navegador). Próximas pruebas con `CuentaAtras`
+  (SeasonBits) también en Temporada.
+- **Agenda** (`SemanaCalendario`): sesiones como bloques teñidos con su
+  disciplina (discontinuo = estimada); días del móvil en píldora.
+- Análisis: escala de forma (`EscalaForma`) bajo el TSB con los cortes de
+  `estadoForma`.
+- Revisar en iPhone e iPad: `REPASO_VISTAS=iphone,ipad npm run repaso`.
 - Primitivas en `src/components/ui/`: `Icon` (SVG de trazo, NUNCA emojis en la UI),
   `PageHeader`, `Tabs` (fijas arriba, etiquetas cortas de una línea), `SectionTitle`,
   `Segmented`, `DisciplineTag`, `Metric`. Estilos en theme.js: `ghostButtonStyle`,

@@ -70,7 +70,7 @@ function NavegadorSemana({ periodo, hoy, onChange }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {boton(anterior, 'back', 'Semana anterior')}
-      <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, minWidth: 130, textAlign: 'center' }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary, minWidth: 140, textAlign: 'center' }}>
         {etiquetaPeriodo(periodo, hoy)}
       </span>
       {boton(siguiente, 'chevronRight', 'Semana siguiente')}
@@ -98,7 +98,7 @@ function CamposFechas({ periodo, hoy, onChange }) {
   }
 
   const campo = (texto, valor, alCambiar) => (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: COLORS.textSecondary }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: COLORS.textSecondary }}>
       {texto}
       <input
         type="date"
@@ -106,7 +106,7 @@ function CamposFechas({ periodo, hoy, onChange }) {
         min={limiteMinimo(hoy)}
         max={hoy}
         onChange={(e) => alCambiar(e.target.value)}
-        style={{ ...inputStyle, width: 'auto', padding: '7px 10px', fontSize: 13, fontFamily: FONTS.mono, colorScheme: 'dark' }}
+        style={{ ...inputStyle, width: 'auto', padding: '8px 12px', fontSize: 16, fontFamily: FONTS.mono, colorScheme: 'dark' }}
       />
     </label>
   )

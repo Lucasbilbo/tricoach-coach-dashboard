@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { pedirDatosAtleta, forzarDatosAtleta } from '../lib/athleteData'
 import { hoyMadrid } from '../lib/chartUtils'
-import { COLORS, pageStyle, buttonStyle, ghostButtonStyle } from '../lib/theme'
+import { COLORS, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { PageHeader, Tabs } from './ui/Layout'
 import SelectorPeriodo from './ui/SelectorPeriodo'
@@ -113,8 +113,8 @@ export default function AthleteView() {
           backLabel="Atletas"
           title={datos?.atleta?.nombre || (cargando ? ' ' : 'Atleta')}
           actions={
-            <button onClick={() => setModalAbierto(true)} style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Icon name="plus" size={16} strokeWidth={2.2} />
+            <button onClick={() => setModalAbierto(true)} style={{ ...buttonStyle, minHeight: 50, padding: '0 22px', fontSize: 16 }}>
+              <Icon name="plus" size={18} strokeWidth={2.4} />
               Prescribir entreno
             </button>
           }
@@ -144,12 +144,12 @@ export default function AthleteView() {
                 }}
                 disabled={cargandoAnalisis}
                 aria-label="Actualizar datos de Strava"
-                style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: cargandoAnalisis ? 0.5 : 1 }}
+                title="Actualizar datos de Strava"
+                style={{ ...iconButtonStyle, opacity: cargandoAnalisis ? 0.5 : 1 }}
               >
-                <Icon name="refresh" size={15} strokeWidth={2} />
-                Actualizar
+                <Icon name="refresh" size={18} strokeWidth={2} />
               </button>
-              <button onClick={() => setComparadorAbierto(true)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 13 }}>
+              <button onClick={() => setComparadorAbierto(true)} style={ghostButtonStyle}>
                 Comparar semanas
               </button>
             </div>

@@ -78,7 +78,7 @@ export default function PowerChart({ actividades }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12, marginBottom: 10, color: COLORS.textSecondary }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 13.5, marginBottom: 10, color: COLORS.textSecondary }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 8, height: 8, borderRadius: 4, background: DISCIPLINE_COLORS.bike }} />
           Potencia media por salida

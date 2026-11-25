@@ -14,7 +14,7 @@ export default function Cumplimiento({ sesion, actividad }) {
   const c = cumplimiento(sesion, actividad)
   if (!c) return null
   return (
-    <span title={AYUDA[c.nivel]} style={{ fontSize: 13, color: COLOR[c.nivel], fontWeight: c.nivel === NIVEL.ok ? 400 : 600, whiteSpace: 'nowrap' }}>
+    <span title={AYUDA[c.nivel]} style={{ fontSize: 14.5, color: COLOR[c.nivel], fontWeight: c.nivel === NIVEL.ok ? 400 : 600, whiteSpace: 'nowrap' }}>
       <span style={{ fontFamily: FONTS.mono }}>{c.texto}</span>
       {c.nivel !== NIVEL.ok && <span style={{ fontFamily: FONTS.mono }}> · {c.pct} %</span>}
     </span>

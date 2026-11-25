@@ -42,7 +42,7 @@ function BotonPincel({ clave, activo, onClick }) {
       onClick={onClick}
       aria-pressed={activo}
       style={{
-        padding: '7px 14px', borderRadius: 999, fontSize: 13, fontFamily: FONTS.sans, cursor: 'pointer',
+        padding: '7px 14px', borderRadius: 999, fontSize: 14.5, fontFamily: FONTS.sans, cursor: 'pointer',
         border: `1px solid ${activo ? color : COLORS.cardBorder}`,
         background: activo ? (clave === BORRAR ? COLORS.cardBorder : `${color}33`) : 'transparent',
         color: activo ? COLORS.textPrimary : COLORS.textSecondary, fontWeight: activo ? 600 : 400,
@@ -171,7 +171,7 @@ export default function DisponibilidadEditor({ athleteId }) {
     <>
       <section style={{ marginBottom: 32 }}>
         <SectionTitle>Tu semana tipo</SectionTitle>
-        <p style={{ color: COLORS.textSecondary, fontSize: 13, margin: '0 0 12px', lineHeight: 1.5 }}>
+        <p style={{ color: COLORS.textSecondary, fontSize: 14.5, margin: '0 0 12px', lineHeight: 1.5 }}>
           Elige una disciplina y toca la hora de inicio y la de fin en el día que quieras.
           {!configurada && ' Mientras no marques nada, tu entrenador no recibe ningún aviso.'}
         </p>
@@ -180,7 +180,7 @@ export default function DisponibilidadEditor({ athleteId }) {
           {DISCIPLINAS_DISPONIBILIDAD.map((d) => <BotonPincel key={d} clave={d} activo={pincel === d} onClick={() => { setPincel(d); setAncla(null) }} />)}
           <BotonPincel clave={BORRAR} activo={pincel === BORRAR} onClick={() => { setPincel(BORRAR); setAncla(null) }} />
         </div>
-        <p role="status" style={{ fontSize: 12, margin: '0 0 8px', minHeight: 18, color: ancla ? COLORS.accent : COLORS.textTertiary }}>
+        <p role="status" style={{ fontSize: 13.5, margin: '0 0 8px', minHeight: 18, color: ancla ? COLORS.accent : COLORS.textTertiary }}>
           {ancla
             ? `${DIAS[ancla.dia - 1]} desde ${formatHora(ancla.slot * MIN_POR_SLOT)}: toca la hora donde termina (en el mismo día).`
             : 'Toca la hora donde empieza.'}
@@ -190,7 +190,7 @@ export default function DisponibilidadEditor({ athleteId }) {
           <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(7, minmax(40px, 1fr))', gap: 2, minWidth: 340 }}>
             <div />
             {INICIAL.map((l, i) => (
-              <div key={l} title={DIAS[i]} style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, color: COLORS.textSecondary, padding: '4px 0' }}>{l}</div>
+              <div key={l} title={DIAS[i]} style={{ textAlign: 'center', fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, padding: '4px 0' }}>{l}</div>
             ))}
             {SLOTS_VISIBLES.map((slot) => (
               <Fila key={slot} slot={slot} slots={slots} ancla={ancla} onTocar={tocarCelda} />
@@ -207,15 +207,15 @@ export default function DisponibilidadEditor({ athleteId }) {
               Descartar cambios
             </button>
           )}
-          {hayCambios && <span style={{ fontSize: 12, color: COLORS.textSecondary }}>Cambios sin guardar</span>}
+          {hayCambios && <span style={{ fontSize: 13.5, color: COLORS.textSecondary }}>Cambios sin guardar</span>}
         </div>
-        {error && <p role="alert" style={{ color: COLORS.error, fontSize: 13, marginTop: 10 }}>{error}</p>}
-        {aviso && <p role="status" style={{ color: COLORS.accent, fontSize: 13, marginTop: 10 }}>{aviso}</p>}
+        {error && <p role="alert" style={{ color: COLORS.error, fontSize: 14.5, marginTop: 10 }}>{error}</p>}
+        {aviso && <p role="status" style={{ color: COLORS.accent, fontSize: 14.5, marginTop: 10 }}>{aviso}</p>}
       </section>
 
       <section style={{ marginBottom: 32 }}>
         <SectionTitle>Días especiales</SectionTitle>
-        <p style={{ color: COLORS.textSecondary, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
+        <p style={{ color: COLORS.textSecondary, fontSize: 14.5, margin: '0 0 14px', lineHeight: 1.5 }}>
           Un viaje, una cena, un día corto… Ese día manda lo que pongas aquí en vez de tu semana tipo.
         </p>
 
@@ -226,14 +226,14 @@ export default function DisponibilidadEditor({ athleteId }) {
                 display: 'flex', gap: 12, alignItems: 'center', padding: '12px 16px', flexWrap: 'wrap',
                 borderTop: i === 0 ? 'none' : `1px solid ${COLORS.cardBorder}`,
               }}>
-                <div style={{ width: 84, fontFamily: FONTS.mono, fontSize: 13 }}>{formatFecha(fecha)}</div>
-                <div style={{ flex: 1, fontSize: 13, color: COLORS.textSecondary }}>
+                <div style={{ width: 84, fontFamily: FONTS.mono, fontSize: 14.5 }}>{formatFecha(fecha)}</div>
+                <div style={{ flex: 1, fontSize: 14.5, color: COLORS.textSecondary }}>
                   {filas[0].tipo === 'no_disponible'
                     ? 'No puedo entrenar'
                     : filas.map((f) => `${DISCIPLINE_LABELS[f.disciplina]} ${formatTramo(f)}`).join(' · ')}
                   {filas.find((f) => f.nota)?.nota ? ` — ${filas.find((f) => f.nota).nota}` : ''}
                 </div>
-                <button onClick={() => quitarExcepcion(fecha)} style={{ ...ghostButtonStyle, padding: '6px 10px', fontSize: 12 }}>Quitar</button>
+                <button onClick={() => quitarExcepcion(fecha)} style={{ ...ghostButtonStyle, padding: '6px 10px', fontSize: 13.5 }}>Quitar</button>
               </div>
             ))}
           </div>
@@ -260,7 +260,7 @@ export default function DisponibilidadEditor({ athleteId }) {
                     <button key={`${t.disciplina}-${t.inicio_min}-${i}`} type="button"
                       onClick={() => setTramosEx((p) => p.filter((_, j) => j !== i))}
                       aria-label={`Quitar ${DISCIPLINE_LABELS[t.disciplina]} ${formatTramo(t)}`}
-                      style={{ ...ghostButtonStyle, padding: '5px 10px', fontSize: 12, borderColor: DISCIPLINE_COLORS[t.disciplina] }}>
+                      style={{ ...ghostButtonStyle, padding: '5px 10px', fontSize: 13.5, borderColor: DISCIPLINE_COLORS[t.disciplina] }}>
                       {DISCIPLINE_LABELS[t.disciplina]} {formatTramo(t)} ✕
                     </button>
                   ))}
@@ -272,9 +272,9 @@ export default function DisponibilidadEditor({ athleteId }) {
                   style={{ ...inputStyle, width: 'auto' }}>
                   {DISCIPLINAS_DISPONIBILIDAD.map((d) => <option key={d} value={d}>{DISCIPLINE_LABELS[d]}</option>)}
                 </select>
-                <span style={{ fontSize: 13, color: COLORS.textSecondary }}>de</span>
+                <span style={{ fontSize: 14.5, color: COLORS.textSecondary }}>de</span>
                 <SelectHora valor={nuevoTramo.inicio_min} etiqueta="Hora de inicio" onChange={(v) => setNuevoTramo((p) => ({ ...p, inicio_min: v }))} />
-                <span style={{ fontSize: 13, color: COLORS.textSecondary }}>a</span>
+                <span style={{ fontSize: 14.5, color: COLORS.textSecondary }}>a</span>
                 <SelectHora valor={nuevoTramo.fin_min} etiqueta="Hora de fin" onChange={(v) => setNuevoTramo((p) => ({ ...p, fin_min: v }))} />
                 <button type="button" disabled={!tramoValido} onClick={() => setTramosEx((p) => [...p, nuevoTramo])}
                   style={{ ...ghostButtonStyle, opacity: tramoValido ? 1 : 0.5 }}>
@@ -305,7 +305,7 @@ function Fila({ slot, slots, ancla, onTocar }) {
   const enPunto = slot % 2 === 0
   return (
     <>
-      <div style={{ fontSize: 10, fontFamily: FONTS.mono, color: COLORS.textTertiary, textAlign: 'right', paddingRight: 4, lineHeight: '20px' }}>
+      <div style={{ fontSize: 12, fontFamily: FONTS.mono, color: COLORS.textTertiary, textAlign: 'right', paddingRight: 4, lineHeight: '20px' }}>
         {enPunto ? formatHora(slot * MIN_POR_SLOT) : ''}
       </div>
       {DIAS.map((nombre, i) => {

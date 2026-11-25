@@ -19,7 +19,7 @@ import {
 import { listarTemporada } from '../../lib/seasonApi'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import EventEditor from './EventEditor'
-import { Chip, EstadoPill, IconoAviso, PrioridadBadge, SportDot, SportRail } from './SeasonBits'
+import { Chip, CuentaAtras, EstadoPill, IconoAviso, PrioridadBadge, SportDot, SportRail } from './SeasonBits'
 
 const FILTROS = [
   { clave: 'activas', label: 'Activas' },
@@ -67,14 +67,13 @@ function SeasonStrip({ eventos, hoy }) {
               <span
                 style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 11,
-                  textTransform: 'uppercase',
+                  fontSize: 14,
                   color: esActual ? COLORS.accent : COLORS.textSecondary,
                   fontWeight: esActual ? 700 : 400,
                 }}
               >
-                {m.corto}
-                <span style={{ display: 'block', fontSize: 9, color: COLORS.textTertiary, textAlign: 'center', minHeight: 11 }}>
+                {m.corto.charAt(0).toUpperCase() + m.corto.slice(1)}
+                <span style={{ display: 'block', fontSize: 12, color: COLORS.textTertiary, textAlign: 'center', minHeight: 11 }}>
                   {i === 0 || cambioAnio ? String(m.anio).slice(2) : ''}
                 </span>
               </span>
@@ -86,14 +85,14 @@ function SeasonStrip({ eventos, hoy }) {
                   </span>
                 ))}
                 {items.length > 4 && (
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textTertiary }}>+{items.length - 4}</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>+{items.length - 4}</span>
                 )}
               </span>
             </a>
           )
         })}
       </div>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 11, color: COLORS.textTertiary }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13, color: COLORS.textTertiary }}>
         {['run', 'tri', 'bike', 'swim'].map((d) => (
           <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <SportDot deporte={d} size={7} /> {DEPORTES[d].label}
@@ -132,18 +131,22 @@ function EventRow({ evento, hoy, onClick, isMobile }) {
         opacity: descartada ? 0.45 : 1,
       }}
     >
-      <span
-        style={{
-          fontFamily: FONTS.mono,
-          fontSize: 13,
-          color: evento.fecha_aprox ? COLORS.textTertiary : COLORS.textSecondary,
-          width: isMobile ? 46 : 58,
-          flexShrink: 0,
-          paddingTop: 1,
-        }}
-      >
-        {evento.fecha ? (evento.fecha_aprox ? `~${formatFechaCorta(evento.fecha).split(' ')[1]}` : formatFechaCorta(evento.fecha)) : '—'}
-      </span>
+      {evento.fecha && evento.fecha >= hoy && evento.estado !== 'hecha' && !descartada ? (
+        <CuentaAtras evento={evento} hoy={hoy} destacada={evento.prioridad === 'A'} />
+      ) : (
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 14.5,
+            color: evento.fecha_aprox ? COLORS.textTertiary : COLORS.textSecondary,
+            width: 60,
+            flexShrink: 0,
+            paddingTop: 1,
+          }}
+        >
+          {evento.fecha ? (evento.fecha_aprox ? `~${formatFechaCorta(evento.fecha).split(' ')[1]}` : formatFechaCorta(evento.fecha)) : '—'}
+        </span>
+      )}
       <SportRail deporte={evento.deporte} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span
@@ -158,17 +161,17 @@ function EventRow({ evento, hoy, onClick, isMobile }) {
           {evento.nombre}
         </span>
         {(detalles.length > 0 || evento.escenario) && (
-          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 3, fontSize: 13, color: COLORS.textSecondary }}>
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 3, fontSize: 14.5, color: COLORS.textSecondary }}>
             {detalles.length > 0 && <span>{detalles.join(' · ')}</span>}
             {evento.escenario && (
-              <span style={{ fontSize: 11, color: COLORS.load, border: `1px solid ${COLORS.load}55`, borderRadius: 4, padding: '1px 6px' }}>
+              <span style={{ fontSize: 13, color: COLORS.load, border: `1px solid ${COLORS.load}55`, borderRadius: 4, padding: '1px 6px' }}>
                 {evento.escenario}
               </span>
             )}
           </span>
         )}
         {alerta && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12, fontWeight: 600, color: alerta.nivel === 'vencida' ? COLORS.error : COLOR_AVISO }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 13.5, fontWeight: 600, color: alerta.nivel === 'vencida' ? COLORS.error : COLOR_AVISO }}>
             <IconoAviso color={alerta.nivel === 'vencida' ? COLORS.error : COLOR_AVISO} />
             {textoAlerta(alerta)} · {formatFechaCorta(evento.inscripcion_antes)}
           </span>
@@ -244,7 +247,7 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
-          <p style={{ margin: 0, fontSize: 14, color: COLORS.textSecondary }}>
+          <p style={{ margin: 0, fontSize: 15, color: COLORS.textSecondary }}>
             <span style={{ fontFamily: FONTS.mono }}>{nActivas}</span> pruebas en juego ·{' '}
             <span style={{ fontFamily: FONTS.mono }}>{nConfirmadas}</span> confirmadas
             {esCoach ? '' : ' · tu entrenador también puede editarla'}
@@ -258,32 +261,30 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
 
       {avisoCambio && (
         <div style={{ ...cardStyle, padding: '12px 16px', marginBottom: 16, borderLeft: `3px solid ${COLORS.accent}` }}>
-          <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 }}>
+          <div style={{ fontSize: 13.5, color: COLORS.textSecondary, marginBottom: 2 }}>
             Último cambio · {textoAutoria(avisoCambio.actor_id, datos.actores, datos.viewerId, avisoCambio.created_at)}
           </div>
-          <div style={{ fontSize: 14 }}>{avisoCambio.resumen}</div>
+          <div style={{ fontSize: 15 }}>{avisoCambio.resumen}</div>
         </div>
       )}
 
       {pendientes.length > 0 && (
-        <div style={{ ...cardStyle, padding: '12px 16px', marginBottom: 16, borderColor: `${COLOR_AVISO}55` }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginBottom: 8 }}>
-            Inscripciones por cerrar
-          </div>
-          {pendientes.map(({ evento, alerta }) => (
-            <button
-              key={evento.id}
-              type="button"
-              onClick={() => setEditando(evento)}
-              style={{ display: 'flex', width: '100%', gap: 10, alignItems: 'center', background: 'none', border: 'none', padding: '5px 0', color: COLORS.textPrimary, cursor: 'pointer', fontFamily: FONTS.sans, fontSize: 14, textAlign: 'left' }}
-            >
-              <SportDot deporte={evento.deporte} size={8} />
-              <span style={{ flex: 1, minWidth: 0 }}>{evento.nombre}</span>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: alerta.nivel === 'vencida' ? COLORS.error : COLOR_AVISO, whiteSpace: 'nowrap' }}>
-                {alerta.nivel === 'vencida' ? 'pasado' : alerta.dias === 0 ? 'hoy' : `${alerta.dias} d`}
-              </span>
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {pendientes.map(({ evento, alerta }) => {
+            const vencida = alerta.nivel === 'vencida'
+            const cuando = vencida ? 'ya ha cerrado' : alerta.dias === 0 ? 'cierra hoy' : alerta.dias === 1 ? 'cierra mañana' : `cierra en ${alerta.dias} días`
+            return (
+              <button
+                key={evento.id}
+                type="button"
+                onClick={() => setEditando(evento)}
+                style={{ display: 'flex', width: '100%', gap: 12, alignItems: 'center', border: 'none', borderRadius: 16, padding: '14px 16px', minHeight: 52, background: vencida ? 'rgba(232,93,93,0.12)' : 'rgba(232,184,74,0.11)', color: vencida ? '#F2A3A3' : '#F1D79A', cursor: 'pointer', fontFamily: FONTS.sans, fontSize: 15, textAlign: 'left' }}
+              >
+                <IconoAviso color={vencida ? COLORS.error : COLOR_AVISO} />
+                <span style={{ flex: 1, minWidth: 0 }}>La inscripción a {evento.nombre} {cuando}</span>
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -298,7 +299,7 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
       </div>
       {escenarios.length > 0 && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto', paddingBottom: 4, marginBottom: 4, scrollbarWidth: 'none' }}>
-          <span style={{ fontSize: 12, color: COLORS.textTertiary, marginRight: 2, whiteSpace: 'nowrap' }}>Escenario</span>
+          <span style={{ fontSize: 13.5, color: COLORS.textTertiary, marginRight: 2, whiteSpace: 'nowrap' }}>Escenario</span>
           <Chip activo={!escenario} onClick={() => setEscenario('')}>Todos</Chip>
           {escenarios.map((e) => (
             <Chip key={e} activo={escenario === e} onClick={() => setEscenario(e)} title="Muestra estas pruebas más las comunes">
@@ -311,18 +312,18 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
       {eventos.length === 0 && (
         <div style={{ ...cardStyle, textAlign: 'center', padding: 36, marginTop: 12 }}>
           <p style={{ margin: '0 0 6px', fontWeight: 600 }}>Aún no hay pruebas en la temporada</p>
-          <p style={{ margin: 0, color: COLORS.textSecondary, fontSize: 14 }}>
+          <p style={{ margin: 0, color: COLORS.textSecondary, fontSize: 15 }}>
             Añade las carreras que tengas en mente, aunque no estén decididas: márcalas como candidatas.
           </p>
         </div>
       )}
       {eventos.length > 0 && visibles.length === 0 && (
-        <p style={{ color: COLORS.textSecondary, fontSize: 14, marginTop: 16 }}>No hay pruebas con este filtro.</p>
+        <p style={{ color: COLORS.textSecondary, fontSize: 15, marginTop: 16 }}>No hay pruebas con este filtro.</p>
       )}
 
       {grupos.map((g) => (
         <section key={g.clave} id={`mes-${g.clave}`} style={{ marginTop: 20, scrollMarginTop: 16 }}>
-          <h2 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
             {etiquetaMes(g.clave)}
           </h2>
           {g.items.map((e) => (
@@ -337,16 +338,16 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
             type="button"
             onClick={() => setVerHistorial((v) => !v)}
             aria-expanded={verHistorial}
-            style={{ background: 'none', border: 'none', color: COLORS.textSecondary, cursor: 'pointer', padding: 0, fontSize: 13, fontWeight: 600, fontFamily: FONTS.sans }}
+            style={{ background: 'none', border: 'none', color: COLORS.textSecondary, cursor: 'pointer', padding: 0, fontSize: 14.5, fontWeight: 600, fontFamily: FONTS.sans }}
           >
             {verHistorial ? '▾' : '▸'} Historial de cambios ({cambios.length})
           </button>
           {verHistorial && (
             <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
               {cambios.map((c) => (
-                <li key={c.id} style={{ padding: '8px 0', borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13 }}>
+                <li key={c.id} style={{ padding: '8px 0', borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 14.5 }}>
                   <div style={{ color: COLORS.textPrimary }}>{c.resumen}</div>
-                  <div style={{ color: COLORS.textTertiary, fontSize: 12, marginTop: 2 }}>
+                  <div style={{ color: COLORS.textTertiary, fontSize: 13.5, marginTop: 2 }}>
                     {textoAutoria(c.actor_id, datos.actores, datos.viewerId, c.created_at)}
                   </div>
                 </li>

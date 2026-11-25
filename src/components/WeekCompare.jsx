@@ -44,7 +44,7 @@ function Diferencia({ a, b, fila }) {
 
 const celdaStyle = {
   padding: '10px 4px',
-  fontSize: 13,
+  fontSize: 14.5,
   borderBottom: `1px solid ${COLORS.cardBorder}`,
 }
 
@@ -109,7 +109,7 @@ export default function WeekCompare({ semanas, onClose }) {
             color: COLORS.textSecondary,
             width: 28,
             height: 28,
-            fontSize: 14,
+            fontSize: 15,
             cursor: 'pointer',
             lineHeight: 1,
           }}
@@ -119,14 +119,14 @@ export default function WeekCompare({ semanas, onClose }) {
       </div>
 
       {semanas.length === 0 && (
-        <p style={{ color: COLORS.textSecondary, fontSize: 13 }}>
+        <p style={{ color: COLORS.textSecondary, fontSize: 14.5 }}>
           No hay semanas con datos en el rango seleccionado.
         </p>
       )}
 
       {semanas.length > 0 && (
         <>
-          <label style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary }}>
+          <label style={{ display: 'block', fontSize: 13.5, color: COLORS.textSecondary }}>
             Semana A
             <select
               value={indiceA}
@@ -142,7 +142,7 @@ export default function WeekCompare({ semanas, onClose }) {
           </label>
 
           <label
-            style={{ display: 'block', fontSize: 12, color: COLORS.textSecondary, marginTop: 14 }}
+            style={{ display: 'block', fontSize: 13.5, color: COLORS.textSecondary, marginTop: 14 }}
           >
             Semana B
             <select
@@ -161,14 +161,14 @@ export default function WeekCompare({ semanas, onClose }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
             <thead>
               <tr>
-                <th style={{ ...celdaStyle, textAlign: 'left', color: COLORS.textSecondary, fontSize: 11, fontWeight: 600 }} />
-                <th style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textSecondary, fontSize: 11, fontWeight: 600 }}>
+                <th style={{ ...celdaStyle, textAlign: 'left', color: COLORS.textSecondary, fontSize: 13, fontWeight: 600 }} />
+                <th style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textSecondary, fontSize: 13, fontWeight: 600 }}>
                   A
                 </th>
-                <th style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textSecondary, fontSize: 11, fontWeight: 600 }}>
+                <th style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textSecondary, fontSize: 13, fontWeight: 600 }}>
                   B
                 </th>
-                <th style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textSecondary, fontSize: 11, fontWeight: 600 }}>
+                <th style={{ ...celdaStyle, textAlign: 'right', color: COLORS.textSecondary, fontSize: 13, fontWeight: 600 }}>
                   Dif.
                 </th>
               </tr>
