@@ -4,7 +4,7 @@
 // Devuelve métricas de los últimos 7 días por atleta del coach:
 // [{ athlete_id, nombre, km_semana, horas_semana, tss_semana, ultima_actividad_dias }]
 
-const { verifyAuth } = require('./lib/auth')
+const { verifyAuth, uidSinVerificar } = require('./lib/auth')
 const { allowLimite, MENSAJE_429 } = require('./lib/rate-limit')
 const { withTimeout } = require('./lib/http')
 const { supabaseGet } = require('./lib/supabase-rest')
@@ -79,20 +79,28 @@ async function procesarAtleta(athleteId, perfil, env) {
     const obtenerToken = () => (tokenPromesa = tokenPromesa || getStravaAccessToken(perfil, env))
 
     const ahoraMs = Date.now()
+    const corteSemana = ahoraMs - VENTANA_DIAS * DIA_MS
     const store = crearStore({
       db: dbSupabase({ supabaseHost: env.supabaseHost, SERVICE_KEY: env.SERVICE_KEY, rest: supabaseRest }),
       listar: (token, desde) => actividadesDesde(token, desde),
     })
-    const actRes = await store.obtener({
-      athleteId,
-      afterUnix: Math.floor(ahoraMs / 1000) - VENTANA_LECTURA_DIAS * 86400,
-      obtenerToken,
-    })
+    // Ajustes de carga y sesiones de natación de la semana salen EN PARALELO
+    // con las actividades (antes en serie después: ~2 idas Ohio↔Frankfurt más).
+    // Las sesiones solo se usan si hay nados; pedirlas siempre es más barato que
+    // esperar. Ninguna de las dos lanza.
+    const ajustesP = leerPotencia(supabaseGet, env.supabaseHost, env.SERVICE_KEY, athleteId)
+    const natacionP = sesionesNatacion(supabaseGet, env.supabaseHost, env.SERVICE_KEY, athleteId, fechaMadrid(new Date(corteSemana)))
+    const [actRes, ajustes] = await Promise.all([
+      store.obtener({
+        athleteId,
+        afterUnix: Math.floor(ahoraMs / 1000) - VENTANA_LECTURA_DIAS * 86400,
+        obtenerToken,
+      }),
+      ajustesP,
+    ])
     if (!actRes.ok) return conNombre
     const actividades = actRes.actividades
-    const corteSemana = ahoraMs - VENTANA_DIAS * DIA_MS
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
-    const ajustes = await leerPotencia(supabaseGet, env.supabaseHost, env.SERVICE_KEY, athleteId)
 
     const semana = actividades.filter(
       (a) => a.start_date && new Date(a.start_date).getTime() >= corteSemana &&
@@ -113,8 +121,7 @@ async function procesarAtleta(athleteId, perfil, env) {
       .filter((a) => mapDisciplina(a.sport_type || a.type) === 'swim')
       .map((a) => ({ disciplina: 'swim', fecha: fechaMadrid(new Date(a.start_date)), distancia_km: 0 }))
     if (nadosSemana.length > 0) {
-      const desde = fechaMadrid(new Date(corteSemana))
-      sumarTecnica(nadosSemana, await sesionesNatacion(supabaseGet, env.supabaseHost, env.SERVICE_KEY, athleteId, desde))
+      sumarTecnica(nadosSemana, await natacionP)
       totales.km += nadosSemana.reduce((s, a) => s + (a.metros_tecnica || 0), 0) / 1000
     }
 
@@ -161,41 +168,43 @@ exports.handler = async (event) => {
   }
   const supabaseHost = SUPABASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
-  // 2. Verificar JWT y derivar el coach del token (nunca del body)
+  // 2. Verificar JWT y derivar el coach del token (nunca del body).
+  // Rendimiento (2026-11-25): las functions corren en Ohio y Supabase en
+  // Frankfurt (~300 ms por ida). Atletas + perfiles salen en UNA query embebida
+  // que se lanza YA con el sub del JWT (sin verificar), en paralelo con la
+  // verificación; solo se usa si coincide con el uid verificado. El rate limit
+  // también va en paralelo. Antes: auth → rate limit → atletas → perfiles.
+  const leerAtletas = (uid) =>
+    withTimeout(
+      supabaseGet(
+        supabaseHost,
+        `/rest/v1/coach_athletes?coach_id=eq.${uid}&select=athlete_id,perfil:profiles!coach_athletes_athlete_id_fkey(*)`,
+        SERVICE_KEY
+      ),
+      5000
+    )
+  const supuesto = uidSinVerificar(event)
+  const atletasAdelantado = supuesto ? leerAtletas(supuesto).then((r) => ({ r }), (err) => ({ err })) : null
+
   const auth = await verifyAuth(event)
   if (!auth) return respuesta(401, { error: 'Unauthorized' })
   if (!auth.isCoach) return respuesta(403, { error: 'Solo coaches' })
-  if (!(await allowLimite('dashboard_data', auth.uid))) {
-    return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
-  }
   const coachId = auth.uid
 
   try {
-    // 3. Leer sus atletas
-    const relRes = await withTimeout(
-      supabaseGet(
-        supabaseHost,
-        `/rest/v1/coach_athletes?coach_id=eq.${coachId}&select=athlete_id`,
-        SERVICE_KEY
-      ),
-      5000
-    )
-    const atletaIds = Array.isArray(relRes.json) ? relRes.json.map((r) => r.athlete_id) : []
+    // 3. Sus atletas con su perfil (filtro por coach_id, una sola query) + rate limit
+    const atletasP =
+      atletasAdelantado && supuesto === coachId
+        ? atletasAdelantado.then((x) => { if (x.err) throw x.err; return x.r })
+        : leerAtletas(coachId)
+    const [dentroDeLimite, relRes] = await Promise.all([allowLimite('dashboard_data', coachId), atletasP])
+    if (!dentroDeLimite) return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
+    const filas = Array.isArray(relRes.json) ? relRes.json : []
+    const atletaIds = filas.map((r) => r.athlete_id)
     if (atletaIds.length === 0) return respuesta(200, [])
 
-    // 4. Traer TODOS los perfiles en una sola query (filtro in) — evita el N+1
-    const perfilesRes = await withTimeout(
-      supabaseGet(
-        supabaseHost,
-        `/rest/v1/profiles?id=in.(${atletaIds.join(',')})&select=*`,
-        SERVICE_KEY
-      ),
-      5000
-    )
     const perfilPorId = new Map()
-    if (Array.isArray(perfilesRes.json)) {
-      for (const p of perfilesRes.json) perfilPorId.set(p.id, p)
-    }
+    for (const f of filas) if (f.perfil) perfilPorId.set(f.athlete_id, f.perfil)
 
     // 5. Procesar atletas en paralelo (cada uno con su propio try/catch)
     const env = { supabaseHost, SERVICE_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET }
