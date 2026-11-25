@@ -12,7 +12,7 @@ const pageStyle = {
   minHeight: '100vh',
   background: COLORS.background,
   color: COLORS.textPrimary,
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -37,7 +37,7 @@ const inputStyle = {
   padding: '10px 12px',
   color: COLORS.textPrimary,
   fontSize: 14,
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   outline: 'none',
   marginTop: 6,
 }
@@ -52,7 +52,7 @@ const btnPrimary = {
   fontSize: 14,
   fontWeight: 600,
   cursor: 'pointer',
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   marginTop: 16,
 }
 
@@ -66,7 +66,7 @@ const btnSecondary = {
   fontSize: 14,
   fontWeight: 600,
   cursor: 'pointer',
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   marginTop: 8,
 }
 
@@ -76,7 +76,7 @@ const btnOmitirStyle = {
   color: '#8A90A0',
   fontSize: 13,
   cursor: 'pointer',
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   marginTop: 20,
   width: '100%',
   textAlign: 'center',
@@ -346,7 +346,7 @@ export default function IntervalsSetup() {
                 fontSize: 14,
                 fontWeight: 600,
                 textDecoration: 'none',
-                fontFamily: "'Archivo', sans-serif",
+                fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
               }}
             >
               Ir a intervals.icu/signup ↗
@@ -445,7 +445,7 @@ export default function IntervalsSetup() {
                 fontSize: 14,
                 fontWeight: 600,
                 textDecoration: 'none',
-                fontFamily: "'Archivo', sans-serif",
+                fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
               }}
             >
               Ir a intervals.icu/settings ↗

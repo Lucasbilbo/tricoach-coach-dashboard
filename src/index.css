@@ -13,7 +13,7 @@ html {
 body {
   background: #0b0d12;
   color: #edeef2;
-  font-family: 'Archivo', system-ui, sans-serif;
+  font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }

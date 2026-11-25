@@ -7,7 +7,7 @@ export const FONTS = {
   // tabular figures, referencia a reloj GPS/ciclocomputador.
   mono: "'JetBrains Mono', monospace",
   // Archivo para UI (nombres, labels, texto de sesión, botones).
-  sans: "'Archivo', sans-serif",
+  sans: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
 }
 
 export const COLORS = {
