@@ -38,9 +38,45 @@ function getJson({ hostname, path, headers }) {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// uid que DICE el JWT (claim `sub`), SIN verificar la firma. Solo sirve para
+// adelantar consultas en paralelo con la verificación real: quien lo use debe
+// descartar el resultado si no coincide con el uid verificado por verifyAuth.
+// Rendimiento (2026-11-25): las functions corren en Ohio y Supabase en
+// Frankfurt; cada ida en serie cuesta ~300 ms.
+function uidSinVerificar(event) {
+  const header = (event && event.headers && (event.headers.authorization || event.headers.Authorization)) || ''
+  if (!header.startsWith('Bearer ')) return null
+  const partes = header.slice(7).trim().split('.')
+  if (partes.length !== 3) return null
+  try {
+    const payload = JSON.parse(Buffer.from(partes[1], 'base64url').toString('utf8'))
+    return typeof payload.sub === 'string' && UUID_REGEX.test(payload.sub) ? payload.sub : null
+  } catch {
+    return null
+  }
+}
+
+function leerCoach(hostname, SERVICE_KEY, uid) {
+  return withTimeout(
+    getJson({
+      hostname,
+      path: `/rest/v1/coaches?id=eq.${uid}&select=id`,
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    }),
+    5000
+  )
+}
+
 // Verifica el JWT del header Authorization contra Supabase Auth.
 // Devuelve { uid, isCoach } si el token es válido, o null en cualquier otro
 // caso (sin token, malformado, expirado, revocado). Falla cerrado.
+// La whitelist de coaches se consulta EN PARALELO con /auth/v1/user usando el
+// `sub` sin verificar; solo se acepta si coincide con el uid verificado (si no,
+// se repite con el uid bueno). Ahorra una ida Ohio↔Frankfurt en cada función.
 async function verifyAuth(event) {
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -52,6 +88,11 @@ async function verifyAuth(event) {
   if (!jwt) return null
 
   const hostname = new URL(SUPABASE_URL).hostname
+
+  const supuesto = uidSinVerificar(event)
+  const coachAdelantado = supuesto
+    ? leerCoach(hostname, SERVICE_KEY, supuesto).then((r) => ({ r }), (err) => ({ err }))
+    : null
 
   let userRes
   try {
@@ -74,21 +115,16 @@ async function verifyAuth(event) {
 
   // Whitelist de coaches: consulta con service key (bypasa RLS)
   let coachRes
-  try {
-    coachRes = await withTimeout(
-      getJson({
-        hostname,
-        path: `/rest/v1/coaches?id=eq.${uid}&select=id`,
-        headers: {
-          apikey: SERVICE_KEY,
-          Authorization: `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      }),
-      5000
-    )
-  } catch {
-    return null
+  if (coachAdelantado && supuesto === uid) {
+    const adelantado = await coachAdelantado
+    if (adelantado.err) return null
+    coachRes = adelantado.r
+  } else {
+    try {
+      coachRes = await leerCoach(hostname, SERVICE_KEY, uid)
+    } catch {
+      return null
+    }
   }
 
   const isCoach = Array.isArray(coachRes.json) && coachRes.json.length > 0
@@ -148,4 +184,4 @@ async function canCoachSession(auth, session) {
   return coachOwnsAthlete(session.coach_id, session.athlete_id)
 }
 
-module.exports = { verifyAuth, coachOwnsAthlete, canAccessAthlete, canCoachSession, UUID_REGEX }
+module.exports = { verifyAuth, uidSinVerificar, coachOwnsAthlete, canAccessAthlete, canCoachSession, UUID_REGEX }
