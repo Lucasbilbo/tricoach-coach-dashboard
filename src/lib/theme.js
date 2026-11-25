@@ -80,7 +80,8 @@ export const pageStyle = {
   background: COLORS.background,
   color: COLORS.textPrimary,
   fontFamily: FONTS.sans,
-  padding: '20px clamp(16px, 4vw, 32px) 64px',
+  // Abajo deja sitio para la barra de pestañas flotante del móvil.
+  padding: '20px clamp(16px, 4vw, 32px) calc(110px + env(safe-area-inset-bottom))',
 }
 
 // 16 px mínimo: por debajo, Safari en iPhone hace zoom al enfocar el campo.
