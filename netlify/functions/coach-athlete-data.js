@@ -270,6 +270,17 @@ exports.handler = async (event) => {
   try {
     // 4. Autorización: el propio atleta o un coach con relación en coach_athletes
     // Autorización y rate limit en paralelo (el limiter es otra ida a Supabase)
+    // Rendimiento 2026-11-25 (functions en Ohio, Supabase en Frankfurt, ~300 ms
+    // por ida): perfil y ajustes del atleta salen YA, en paralelo con la
+    // autorización y el rate limit. Se leen con service key y NO se usan ni
+    // devuelven nada si la autorización falla.
+    const perfilPromesa = withTimeout(
+      supabaseGet(supabaseHost, `/rest/v1/profiles?id=eq.${athleteId}&select=*`, SERVICE_KEY),
+      5000
+    )
+    perfilPromesa.catch(() => {}) // si se descarta por 403/429, sin rechazo suelto
+    // Ajustes de carga (FTP, FC umbral); nunca falla
+    const ajustesPromesa = leerPotencia(supabaseGet, supabaseHost, SERVICE_KEY, athleteId)
     const [permitido, dentroDeLimite] = await Promise.all([
       canAccessAthlete(auth, athleteId),
       allowLimite(conRecords ? 'athlete_data_full' : 'athlete_data_light', auth.uid),
@@ -279,13 +290,9 @@ exports.handler = async (event) => {
     }
     if (!dentroDeLimite) return respuesta(429, { error: MENSAJE_429, code: 'RATE_LIMITED' })
 
-    // Ajustes de carga (FTP, FC umbral) en paralelo con el perfil; nunca falla
-    const ajustesPromesa = leerPotencia(supabaseGet, supabaseHost, SERVICE_KEY, athleteId)
-    // 5. Leer perfil del atleta (tokens Strava) con service key
-    const perfilRes = await withTimeout(
-      supabaseGet(supabaseHost, `/rest/v1/profiles?id=eq.${athleteId}&select=*`, SERVICE_KEY),
-      5000
-    )
+    // 5. Perfil del atleta (tokens Strava) y ajustes: lanzados antes de la
+    // autorización (arriba); solo se usan si se ha autorizado.
+    const perfilRes = await perfilPromesa
     const perfil = Array.isArray(perfilRes.json) ? perfilRes.json[0] : null
     if (!perfil) return respuesta(404, { error: 'Perfil del atleta no encontrado' })
     if (!perfil.strava_token || !perfil.strava_refresh_token) {
