@@ -75,6 +75,33 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   Strava (antes ~4–5 s); mismos KPIs que leyendo de Strava. 172 actividades de
   26 semanas ≈ 1,2 MB.
 
+### Latencia Ohio ↔ Frankfurt (auditoría 2026-11-25)
+- Las Netlify Functions corren en la región por defecto **`cmh` (Ohio)** y Supabase
+  está en **eu-central-1 (Frankfurt)**: cada ida a Supabase desde una función
+  cuesta ~200–500 ms (medido en edge_logs, `request.cf.colo = CMH`), frente a
+  ~25–60 ms desde el navegador (MAD). La BD responde en decenas de ms. Informe:
+  `auditorias/AUDITORIA_RENDIMIENTO_2026-11-25.md` (Project de Claude).
+- **Regla**: en una función, nada de idas a Supabase en serie si no dependen
+  entre sí. Patrones aplicados:
+  - `verifyAuth` consulta `coaches` en paralelo con `/auth/v1/user` usando el
+    `sub` SIN verificar (`uidSinVerificar`); solo vale si coincide con el uid
+    verificado. Mismo patrón en `my-connections` (perfil) y
+    `coach-dashboard-data` (atletas + perfiles en UNA query embebida
+    `coach_athletes?select=athlete_id,perfil:profiles!coach_athletes_athlete_id_fkey(*)`).
+  - `coach-athlete-data` lanza perfil y ajustes junto a la autorización (no se
+    usan ni devuelven si no autoriza).
+  - `actividades-store` incremental: `[Strava ∥ leer BD]` → `[guardar ∥ borrar]`
+    → `guardarSync`, y combina en memoria.
+- **Frontend**: `/home` no espera a `misConexiones` para pintar los entrenos; el
+  panel del coach guarda la última respuesta en localStorage por uid
+  (`dashboardGuardado`, 7 días, se borra al cambiar de usuario) y la pinta al
+  instante con «Actualizando…».
+- Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →
+  Functions → Region; requiere plan Pro). Es la mejora grande: cada ida
+  bajaría a ~10–30 ms. Strava (EE. UU.) iría algo más lento, pero casi nunca
+  está en el camino crítico. Keep-alive en `https` NO ayuda aquí (el coste es
+  Cloudflare Ohio → origen Frankfurt, no el TLS Lambda → Cloudflare).
+
 ## Autenticación de las Netlify Functions
 
 - Las funciones que devuelven o mutan datos exigen `Authorization: Bearer <jwt>`
