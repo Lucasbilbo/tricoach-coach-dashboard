@@ -113,8 +113,8 @@ export default function AthleteView() {
           backLabel="Atletas"
           title={datos?.atleta?.nombre || (cargando ? ' ' : 'Atleta')}
           actions={
-            <button onClick={() => setModalAbierto(true)} style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Icon name="plus" size={16} strokeWidth={2.2} />
+            <button onClick={() => setModalAbierto(true)} style={{ ...buttonStyle, minHeight: 50, padding: '0 22px', fontSize: 16 }}>
+              <Icon name="plus" size={18} strokeWidth={2.4} />
               Prescribir entreno
             </button>
           }
