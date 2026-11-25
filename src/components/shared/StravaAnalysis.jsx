@@ -322,7 +322,7 @@ export default function StravaAnalysis({
             showLegend
             showStatusLabel={!isMobile}
             maxLabels={vistaDiaria ? (isMobile ? 7 : 14) : (isMobile ? 5 : 12)}
-            dowFontSize={isMobile ? 10 : 11}
+            dowFontSize={isMobile ? 11.5 : 12.5}
           />
         </div>
       )}

@@ -52,7 +52,7 @@ export default function TSSChart({ semanas, porDia = false }) {
         </BarChart>
       </ResponsiveContainer>
       {data.some((d) => d.enCurso) && (
-        <p style={{ margin: '6px 0 0', fontSize: 11, color: COLORS.textTertiary }}>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: COLORS.textTertiary }}>
           {porDia ? 'La barra tenue es hoy, aún sin terminar.' : 'La barra tenue es la semana en curso.'}
         </p>
       )}

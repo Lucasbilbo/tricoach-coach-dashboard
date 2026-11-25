@@ -64,7 +64,7 @@ function Leyenda({ ctl, atl, conPrevisto }) {
     </span>
   )
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12, marginBottom: 10 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 13.5, marginBottom: 10 }}>
       {item(CTL_COLOR, 'CTL', 'forma · 42 d', ctl)}
       {item(ATL_COLOR, 'ATL', 'fatiga · 7 d', atl)}
       {conPrevisto && item(COLORS.textSecondary, 'Previsto', 'con lo planificado', null, true)}
@@ -100,7 +100,7 @@ function ResumenPrevisto({ proyeccion }) {
     )
   }
   if (!texto) return null
-  return <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.5 }}>{texto}</p>
+  return <p style={{ margin: '8px 0 0', fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.5 }}>{texto}</p>
 }
 
 // `hasta`: último día que se calcula y dibuja (por defecto hoy). En un periodo
@@ -145,7 +145,7 @@ export default function FormaChart({ actividadesCarga, desde, hasta, proyeccion 
               x={formatFechaCorta(prueba.evento.fecha)}
               stroke={COLORS.textTertiary}
               strokeDasharray="2 3"
-              label={{ value: prueba.evento.nombre, position: 'insideTopRight', fill: COLORS.textSecondary, fontSize: 11 }}
+              label={{ value: prueba.evento.nombre, position: 'insideTopRight', fill: COLORS.textSecondary, fontSize: 13 }}
             />
           )}
           <Line dataKey="atl" name="ATL" stroke={ATL_COLOR} strokeWidth={1.5} dot={false} isAnimationActive={false} />
