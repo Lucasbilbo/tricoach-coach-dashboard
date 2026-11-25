@@ -190,10 +190,17 @@ export default function AthleteHome() {
       const hoy = hoyMadrid()
       setCargandoSesiones(true)
 
-      // Perfil, conexiones y sesiones en paralelo — ya tenemos el uid.
-      const [perfilRes, conexiones, proximasRes, pasadasRes, mapaFeedback, datosNutricion] = await Promise.all([
+      // Conexiones (Strava/Intervals) van por una Netlify Function (Ohio →
+      // Supabase en Frankfurt, ~1 s): NO deben frenar la lista de entrenos, que
+      // sale directa de Supabase en ~100 ms. Se piden ya y se añaden al llegar
+      // (mientras, conexiones = undefined: no se pinta "Enviar al reloj").
+      misConexiones().then((conexiones) => {
+        if (activo) setPerfil((p) => ({ ...(p || {}), conexiones }))
+      })
+
+      // Perfil y sesiones en paralelo — ya tenemos el uid.
+      const [perfilRes, proximasRes, pasadasRes, mapaFeedback, datosNutricion] = await Promise.all([
         supabase.from('profiles').select('nombre, fc_maxima').eq('id', uid).maybeSingle(),
-        misConexiones(),
         supabase
           .from('coach_sessions')
           .select('*')
@@ -215,7 +222,7 @@ export default function AthleteHome() {
       ])
 
       if (!activo) return
-      setPerfil({ ...(perfilRes.data || {}), conexiones })
+      setPerfil((p) => ({ ...(perfilRes.data || {}), conexiones: p?.conexiones }))
       setFeedbacks(mapaFeedback)
       setNutricion(datosNutricion)
 
