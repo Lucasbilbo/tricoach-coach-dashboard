@@ -166,3 +166,36 @@ test('sin token y sin cobertura: motivo token', async () => {
   assert.equal(r.ok, false)
   assert.equal(r.motivo, 'token')
 })
+
+test('incremental: la BD se lee en paralelo con Strava (no después de escribir) y el resultado es el mismo', async () => {
+  const m = montar({ strava: [act(1, 2), act(2, 3), act(3, 30)] })
+  await m.obtener(56)
+  m.avanzar(FRESCO_MS + 1000)
+  m.estado.strava = [act(2, 3), act(3, 30), act(9, 0)]
+  const orden = []
+  const store = crearStore({
+    db: {
+      leerSync: async () => ({ ok: true, fila: m.getSync() }),
+      leerActividades: async (...a) => { orden.push('leer'); return { ok: true, datos: [...m.filas.values()].filter((x) => x.start_date >= a[1]) } },
+      guardar: async () => { orden.push('guardar'); return true },
+      borrarAusentes: async () => { orden.push('borrar'); return true },
+      guardarSync: async () => { orden.push('sync'); return true },
+    },
+    listar: async () => { orden.push('strava'); return { ok: true, actividades: m.estado.strava.filter((a) => a.start_date >= new Date(AHORA - MARGEN_MS).toISOString()), completo: true } },
+    now: () => AHORA + FRESCO_MS + 1000,
+  })
+  const r = await store.obtener({ athleteId: ATL, afterUnix: Math.floor((AHORA - 56 * DIA) / 1000), obtenerToken: async () => 'tok' })
+  assert.ok(orden.indexOf('leer') < orden.indexOf('guardar'))
+  assert.equal(orden.filter((x) => x === 'leer').length, 1)
+  assert.deepEqual(r.actividades.map((a) => a.id), [9, 2, 3])
+})
+
+test('incremental incompleto: se conserva lo guardado que Strava no devolvió', async () => {
+  const m = montar({ strava: [act(1, 2), act(2, 3)] })
+  await m.obtener(56)
+  m.avanzar(FRESCO_MS + 1000)
+  m.estado.strava = [act(9, 0)]
+  m.estado.completo = false
+  const r = await m.obtener(56)
+  assert.deepEqual(r.actividades.map((a) => a.id), [9, 1, 2])
+})

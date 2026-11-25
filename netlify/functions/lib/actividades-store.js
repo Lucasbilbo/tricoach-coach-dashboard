@@ -62,55 +62,83 @@ function crearStore({ db, listar, now = Date.now }) {
     if (desdeSync != null && Number.isNaN(desdeSync)) desdeSync = afterUnix
 
     let ultima = fila?.ultima_actividad_at || null
+    // Incremental (ventana cubierta pero sync vieja): la lectura de la BD sale
+    // EN PARALELO con Strava y se combina en memoria, en vez de leer la BD
+    // después de escribir. Rendimiento 2026-11-25: cada ida Ohio↔Frankfurt
+    // cuesta ~300 ms y este es el camino de casi cada entrada al panel.
+    const incremental = desdeSync != null && desdeSync > afterUnix
+    const lecturaP = desdeSync == null || incremental ? db.leerActividades(athleteId, iso(afterUnix)) : null
 
-    if (desdeSync != null) {
-      const token = await obtenerToken()
-      const r = token ? await listar(token, desdeSync) : { ok: false, motivo: 'token' }
+    async function desdeBd(lect) {
+      if (!lect.ok) return directo()
+      marcar('bd')
+      for (const a of lect.datos) ultima = maxFecha(ultima, a.start_date)
+      return { ok: true, actividades: lect.datos, origen: 'bd', ultimaActividadAt: ultima }
+    }
 
-      if (!r.ok) {
-        if (!cubre) return { ok: false, motivo: token ? 'strava' : 'token', status: r.status }
-        console.error('Strava no disponible; se sirve lo guardado', athleteId, r.status)
-        // cae a la lectura de BD de abajo (datos algo viejos mejor que un error)
-      } else {
-        for (const a of r.actividades) ultima = maxFecha(ultima, a.start_date)
-        const guardado = await db.guardar(athleteId, r.actividades)
-        let borrado = true
-        if (guardado && r.completo) {
-          const ids = r.actividades.map((a) => a.id).filter((id) => id != null)
-          borrado = ids.length <= MAX_IDS_BORRADO ? await db.borrarAusentes(athleteId, iso(desdeSync), ids) : true
-        }
-        if (guardado && borrado) {
-          // Solo se amplía la cobertura con una lectura COMPLETA y contigua
-          const cubiertoPrevio = fila?.cubierto_desde || null
-          let cubierto = cubiertoPrevio
-          if (r.completo && (!cubiertoPrevio || desdeSync * 1000 <= ms(cubiertoPrevio) || cubre)) {
-            cubierto = cubiertoPrevio && ms(cubiertoPrevio) < desdeSync * 1000 ? cubiertoPrevio : iso(desdeSync)
-          }
-          await db.guardarSync(athleteId, {
-            cubierto_desde: cubierto,
-            sincronizado_at: r.completo ? new Date(ahora).toISOString() : fila?.sincronizado_at || null,
-            ultima_actividad_at: ultima,
-          })
-        }
-        // Lectura de la ventana entera recién traída: no hace falta ir a la BD
-        if (desdeSync <= afterUnix) {
-          marcar('strava')
-          const desdeMs = afterUnix * 1000
-          return {
-            ok: true,
-            actividades: r.actividades.filter((a) => !a.start_date || ms(a.start_date) >= desdeMs),
-            origen: 'strava',
-            ultimaActividadAt: ultima,
-          }
-        }
+    if (desdeSync == null) return desdeBd(await lecturaP)
+
+    const token = await obtenerToken()
+    const [r, lect] = await Promise.all([
+      token ? listar(token, desdeSync) : Promise.resolve({ ok: false, motivo: 'token' }),
+      lecturaP,
+    ])
+
+    if (!r.ok) {
+      if (!cubre) return { ok: false, motivo: token ? 'strava' : 'token', status: r.status }
+      console.error('Strava no disponible; se sirve lo guardado', athleteId, r.status)
+      return desdeBd(lect || (await db.leerActividades(athleteId, iso(afterUnix))))
+    }
+
+    for (const a of r.actividades) ultima = maxFecha(ultima, a.start_date)
+    const ids = r.actividades.map((a) => a.id).filter((id) => id != null)
+    const borrarP =
+      r.completo && ids.length <= MAX_IDS_BORRADO ? db.borrarAusentes(athleteId, iso(desdeSync), ids) : Promise.resolve(true)
+    // Guardar y borrar ausentes no dependen entre sí: en paralelo
+    const [guardado, borradoRes] = await Promise.all([db.guardar(athleteId, r.actividades), borrarP])
+    const borrado = r.completo ? borradoRes : true
+    if (guardado && borrado) {
+      // Solo se amplía la cobertura con una lectura COMPLETA y contigua
+      const cubiertoPrevio = fila?.cubierto_desde || null
+      let cubierto = cubiertoPrevio
+      if (r.completo && (!cubiertoPrevio || desdeSync * 1000 <= ms(cubiertoPrevio) || cubre)) {
+        cubierto = cubiertoPrevio && ms(cubiertoPrevio) < desdeSync * 1000 ? cubiertoPrevio : iso(desdeSync)
+      }
+      await db.guardarSync(athleteId, {
+        cubierto_desde: cubierto,
+        sincronizado_at: r.completo ? new Date(ahora).toISOString() : fila?.sincronizado_at || null,
+        ultima_actividad_at: ultima,
+      })
+    }
+
+    // Ventana entera recién traída de Strava: no hace falta la BD
+    if (!incremental) {
+      marcar('strava')
+      const desdeMs = afterUnix * 1000
+      return {
+        ok: true,
+        actividades: r.actividades.filter((a) => !a.start_date || ms(a.start_date) >= desdeMs),
+        origen: 'strava',
+        ultimaActividadAt: ultima,
       }
     }
 
-    const lect = await db.leerActividades(athleteId, iso(afterUnix))
-    if (!lect.ok) return directo()
-    marcar('bd')
-    for (const a of lect.datos) ultima = maxFecha(ultima, a.start_date)
-    return { ok: true, actividades: lect.datos, origen: 'bd', ultimaActividadAt: ultima }
+    // Incremental: lo guardado ANTES de desdeSync + lo de Strava desde ahí.
+    // Con lectura completa, lo que Strava ya no devuelve en ese tramo está
+    // borrado; con incompleta se conserva lo guardado que no vino.
+    if (!lect || !lect.ok) {
+      const relectura = await db.leerActividades(athleteId, iso(afterUnix))
+      return desdeBd(relectura)
+    }
+    const desdeSyncMs = desdeSync * 1000
+    const porId = new Map()
+    for (const a of lect.datos) {
+      if (r.completo && a.start_date && ms(a.start_date) >= desdeSyncMs) continue
+      porId.set(a.id, a)
+    }
+    for (const a of r.actividades) porId.set(a.id, a)
+    const combinadas = [...porId.values()].sort((x, y) => ms(y.start_date) - ms(x.start_date))
+    return desdeBd({ ok: true, datos: combinadas })
   }
 
   return { obtener }
