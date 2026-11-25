@@ -3,10 +3,15 @@ import SeasonOverview from './season/SeasonOverview'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { dashboardGuardado, datosDashboard } from '../lib/panelData'
-import { COLORS, cardStyle, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle, inputStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_COLORS, DISCIPLINE_LABELS, cardStyle, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle, inputStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { Metric, PageHeader, SectionTitle } from './ui/Layout'
 import { TEXTO_NIVEL, cargaRelativa } from '../lib/cargaRelativa'
+import { hoyMadrid } from '../lib/chartUtils'
+import { tituloSesion } from '../lib/agenda'
+import { formatHora } from '../lib/disponibilidad'
+import { duracionPrevista } from '../lib/tssPrevisto'
+import { esDescanso } from '../lib/descanso'
 
 // TSS de 7 días en el violeta de carga, con una etiqueta relativa a lo
 // habitual del atleta (lib/cargaRelativa). Antes: semáforo con cortes fijos y
@@ -17,11 +22,11 @@ function TssRelativo({ tss, semanas }) {
   const rel = cargaRelativa(tss, semanas)
   return (
     <div style={{ minWidth: 0 }}>
-      <Metric value={tss} label="TSS" color={tss != null ? COLORS.load : undefined} />
+      <Metric value={tss} label="TSS" color={tss != null ? COLORS.loadText : undefined} />
       {rel && (
         <div
           title={`Su media de las 4 semanas anteriores: ${rel.media} TSS`}
-          style={{ fontSize: 12, marginTop: 2, color: rel.nivel === 'alta' ? AVISO : COLORS.textTertiary, whiteSpace: 'nowrap' }}
+          style={{ fontSize: 13, marginTop: 2, color: rel.nivel === 'alta' ? AVISO : COLORS.textSecondary, whiteSpace: 'nowrap' }}
         >
           {TEXTO_NIVEL[rel.nivel]}
         </div>
@@ -33,7 +38,7 @@ function TssRelativo({ tss, semanas }) {
 function textoUltimaActividad(dias) {
   if (dias == null) return 'Sin actividad reciente'
   if (dias === 0) return 'Última actividad hoy'
-  if (dias === 1) return 'Última actividad hace 1 día'
+  if (dias === 1) return 'Última actividad ayer'
   return `Última actividad hace ${dias} días`
 }
 
@@ -46,7 +51,7 @@ function CargaSemanas({ semanas }) {
   if (maxTss <= 0) return null
   return (
     <div style={{ marginTop: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 34 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 48 }}>
         {semanas.map((s, i) => (
           <div
             key={s.semana}
@@ -56,14 +61,13 @@ function CargaSemanas({ semanas }) {
               // Semana sin actividad: raya fina gris (no una barra mínima violeta,
               // que se confundiría con una semana floja).
               height: s.tss_total > 0 ? `${Math.max((s.tss_total / maxTss) * 100, 6)}%` : 2,
-              borderRadius: 3,
-              background: s.tss_total > 0 ? COLORS.load : COLORS.textTertiary,
-              opacity: i === semanas.length - 1 ? 1 : 0.4,
+              borderRadius: 4,
+              background: s.tss_total > 0 ? (i === semanas.length - 1 ? COLORS.load : '#2E2A4A') : COLORS.textTertiary,
             }}
           />
         ))}
       </div>
-      <p style={{ margin: '8px 0 0', fontSize: 12, color: COLORS.textTertiary }}>Carga de las últimas {semanas.length} semanas</p>
+      <p style={{ margin: '8px 0 0', fontSize: 13, color: COLORS.textSecondary }}>Carga de las últimas {semanas.length} semanas</p>
     </div>
   )
 }
@@ -71,9 +75,56 @@ function CargaSemanas({ semanas }) {
 function Estado({ dias }) {
   const activo = dias != null && dias <= DIAS_ACTIVO
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: COLORS.textSecondary }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: COLORS.textSecondary }}>
       <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: activo ? COLORS.accent : COLORS.textTertiary }} />
       {textoUltimaActividad(dias)}
+    </span>
+  )
+}
+
+// Lo que el atleta tiene HOY (coach_sessions, consulta directa: ~30 ms desde
+// el navegador). Sin hora, sin entreno o con descanso, se dice tal cual.
+function HoyAtleta({ sesiones }) {
+  if (sesiones == null) return <div style={{ height: 62, marginTop: 16 }} />
+  if (sesiones.length === 0) {
+    return (
+      <div style={{ marginTop: 16, padding: '0 14px', minHeight: 50, display: 'flex', alignItems: 'center', borderRadius: 14, background: COLORS.sunken, fontSize: 15, color: COLORS.textSecondary }}>
+        Nada planificado hoy
+      </div>
+    )
+  }
+  return (
+    <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {sesiones.map((s) => {
+        const descanso = esDescanso(s)
+        const color = DISCIPLINE_COLORS[s.disciplina] || DISCIPLINE_COLORS.other
+        const dp = duracionPrevista(s)
+        const hora = Number.isInteger(s.hora_inicio_min) ? formatHora(s.hora_inicio_min) : null
+        return (
+          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 14, background: COLORS.sunken }}>
+            <span aria-hidden="true" style={{ width: 4, height: 34, borderRadius: 2, background: color, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: COLORS.textSecondary }}>{hora ? `Hoy, ${hora}` : 'Hoy'} · {DISCIPLINE_LABELS[s.disciplina] || 'Sesión'}</div>
+              <div style={{ fontSize: 16, fontWeight: 650, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {tituloSesion(s)}{dp ? ` · ${dp.estimada ? '~' : ''}${dp.min} min` : ''}
+              </div>
+            </div>
+            {!descanso && (
+              <span style={{ fontSize: 13, whiteSpace: 'nowrap', color: s.enviado_a_garmin ? COLORS.accent : AVISO }}>
+                {s.enviado_a_garmin ? 'En su reloj' : 'Sin enviar'}
+              </span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Avatar({ nombre }) {
+  return (
+    <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 23, flexShrink: 0, background: '#1E2430', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, fontStretch: '112%' }}>
+      {(nombre || '?').trim().charAt(0).toUpperCase()}
     </span>
   )
 }
@@ -91,6 +142,38 @@ export default function Dashboard() {
   const [emailInvite, setEmailInvite] = useState('')
   const [generando, setGenerando] = useState(false)
   const [copiados, setCopiados] = useState({})
+  // Sesiones de HOY por atleta (Map athlete_id → sesiones); null = cargando
+  const [deHoy, setDeHoy] = useState(null)
+  const idsAtletas = atletas.map((a) => a.athlete_id).sort().join(',')
+
+  useEffect(() => {
+    if (!idsAtletas) return undefined
+    let vivo = true
+    supabase
+      .from('coach_sessions')
+      .select('id, athlete_id, fecha, disciplina, hora_inicio_min, duracion_min, workout_steps, descripcion, enviado_a_garmin')
+      .in('athlete_id', idsAtletas.split(','))
+      .eq('fecha', hoyMadrid())
+      .order('hora_inicio_min', { ascending: true, nullsFirst: true })
+      .then(({ data, error: e }) => {
+        if (!vivo) return
+        const mapa = new Map()
+        // Si falla, sin bloque «hoy» (mejor que decir «nada planificado»)
+        if (e) { setDeHoy(new Map([['__error', true]])); return }
+        for (const s of data || []) mapa.set(s.athlete_id, [...(mapa.get(s.athlete_id) || []), s])
+        setDeHoy(mapa)
+      })
+    return () => { vivo = false }
+  }, [idsAtletas])
+
+  const conEntrenoHoy = deHoy && !deHoy.has('__error') ? atletas.filter((a) => (deHoy.get(a.athlete_id) || []).some((s) => !esDescanso(s))).length : null
+  const subtitulo = conEntrenoHoy == null || atletas.length === 0
+    ? 'Volumen y carga de los últimos 7 días'
+    : conEntrenoHoy === 0
+      ? 'Hoy nadie tiene entreno'
+      : conEntrenoHoy === atletas.length && atletas.length > 1
+        ? 'Hoy entrenan todos'
+        : `Hoy ${conEntrenoHoy === 1 ? 'entrena 1' : `entrenan ${conEntrenoHoy}`} de ${atletas.length}`
 
   useEffect(() => {
     let activo = true
@@ -234,13 +317,12 @@ export default function Dashboard() {
     <div style={pageStyle}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <PageHeader
-          brandSub="· Panel del entrenador"
           title="Tus atletas"
-          subtitle="Volumen y carga de los últimos 7 días"
+          subtitle={subtitulo}
           topActions={
             <>
               {esTambienAtleta && (
-                <button onClick={() => navigate('/home')} style={{ ...ghostButtonStyle, padding: '8px 12px', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                <button onClick={() => navigate('/home')} style={ghostButtonStyle}>
                   <Icon name="user" size={16} />
                   Mis entrenos
                 </button>
@@ -266,10 +348,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: 14 }}>
           {cargando &&
             [1, 2].map((i) => (
-              <div key={i} style={{ ...cardStyle, height: 178, opacity: 0.5 }} />
+              <div key={i} style={{ ...cardStyle, height: 300, opacity: 0.5 }} />
             ))}
           {!cargando &&
             atletas.map((atleta) => (
@@ -279,22 +361,31 @@ export default function Dashboard() {
                 // Columna arriba: un <button> centra su contenido en vertical y, en
                 // una fila con otra tarjeta más alta (con gráfico), el nombre
                 // quedaba flotando a media altura.
-                style={{ ...cardStyle, textAlign: 'left', cursor: 'pointer', color: COLORS.textPrimary, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
+                style={{ ...cardStyle, borderRadius: 24, padding: 18, textAlign: 'left', cursor: 'pointer', color: COLORS.textPrimary, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.01em' }}>{atleta.nombre}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Avatar nombre={atleta.nombre} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 23, fontWeight: 800, fontStretch: '112%', letterSpacing: '-0.015em', lineHeight: 1.1 }}>{atleta.nombre}</div>
                     <div style={{ marginTop: 4 }}>
                       <Estado dias={atleta.ultima_actividad_dias} />
                     </div>
                   </div>
                   <Icon name="chevronRight" size={20} color={COLORS.textTertiary} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 20 }}>
-                  <Metric value={atleta.km_semana} unit="km" label="Distancia" />
-                  <Metric value={atleta.horas_semana} unit="h" label="Tiempo" />
+                {deHoy && !deHoy.has('__error') && <HoyAtleta sesiones={deHoy.get(atleta.athlete_id) || []} />}
+                {!deHoy && <HoyAtleta sesiones={null} />}
+                {atleta.km_semana == null && atleta.horas_semana == null && atleta.tss_semana == null ? (
+                  <p style={{ margin: '18px 0 0', fontSize: 15, lineHeight: 1.45, color: COLORS.textSecondary }}>
+                    Sin actividades de Strava en los últimos 7 días. Cuando las haya verás aquí su volumen y su carga.
+                  </p>
+                ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 20, paddingTop: 16, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+                  <Metric value={atleta.km_semana} unit="km" label="7 días" />
+                  <Metric value={atleta.horas_semana} unit="h" label="en movimiento" />
                   <TssRelativo tss={atleta.tss_semana} semanas={atleta.semanas_recientes} />
                 </div>
+                )}
                 <CargaSemanas semanas={atleta.semanas_recientes} />
               </button>
             ))}

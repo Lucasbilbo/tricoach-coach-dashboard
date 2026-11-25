@@ -181,8 +181,10 @@ export function DisciplineTag({ disciplina, label }) {
   )
 }
 
-// Número + unidad para métricas: el número en mono, la unidad pequeña.
+// Número + unidad para métricas: el número grande, la unidad pequeña. Los
+// números van con coma decimal (63,2 km, no 63.2).
 export function Metric({ value, unit, label, color }) {
+  if (typeof value === 'number') value = value.toLocaleString('es-ES', { maximumFractionDigits: 1 })
   return (
     <div style={{ minWidth: 0 }}>
       <div style={{ ...metricNumberStyle, fontSize: 26, color: color || COLORS.textPrimary, whiteSpace: 'nowrap' }}>
