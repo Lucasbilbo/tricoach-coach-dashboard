@@ -272,9 +272,18 @@ const PANTALLAS = [
   await new Promise((r) => server.listen(5299, r))
   const browser = await chromium.launch()
   const informe = []
-  for (const vista of [{ nombre: 'movil', viewport: { width: 375, height: 812 } }, { nombre: 'escritorio', viewport: { width: 1280, height: 860 } }]) {
-    for (const p of PANTALLAS) {
-      const context = await browser.newContext({ viewport: vista.viewport, timezoneId: 'Europe/Madrid', locale: 'es-ES' })
+  // REPASO_VISTAS=iphone,ipad (por defecto movil,escritorio); REPASO_SOLO=regex de pantallas
+  const TODAS = {
+    movil: { nombre: 'movil', viewport: { width: 375, height: 812 } },
+    escritorio: { nombre: 'escritorio', viewport: { width: 1280, height: 860 } },
+    iphone: { nombre: 'iphone', viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+    ipad: { nombre: 'ipad', viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  }
+  const vistas = (process.env.REPASO_VISTAS || 'movil,escritorio').split(',').map((v) => TODAS[v.trim()]).filter(Boolean)
+  const solo = process.env.REPASO_SOLO ? new RegExp(process.env.REPASO_SOLO) : null
+  for (const vista of vistas) {
+    for (const p of PANTALLAS.filter((x) => !solo || solo.test(x.nombre))) {
+      const context = await browser.newContext({ viewport: vista.viewport, deviceScaleFactor: vista.deviceScaleFactor || 1, isMobile: !!vista.isMobile, hasTouch: !!vista.hasTouch, timezoneId: 'Europe/Madrid', locale: 'es-ES' })
       await preparar(context, p.quien)
       const page = await context.newPage()
       const errores = []

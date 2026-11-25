@@ -6,7 +6,7 @@ import { parsearEntreno, zonasAPotencia } from './parser'
 import { PotenciaContext } from './PotenciaContext'
 import { sectionLabel, miniBtn } from './styles'
 
-const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo', sans-serif" }
+const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }
 
 // Atajos del WorkoutBuilder para que el coach prescriba rápido:
 //  1) Escritura rápida: una línea → bloques (parser.js).

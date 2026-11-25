@@ -11,9 +11,10 @@ html {
 }
 
 body {
-  background: #0b0d12;
+  background: #0a0c11;
+  font-variant-numeric: tabular-nums;
   color: #edeef2;
-  font-family: 'Archivo', system-ui, sans-serif;
+  font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -30,11 +31,29 @@ button {
   touch-action: manipulation;
 }
 
+/* Respuesta al toque: el inline style no puede expresar :active. Solo
+   botones y enlaces que no están deshabilitados. */
+button:not(:disabled),
+a[href] {
+  transition: transform 120ms ease, filter 120ms ease, background-color 160ms ease;
+}
+button:not(:disabled):active,
+a[href]:active {
+  transform: scale(0.97);
+  filter: brightness(1.12);
+}
+@media (hover: hover) {
+  button:not(:disabled):hover,
+  a[href]:hover {
+    filter: brightness(1.12);
+  }
+}
+
 /* Foco visible solo con teclado; el inline style no puede expresar :focus-visible */
 :focus-visible {
   outline: 2px solid #2fbfaf;
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 ::selection {

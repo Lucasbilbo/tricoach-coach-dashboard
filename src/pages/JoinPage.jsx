@@ -8,7 +8,7 @@ const pageStyle = {
   minHeight: '100vh',
   background: COLORS.background,
   color: COLORS.textPrimary,
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -33,7 +33,7 @@ const inputStyle = {
   padding: '10px 12px',
   color: COLORS.textPrimary,
   fontSize: 14,
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   outline: 'none',
   marginTop: 6,
   marginBottom: 14,
@@ -236,7 +236,7 @@ export default function JoinPage() {
               fontSize: 14,
               fontWeight: 600,
               cursor: registrando ? 'wait' : 'pointer',
-              fontFamily: "'Archivo', sans-serif",
+              fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
               opacity: registrando ? 0.7 : 1,
             }}
           >

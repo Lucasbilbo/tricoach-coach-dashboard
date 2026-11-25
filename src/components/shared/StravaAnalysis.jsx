@@ -511,8 +511,8 @@ export default function StravaAnalysis({
                     setSelectedActivityId(act.id)
                   }
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: TABLA_COLS,

@@ -25,7 +25,7 @@ import HojaMover from './HojaMover'
 import Icon from './ui/Icon'
 
 const INICIAL_DIA = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-const CORTO_DIA = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
+const CORTO_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const NOMBRE_DIA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 const AMBAR = '#E8B84A'
 const PX_ESCRITORIO = 0.5 // px por minuto (30 px/h)
@@ -34,6 +34,7 @@ const ANCHO_HORAS = 32
 const CARRIL = { swim: 3, bike: 7, run: 11, strength: 15 } // x de cada carril (3 px)
 const MARGEN_TARJETA = 21 // las tarjetas empiezan tras los carriles
 const RAYADO = 'repeating-linear-gradient(135deg, #1B202C 0 5px, transparent 5px 11px)'
+const LUZ = 'inset 0 1px 0 rgba(255,255,255,0.06)'
 
 const fmtDur = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 // Duración real o estimada (pasos por distancia) en minutos, para dibujar
@@ -56,7 +57,7 @@ function marcas(min, max) {
   return res
 }
 
-function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 'normal', onClick, arrastrable, onDragStart, onDragEnd, compacta, capa = 0 }) {
+function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 'normal', onClick, arrastrable, onDragStart, onDragEnd, compacta, grande = false, capa = 0 }) {
   const color = DISCIPLINE_COLORS[sesion.disciplina] || COLORS.textTertiary
   const h = Number.isInteger(sesion.hora_inicio_min) ? formatHora(sesion.hora_inicio_min) : null
   // Estimada (va por distancia): "~1:05" y borde discontinuo
@@ -80,17 +81,19 @@ function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 
       style={{
         position: top == null ? 'relative' : 'absolute',
         ...(top == null ? {} : { top, height, left, right }),
-        minHeight: top == null ? undefined : 18,
         boxSizing: 'border-box',
-        padding: enUnaLinea ? '0 6px 0 9px' : '4px 6px 4px 9px',
+        padding: grande ? '0 12px' : enUnaLinea ? '0 7px' : '5px 7px',
+        minHeight: grande ? 48 : top == null ? undefined : 18,
         display: enUnaLinea ? 'flex' : 'block',
         alignItems: 'center',
-        gap: 5,
+        gap: 6,
         overflow: 'hidden',
-        borderRadius: 7,
-        background: fantasma ? 'transparent' : flotante ? '#1D2230' : '#181C26',
-        border: fantasma ? '1px dashed #3A4256' : aviso ? `1px dashed ${AMBAR}` : flotante ? `1px solid ${color}8C` : estimada ? '1px dashed #343C4D' : '1px solid #232A38',
-        boxShadow: fantasma ? 'none' : `inset 3px 0 0 ${color}${flotante ? ', 0 14px 30px rgba(0,0,0,0.55)' : capa ? ', -4px 0 10px rgba(0,0,0,0.45)' : ''}`,
+        borderRadius: 9,
+        // Rediseño 2026-11: bloque teñido con el color de la disciplina (antes
+        // filo inset de 3 px sobre gris). Discontinuo = duración estimada.
+        background: fantasma ? 'transparent' : flotante ? `${color}40` : `${color}24`,
+        border: fantasma ? '1px dashed #3A4256' : aviso ? `1.5px dashed ${AMBAR}` : estimada ? `1.5px dashed ${color}99` : `1.5px solid ${color}${flotante ? 'D9' : '8C'}`,
+        boxShadow: flotante ? '0 14px 30px rgba(0,0,0,0.55)' : capa ? '-4px 0 10px rgba(0,0,0,0.45)' : 'none',
         opacity: fantasma ? 0.7 : 1,
         zIndex: flotante ? 5 : 2 + capa,
         cursor: arrastrable ? 'grab' : onClick ? 'pointer' : 'default',
@@ -102,12 +105,12 @@ function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: enUnaLinea ? '1 1 auto' : undefined }}>
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: COLORS.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            <span style={{ fontSize: grande ? 15 : 12, fontWeight: 700, color: COLORS.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
               {tituloSesion(sesion)}
             </span>
             {movidaPor && <Icon name="move" size={11} color={COLORS.accent} strokeWidth={2.4} style={{ marginLeft: 'auto' }} />}
           </div>
-          <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: aviso ? AMBAR : COLORS.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: enUnaLinea ? 0 : 1, flexShrink: enUnaLinea ? 0 : undefined }}>
+          <div style={{ fontFamily: FONTS.mono, fontSize: grande ? 14 : 10.5, color: aviso ? AMBAR : COLORS.textSoft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: enUnaLinea ? 0 : 1, flexShrink: enUnaLinea ? 0 : undefined }}>
             {enUnaLinea ? (aviso ? <Icon name="alert" size={12} color={AMBAR} /> : h || '') : linea}
           </div>
         </>
@@ -320,7 +323,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
 
   function ejeHoras() {
     return (
-      <div style={{ position: 'relative', height: alto, fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.textTertiary }}>
+      <div style={{ position: 'relative', height: alto, fontFamily: FONTS.mono, fontSize: 10.5, color: COLORS.textTertiary }}>
         {marcas(MIN, MAX).map((m) => (
           <span key={m} style={{ position: 'absolute', right: 6, top: y(m), transform: 'translateY(-50%)', whiteSpace: 'nowrap' }}>{esMovil ? formatHora(m) : m / 60}</span>
         ))}
@@ -352,7 +355,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
     const sueltas = sinHora(inf.delDia)
     return (
       <div style={{ marginBottom: 14 }}>
-        <div role="tablist" aria-label="Día" style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+        <div role="tablist" aria-label="Día" style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
           {dias.map((d, i) => {
             const n = infos[i]
             const activo = i === sel
@@ -365,17 +368,18 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
                 aria-label={`${NOMBRE_DIA[i]} ${Number(d.fecha.slice(8))}`}
                 onClick={() => setDiaMovil(i)}
                 style={{
-                  position: 'relative', flex: 1, minWidth: 0, padding: '7px 0 6px', borderRadius: 11, cursor: 'pointer',
-                  border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
-                  background: activo ? 'rgba(47,191,175,0.08)' : COLORS.card,
-                  color: COLORS.textPrimary, opacity: n.pasado && !activo ? 0.55 : 1,
+                  position: 'relative', flex: 1, minWidth: 0, padding: '8px 0 7px', borderRadius: 16, cursor: 'pointer',
+                  border: 'none',
+                  background: activo ? COLORS.textPrimary : COLORS.card,
+                  boxShadow: activo ? 'none' : LUZ,
+                  color: activo ? COLORS.background : COLORS.textPrimary, opacity: n.pasado && !activo ? 0.5 : 1,
                   backgroundImage: n.libre && !activo ? RAYADO : undefined,
                 }}
               >
-                {n.choca && <span style={{ position: 'absolute', top: 5, right: 6, width: 5, height: 5, borderRadius: '50%', background: AMBAR }} />}
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: activo || n.esHoy ? COLORS.accent : COLORS.textSecondary }}>{INICIAL_DIA[i]}</div>
-                <div style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600, color: activo ? COLORS.accent : COLORS.textPrimary }}>{Number(d.fecha.slice(8))}</div>
-                <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: n.choca ? AMBAR : COLORS.textTertiary, minHeight: 11 }}>{n.minutos > 0 ? (n.estimadas ? '~' : '') + fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
+                {n.choca && <span style={{ position: 'absolute', top: 6, right: 7, width: 6, height: 6, borderRadius: '50%', background: AMBAR }} />}
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: activo ? COLORS.background : n.esHoy ? COLORS.accent : COLORS.textSecondary }}>{n.esHoy ? 'Hoy' : INICIAL_DIA[i]}</div>
+                <div style={{ fontSize: 19, fontWeight: 800, fontStretch: '112%', lineHeight: 1.15 }}>{Number(d.fecha.slice(8))}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 500, color: activo ? '#3A3F4B' : n.choca ? AMBAR : COLORS.textTertiary, minHeight: 13 }}>{n.minutos > 0 ? (n.estimadas ? '~' : '') + fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
               </button>
             )
           })}
@@ -385,15 +389,15 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
             empujaba "Próximos" fuera de la pantalla). Se abre para ver las horas
             o planificar a una hora concreta. */}
         {!horasAbiertas && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 4 }}>
             {inf.delDia.length === 0 ? (
-              <span style={{ fontSize: 13, color: COLORS.textTertiary }}>
+              <span style={{ fontSize: 15, color: COLORS.textTertiary, padding: '10px 0' }}>
                 {inf.libre ? 'Día libre' : inf.sinActividad ? 'Sin disponibilidad' : 'Sin sesiones'}
               </span>
             ) : (
               [...inf.delDia]
                 .sort((x, z) => (x.hora_inicio_min ?? -1) - (z.hora_inicio_min ?? -1))
-                .map((s) => <Tarjeta key={s.id} sesion={s} aviso={avisoDe(s)} movidaPor={nombreMovida(s)} onClick={() => abrir(s)} compacta />)
+                .map((s) => <Tarjeta key={s.id} sesion={s} aviso={avisoDe(s)} movidaPor={nombreMovida(s)} onClick={() => abrir(s)} compacta grande />)
             )}
           </div>
         )}
@@ -402,7 +406,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
           type="button"
           onClick={() => setHorasAbiertas((v) => !v)}
           aria-expanded={horasAbiertas}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', padding: '8px 0', minHeight: 36, color: COLORS.textSecondary, fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', padding: '10px 0', minHeight: 44, color: COLORS.textSecondary, fontSize: 15, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer' }}
         >
           <Icon name="chevronDown" size={16} style={{ transform: horasAbiertas ? 'rotate(180deg)' : 'none' }} />
           {horasAbiertas ? 'Ocultar horas' : inf.pulsable ? 'Ver horas y planificar' : 'Ver horas'}
@@ -419,7 +423,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: `${ANCHO_HORAS}px minmax(0, 1fr)`, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 12, padding: '10px 8px 10px 0', opacity: inf.pasado ? 0.6 : 1 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `${ANCHO_HORAS}px minmax(0, 1fr)`, background: COLORS.card, boxShadow: LUZ, borderRadius: 20, padding: '12px 10px 12px 0', opacity: inf.pasado ? 0.6 : 1 }}>
               {ejeHoras()}
               {columna(dia, sel, inf, true)}
             </div>
@@ -436,7 +440,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
   // ── Escritorio: la semana entera ──────────────────────────────────────────
   const cols = `${ANCHO_HORAS}px repeat(7, minmax(0, 1fr))`
   return (
-    <div style={{ marginBottom: 14, background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ marginBottom: 14, background: COLORS.card, boxShadow: LUZ, borderRadius: 20, overflow: 'hidden' }}>
       <div style={{ display: 'grid', gridTemplateColumns: cols, borderBottom: `1px solid ${COLORS.cardBorder}` }}>
         <div />
         {dias.map((d, i) => {
@@ -447,17 +451,17 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
               key={d.fecha}
               {...(n.pulsable ? { type: 'button', onClick: () => onDia(d.fecha, null), 'aria-label': `Planificar entreno el ${NOMBRE_DIA[i]} ${Number(d.fecha.slice(8))}` } : {})}
               style={{
-                padding: '8px 8px 7px', textAlign: 'left', border: 'none', borderLeft: `1px solid ${COLORS.cardBorder}`,
-                background: n.esHoy ? 'rgba(47,191,175,0.06)' : 'transparent', cursor: n.pulsable ? 'pointer' : 'default',
+                padding: '12px 10px 10px', textAlign: 'left', border: 'none', borderLeft: `1px solid ${COLORS.cardBorder}`,
+                background: n.esHoy ? 'rgba(47,191,175,0.07)' : 'transparent', cursor: n.pulsable ? 'pointer' : 'default',
                 color: COLORS.textPrimary, fontFamily: FONTS.sans, minWidth: 0,
               }}
             >
-              <div style={{ fontSize: 10, letterSpacing: '0.08em', fontWeight: 700, color: n.esHoy ? COLORS.accent : COLORS.textSecondary }}>
-                {CORTO_DIA[i]}{n.esHoy ? ' · HOY' : ''}
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: n.esHoy ? COLORS.accent : COLORS.textSecondary }}>
+                {n.esHoy ? 'Hoy' : CORTO_DIA[i]}
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 1 }}>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 17, fontWeight: 600, color: n.esHoy ? COLORS.accent : n.pasado ? COLORS.textSecondary : COLORS.textPrimary }}>{Number(d.fecha.slice(8))}</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: n.choca ? AMBAR : COLORS.textTertiary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+                <span style={{ fontSize: 22, fontWeight: 800, fontStretch: '112%', lineHeight: 1, color: n.pasado ? COLORS.textSecondary : COLORS.textPrimary }}>{Number(d.fecha.slice(8))}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: n.choca ? AMBAR : COLORS.textTertiary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {totalTexto(n)}{n.choca ? ' !' : ''}
                 </span>
               </div>

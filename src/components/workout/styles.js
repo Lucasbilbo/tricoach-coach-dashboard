@@ -17,7 +17,7 @@ export const miniBtn = {
   padding: '3px 7px',
   fontSize: 12,
   cursor: 'pointer',
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
 }
 
 export const addBtnStyle = {
@@ -28,7 +28,7 @@ export const addBtnStyle = {
   padding: '6px 12px',
   fontSize: 12,
   cursor: 'pointer',
-  fontFamily: "'Archivo', sans-serif",
+  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
   width: '100%',
 }
 
@@ -68,7 +68,7 @@ export function chipStyle(sel, { bloqueado = false, mono = false } = {}) {
     fontWeight: sel ? 600 : 500,
     cursor: bloqueado ? 'not-allowed' : 'pointer',
     opacity: bloqueado ? 0.35 : 1,
-    fontFamily: mono ? "'JetBrains Mono', monospace" : "'Archivo', sans-serif",
+    fontFamily: mono ? "'JetBrains Mono', monospace" : "'Archivo Variable', 'Archivo', system-ui, sans-serif",
     whiteSpace: 'nowrap',
     flexShrink: 0,
   }
@@ -92,7 +92,7 @@ export function chipDisciplinaStyle(sel, color, { bloqueado = false } = {}) {
     fontWeight: sel ? 600 : 500,
     cursor: bloqueado ? 'not-allowed' : 'pointer',
     opacity: bloqueado ? 0.35 : 1,
-    fontFamily: "'Archivo', sans-serif",
+    fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
     whiteSpace: 'nowrap',
     flexShrink: 0,
   }

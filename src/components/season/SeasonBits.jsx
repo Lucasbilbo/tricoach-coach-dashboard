@@ -27,10 +27,9 @@ export function EstadoPill({ estado }) {
     <span
       style={{
         display: 'inline-block',
-        fontSize: 11,
+        fontSize: 12.5,
         fontWeight: 600,
-        letterSpacing: '0.02em',
-        padding: '3px 8px',
+        padding: '4px 10px',
         borderRadius: 999,
         color: e.color,
         background: e.fondo,
@@ -53,12 +52,12 @@ export function PrioridadBadge({ prioridad }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        fontFamily: FONTS.mono,
-        fontSize: 12,
-        fontWeight: 700,
+        width: 26,
+        height: 26,
+        borderRadius: 8,
+        fontFamily: FONTS.sans,
+        fontSize: 13,
+        fontWeight: 800,
         color: esA ? COLORS.background : COLORS.textPrimary,
         background: esA ? COLORS.textPrimary : 'transparent',
         border: `1px solid ${esA ? COLORS.textPrimary : COLORS.restBorder}`,
@@ -82,8 +81,9 @@ export function Chip({ activo, onClick, children, title }) {
         color: activo ? COLORS.textPrimary : COLORS.textSecondary,
         border: `1px solid ${activo ? 'rgba(237,238,242,0.25)' : COLORS.cardBorder}`,
         borderRadius: 999,
-        padding: '6px 12px',
-        fontSize: 13,
+        padding: '0 14px',
+        minHeight: 38,
+        fontSize: 14,
         fontWeight: 600,
         cursor: 'pointer',
         fontFamily: FONTS.sans,
@@ -116,5 +116,30 @@ export function IconoAviso({ color = COLOR_AVISO }) {
       <path d="M12 17h.01" />
       <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
     </svg>
+  )
+}
+
+// Cuenta atrás de una prueba (de la dirección B «Boya»): los días que faltan
+// en grande y condensados, como un dorsal. Con fecha aproximada, el mes.
+const MESES_CUENTA = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+export function CuentaAtras({ evento, hoy, destacada = false }) {
+  if (!evento?.fecha) return <span style={{ width: 60, flexShrink: 0 }} />
+  const dias = Math.round((Date.parse(`${evento.fecha}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000)
+  const [, m] = evento.fecha.split('-').map(Number)
+  const grande = evento.fecha_aprox ? MESES_CUENTA[m - 1] : dias === 0 ? 'Hoy' : String(dias)
+  const pie = evento.fecha_aprox ? 'aprox.' : dias === 0 ? '' : dias === 1 ? 'día' : 'días'
+  return (
+    <span
+      aria-label={evento.fecha_aprox ? `En ${MESES_CUENTA[m - 1]}, fecha aproximada` : dias === 0 ? 'Hoy' : `Faltan ${dias} ${pie}`}
+      style={{
+        width: 60, minHeight: 58, flexShrink: 0, borderRadius: 16,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: destacada ? COLORS.textPrimary : 'rgba(255,255,255,0.05)',
+        color: destacada ? COLORS.background : COLORS.textPrimary,
+      }}
+    >
+      <span style={{ fontSize: grande.length > 3 ? 22 : 30, fontWeight: 900, fontStretch: '70%', lineHeight: 0.95 }}>{grande}</span>
+      {pie && <span style={{ fontSize: 11.5, fontWeight: 600, marginTop: 3, color: destacada ? '#3A3F4B' : COLORS.textSecondary }}>{pie}</span>}
+    </span>
   )
 }

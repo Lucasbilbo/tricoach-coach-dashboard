@@ -485,7 +485,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           zIndex: 200,
           display: 'flex',
           flexDirection: 'column',
-          fontFamily: "'Archivo', sans-serif",
+          fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
         }}
       >
         {/* Header */}
@@ -665,7 +665,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   fontSize: 12,
                   cursor: 'pointer',
                   padding: 0,
-                  fontFamily: "'Archivo', sans-serif",
+                  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
                 }}
               >
                 <Icon name="chevronDown" size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 4, transform: mostrarInputFecha ? 'rotate(180deg)' : 'none' }} />{mostrarInputFecha ? 'Ocultar' : 'Otra fecha'}
@@ -716,7 +716,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 <button
                   type="button"
                   onClick={() => setMostrarInputHora((v) => !v)}
-                  style={{ background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'Archivo', sans-serif" }}
+                  style={{ background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }}
                 >
                   <Icon name="chevronDown" size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 4, transform: mostrarInputHora ? 'rotate(180deg)' : 'none' }} />{mostrarInputHora ? 'Ocultar' : 'Otra hora'}
                 </button>
@@ -880,7 +880,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     color: COLORS.textSecondary,
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
-                    fontFamily: FONTS.mono,
+                    fontFamily: FONTS.code,
                     margin: '8px 0 0',
                   }}
                 >
@@ -1007,7 +1007,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: guardando ? 'wait' : 'pointer',
-                  fontFamily: "'Archivo', sans-serif",
+                  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
                   opacity: guardando || enviando ? 0.6 : 1,
                 }}
               >
@@ -1027,7 +1027,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: enviando ? 'wait' : 'pointer',
-                  fontFamily: "'Archivo', sans-serif",
+                  fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
                   opacity: guardando || enviando ? 0.6 : 1,
                 }}
               >
