@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import SeasonOverview from './season/SeasonOverview'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { datosDashboard } from '../lib/panelData'
+import { dashboardGuardado, datosDashboard } from '../lib/panelData'
 import { COLORS, cardStyle, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle, inputStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { Metric, PageHeader, SectionTitle } from './ui/Layout'
@@ -82,6 +82,8 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [atletas, setAtletas] = useState([])
   const [cargando, setCargando] = useState(true)
+  // Pintado con la copia guardada y pidiendo la buena en segundo plano
+  const [actualizando, setActualizando] = useState(false)
   const [error, setError] = useState('')
   const [coachId, setCoachId] = useState(null)
   const [esTambienAtleta, setEsTambienAtleta] = useState(false)
@@ -106,7 +108,16 @@ export default function Dashboard() {
         // YA, en paralelo con la comprobación de coach: el backend verifica el JWT
         // y la whitelist por su cuenta, así que lanzarla antes no abre nada. Si
         // al final no es coach se descarta (la caché nunca guarda fallos).
-        const atletasP = datosDashboard().then((v) => ({ ok: v }), (err) => ({ err }))
+        // Lo último que se vio (localStorage) se pinta YA; la petición de
+        // abajo lo sustituye al llegar. Solo existe si este uid ya entró como
+        // coach en este navegador.
+        const guardado = dashboardGuardado(userId)
+        if (guardado && activo) {
+          setAtletas(guardado)
+          setCargando(false)
+          setActualizando(true)
+        }
+        const atletasP = datosDashboard({ uid: userId }).then((v) => ({ ok: v }), (err) => ({ err }))
         // Las consultas de supabase-js no salen hasta que alguien las espera:
         // .then() la lanza ya, en paralelo con todo lo demás.
         const invitacionesP = supabase
@@ -157,14 +168,17 @@ export default function Dashboard() {
         if (!activo) return
         setInvitaciones(invs || [])
         if (resAtletas.err) {
-          setError(resAtletas.err.message)
+          setError(guardado ? `No se pudo actualizar (se muestran los últimos datos): ${resAtletas.err.message}` : resAtletas.err.message)
           return
         }
         setAtletas(resAtletas.ok)
       } catch {
         if (activo) setError('Error de conexión cargando atletas')
       } finally {
-        if (activo) setCargando(false)
+        if (activo) {
+          setCargando(false)
+          setActualizando(false)
+        }
       }
     }
 
@@ -239,6 +253,9 @@ export default function Dashboard() {
         />
 
         {error && <p style={{ color: COLORS.error, marginBottom: 16 }}>{error}</p>}
+        {actualizando && !error && (
+          <p role="status" style={{ color: COLORS.textTertiary, fontSize: 13, margin: '0 0 12px' }}>Actualizando…</p>
+        )}
 
         {!cargando && !error && atletas.length === 0 && (
           <div style={{ ...cardStyle, padding: 32 }}>
