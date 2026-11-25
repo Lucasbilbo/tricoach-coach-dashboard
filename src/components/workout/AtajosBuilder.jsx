@@ -6,7 +6,7 @@ import { parsearEntreno, zonasAPotencia } from './parser'
 import { PotenciaContext } from './PotenciaContext'
 import { sectionLabel, miniBtn } from './styles'
 
-const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }
+const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 14, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }
 
 // Atajos del WorkoutBuilder para que el coach prescriba rápido:
 //  1) Escritura rápida: una línea → bloques (parser.js).
@@ -95,14 +95,14 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
             }
           }}
           placeholder={disciplina === 'swim' ? 'cal 400 + 8x100 1:45 rec 20" + 200 suave' : "15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1"}
-          style={{ ...inputStyle, flex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}
+          style={{ ...inputStyle, flex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 16 }}
         />
-        <button type="button" onClick={generar} style={{ ...miniBtn, padding: '0 12px', color: COLORS.accent, borderColor: COLORS.accent }}>
+        <button type="button" onClick={generar} style={{ ...miniBtn, padding: '0 18px', minHeight: 46, borderRadius: 999, border: 'none', background: 'rgba(47,191,175,0.14)', color: COLORS.accent, fontWeight: 700, fontSize: 15 }}>
           Generar
         </button>
       </div>
       {ayuda || errores.length > 0 ? (
-        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: COLORS.textTertiary, lineHeight: 1.5 }}>
+        <p style={{ margin: '8px 0 0', fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.5 }}>
           ' minutos · " segundos · m/km distancia (en natación, un número suelto son metros) · Z1–Z5 · ritmo 4:50-5:10 · series: 8x100m 1:45 rec 20" o Nx( … / … ). Reemplaza los bloques.
         </p>
       ) : (

@@ -67,3 +67,14 @@ a[href]:active {
     scroll-behavior: auto !important;
   }
 }
+
+/* En pantallas táctiles, ningún campo por debajo de 16 px: con menos, Safari
+   en iPhone hace zoom al enfocarlo y descoloca la página. !important porque
+   los estilos son inline (regla del proyecto) y algunos campos los bajan. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
