@@ -443,7 +443,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
     const nutriAbierta = nutriAbiertaId === sesion.id
 
     return (
-      <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 12px 18px', ...railStyle(sesion.disciplina) }}>
+      <article key={sesion.id} style={{ ...cardStyle, padding: '18px 16px 14px 24px', ...railStyle(sesion.disciplina) }}>
         {/* Cabecera: fecha y deporte a la izquierda, acciones de icono a la derecha
             (así nunca se van a una línea propia en el móvil). */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>

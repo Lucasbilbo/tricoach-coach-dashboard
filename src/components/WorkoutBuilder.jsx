@@ -880,7 +880,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     color: COLORS.textSecondary,
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
-                    fontFamily: FONTS.mono,
+                    fontFamily: FONTS.code,
                     margin: '8px 0 0',
                   }}
                 >

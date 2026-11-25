@@ -426,7 +426,7 @@ export default function AthleteHome() {
     const enviada = !!sesion.enviado_a_garmin
     const descanso = esDescanso(sesion)
     return (
-      <article key={sesion.id} style={{ ...cardStyle, padding: '14px 14px 10px 18px', ...railStyle(sesion.disciplina) }}>
+      <article key={sesion.id} style={{ ...cardStyle, padding: '18px 16px 12px 24px', ...railStyle(sesion.disciplina) }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 13, color: COLORS.textSecondary }}>
           {relativo && <span style={{ color: relativo === 'Hoy' ? COLORS.accent : COLORS.textPrimary, fontWeight: 600 }}>{relativo}</span>}
           <span style={{ fontFamily: FONTS.mono }}>
