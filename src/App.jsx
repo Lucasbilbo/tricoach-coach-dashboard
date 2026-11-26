@@ -3,12 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { COLORS, pageStyle } from './lib/theme'
 import Login from './components/Login'
-import JoinPage from './pages/JoinPage'
-import IntervalsSetup from './pages/IntervalsSetup'
 
-// Rutas con Recharts (StravaAnalysis) o pesadas van en chunks aparte: así
-// /login y /join/:token no descargan Recharts. Login/JoinPage/IntervalsSetup se
-// mantienen eager (entrada pública, primer render rápido).
+// Cada pantalla va en su chunk: el arranque solo trae React, el router, auth y
+// Login. JoinPage e IntervalsSetup se abren una vez en la vida de un atleta, no
+// tiene sentido que todo el mundo las descargue en cada visita.
+const JoinPage = lazy(() => import('./pages/JoinPage'))
+const IntervalsSetup = lazy(() => import('./pages/IntervalsSetup'))
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const AthleteView = lazy(() => import('./components/AthleteView'))
 const AthleteHome = lazy(() => import('./pages/AthleteHome'))
