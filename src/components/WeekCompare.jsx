@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Icon from './ui/Icon'
-import { COLORS, FONTS, inputStyle } from '../lib/theme'
+import { num } from '../lib/numero'
+import { COLORS, FONTS, inputStyle, iconButtonStyle } from '../lib/theme'
 import { formatFechaCorta, formatHorasMin, hoyMadrid, lunesDeSemana, sumarDias } from '../lib/chartUtils'
 import { indicesPorDefecto } from '../lib/compararSemanas'
 
@@ -24,7 +25,7 @@ function etiquetaSemana(lunes, lunesHoy) {
 }
 
 // Horas en "3h 30m" (antes "3.5"); el resto tal cual
-const valorTexto = (v, fila) => (v == null ? '—' : fila.horas ? formatHorasMin(v) : v)
+const valorTexto = (v, fila) => (v == null ? '—' : fila.horas ? formatHorasMin(v) : num(v, 1))
 
 function Diferencia({ a, b, fila }) {
   if (a == null || b == null) {
@@ -37,7 +38,7 @@ function Diferencia({ a, b, fila }) {
   const flecha = delta > 0 ? '▲' : '▼'
   return (
     <span style={{ color: COLORS.textPrimary, fontWeight: 600, fontFamily: FONTS.mono }}>
-      {flecha} {fila.horas ? formatHorasMin(Math.abs(a - b)) : Math.abs(delta)}
+      {flecha} {fila.horas ? formatHorasMin(Math.abs(a - b)) : num(Math.abs(delta), 1)}
     </span>
   )
 }
@@ -95,26 +96,16 @@ export default function WeekCompare({ semanas, onClose }) {
           marginBottom: 20,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, fontStretch: '112%', letterSpacing: '-0.015em', color: COLORS.textPrimary }}>
           Comparar semanas
         </h2>
         <button
           aria-label="Cerrar"
           title="Cerrar"
           onClick={onClose}
-          style={{
-            background: 'transparent',
-            border: `1px solid ${COLORS.cardBorder}`,
-            borderRadius: 8,
-            color: COLORS.textSecondary,
-            width: 28,
-            height: 28,
-            fontSize: 15,
-            cursor: 'pointer',
-            lineHeight: 1,
-          }}
+          style={iconButtonStyle}
         >
-          <Icon name="close" size={16} style={{ margin: '0 auto' }} />
+          <Icon name="close" size={18} />
         </button>
       </div>
 

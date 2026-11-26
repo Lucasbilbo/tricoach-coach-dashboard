@@ -1,5 +1,5 @@
 import CopiarStrava from './CopiarStrava'
-import { COLORS, FONTS } from '../lib/theme'
+import { COLORS, FONTS, DISCIPLINE_COLORS } from '../lib/theme'
 import { conPausas, textoPausa } from '../lib/intervalsText'
 import { adjuntoDe } from '../lib/adjuntos'
 import { metrosDeBloques } from '../lib/cumplimiento'
@@ -12,7 +12,6 @@ import { AdjuntoVista } from './AdjuntoEntreno'
 const PISCINA_LABEL = { '25': 'Piscina de 25 m', '50': 'Piscina de 50 m', open: 'Aguas abiertas' }
 
 // Intensidad 1–5 → color (de suave a máximo, con la paleta del panel).
-const COLOR_NIVEL = { 1: '#4E6475', 2: '#2FBFAF', 3: '#E8934A', 4: '#E8704F', 5: '#E85D5D' }
 
 function nivelPaso(paso) {
   const v = paso.objetivo_valor
@@ -58,12 +57,22 @@ function aplanar(bloques) {
 // `tinte`: en vez de la rampa de colores por zona, el color de la disciplina
 // con más opacidad cuanto más intenso (la tarjeta de hoy del atleta). `alto`
 // en px.
+// Rediseño 2026-11: siempre con el color de SU disciplina y más opacidad cuanto
+// más intenso. Antes una rampa gris → teal → ámbar → coral, que pintaba de
+// «bici» o de «carrera» las zonas de cualquier deporte.
 export function Perfil({ bloques, disciplina, alto = 36, tinte = null, separacion = 1, style }) {
+  tinte = tinte || DISCIPLINE_COLORS[disciplina] || DISCIPLINE_COLORS.other
   const pasos = aplanar(bloques)
   const total = pasos.reduce((s, p) => s + pesoPaso(p, disciplina), 0)
   if (!total) return null
+  // Con tinte (tarjeta grande de hoy) la caja mide lo que pide la zona más
+  // alta de la sesión: un rodaje Z2 no deja medio perfil vacío encima. Las
+  // barras conservan su altura real en px (Z2 siempre igual de alta), así que
+  // dos sesiones se comparan igual que antes.
+  const pct = (n) => 20 + n * 16
+  const techo = tinte ? Math.max(...pasos.map((p) => pct(nivelPaso(p)))) : 100
   return (
-    <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: separacion, height: alto, marginBottom: 12, ...style }}>
+    <div aria-hidden="true" style={{ display: 'flex', alignItems: 'flex-end', gap: separacion, height: Math.round((alto * techo) / 100), marginBottom: 12, ...style }}>
       {pasos.map((p, i) => {
         const nivel = nivelPaso(p)
         return (
@@ -73,10 +82,10 @@ export function Perfil({ bloques, disciplina, alto = 36, tinte = null, separacio
               flexGrow: pesoPaso(p, disciplina),
               flexBasis: 0,
               minWidth: 2,
-              height: `${20 + nivel * 16}%`,
-              background: tinte || COLOR_NIVEL[nivel],
-              opacity: tinte ? OPACIDAD_NIVEL[nivel] : 1,
-              borderRadius: tinte ? '5px 5px 2px 2px' : 2,
+              height: `${(pct(nivel) / techo) * 100}%`,
+              background: tinte,
+              opacity: OPACIDAD_NIVEL[nivel],
+              borderRadius: alto >= 60 ? '5px 5px 2px 2px' : 2,
             }}
           />
         )
@@ -130,7 +139,7 @@ function Paso({ paso, etiqueta, disciplina }) {
       <span style={{ fontFamily: FONTS.mono, fontSize: 14.5, color: COLORS.textPrimary, width: 58, flexShrink: 0, textAlign: 'right' }}>
         {formatCant(paso.cantidad, paso.unidad)}
       </span>
-      <span style={{ width: 8, height: 8, borderRadius: 2, background: COLOR_NIVEL[nivel], flexShrink: 0, alignSelf: 'center' }} />
+      <span style={{ width: 8, height: 8, borderRadius: 2, background: DISCIPLINE_COLORS[disciplina] || DISCIPLINE_COLORS.other, opacity: OPACIDAD_NIVEL[nivel], flexShrink: 0, alignSelf: 'center' }} />
       <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: COLORS.textSecondary, lineHeight: 1.4 }}>
         {obj && <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary, marginRight: 6 }}>{obj}</span>}
         {texto}
@@ -154,7 +163,7 @@ export default function WorkoutDetail({ sesion, mostrarNotas = true, copiarStrav
   return (
     <div style={{ marginTop: 8, padding: '12px 12px 8px', background: 'rgba(255,255,255,0.025)', borderRadius: 10 }}>
       {adjunto && <AdjuntoVista adjunto={adjunto} />}
-      {bloques.length > 0 && <Perfil bloques={ws.bloques} disciplina={disciplina} />}
+      {bloques.length > 0 && <Perfil bloques={ws.bloques} disciplina={disciplina} alto={44} separacion={2} />}
       {disciplina === 'swim' && ws.piscina && (
         <p style={{ margin: '0 0 6px', fontSize: 13.5, color: COLORS.textTertiary }}>{PISCINA_LABEL[ws.piscina] || ws.piscina}</p>
       )}

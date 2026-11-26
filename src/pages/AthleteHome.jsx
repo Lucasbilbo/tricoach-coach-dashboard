@@ -493,8 +493,8 @@ export default function AthleteHome() {
         </div>
 
         {bloques.length > 0 && (
-          <div style={{ padding: '14px 16px 0' }}>
-            <Perfil bloques={bloques} disciplina={sesion.disciplina} alto={84} tinte={color} separacion={3} style={{ marginBottom: 0 }} />
+          <div style={{ padding: '20px 16px 0' }}>
+            <Perfil bloques={bloques} disciplina={sesion.disciplina} alto={110} tinte={color} separacion={3} style={{ marginBottom: 0 }} />
             {plan.length > 0 && (
               <p style={{ margin: '12px 4px 0', fontSize: 14, lineHeight: 1.5, color: COLORS.textSoft }}>{plan.join('  ·  ')}</p>
             )}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import Icon from './ui/Icon'
+import { num } from '../lib/numero'
 import { authHeaders } from '../lib/authHeaders'
-import { COLORS, DISCIPLINE_LABELS, FONTS, railStyle } from '../lib/theme'
+import { COLORS, DISCIPLINE_LABELS, FONTS, railStyle, iconButtonStyle } from '../lib/theme'
 import { formatDiaMes } from '../lib/chartUtils'
 import { useIsMobile } from '../hooks/useIsMobile'
 import PolylineMap from './PolylineMap'
@@ -46,7 +47,7 @@ function formatDistanciaVuelta(vuelta, disciplina) {
     if (metros == null) return '—'
     if (metros < 1000) return `${metros} m`
   }
-  return vuelta.distancia_km != null ? `${vuelta.distancia_km} km` : '—'
+  return vuelta.distancia_km != null ? `${num(vuelta.distancia_km)} km` : '—'
 }
 
 const thStyle = {
@@ -70,9 +71,10 @@ const tdStyle = {
 
 const seccionTituloStyle = {
   color: COLORS.textPrimary,
-  fontSize: 15,
-  margin: '24px 0 8px',
-  fontWeight: 600,
+  fontSize: 19,
+  margin: '28px 0 10px',
+  fontWeight: 700,
+  fontStretch: '108%',
 }
 
 export default function ActivityDetail({ activityId, athleteId, onClose }) {
@@ -125,13 +127,13 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
 
   const metricas = act
     ? [
-        { etiqueta: 'Distancia', valor: act.distancia_km != null ? `${act.distancia_km} km` : null },
+        { etiqueta: 'Distancia', valor: act.distancia_km != null ? `${num(act.distancia_km)} km` : null },
         { etiqueta: 'Duración', valor: formatDuracionMin(act.duracion_mov_min ?? act.duracion_min) },
         act.disciplina === 'run'
           ? { etiqueta: 'Ritmo', valor: act.ritmo_min_km ? `${act.ritmo_min_km} /km` : null }
           : act.disciplina === 'swim'
             ? { etiqueta: 'Ritmo', valor: act.ritmo_min_100m ? `${act.ritmo_min_100m} /100m` : null }
-            : { etiqueta: 'Vel. media', valor: act.velocidad_media_kmh != null ? `${act.velocidad_media_kmh} km/h` : null },
+            : { etiqueta: 'Vel. media', valor: act.velocidad_media_kmh != null ? `${num(act.velocidad_media_kmh, 1)} km/h` : null },
         { etiqueta: 'FC media', valor: act.fc_media != null ? `${act.fc_media} ppm` : null },
         { etiqueta: 'FC máx', valor: act.fc_maxima_actividad != null ? `${act.fc_maxima_actividad} ppm` : null },
         { etiqueta: 'Potencia media', valor: act.potencia_media != null ? `${act.potencia_media} W` : null },
@@ -240,7 +242,7 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                             ? `${v.ritmo_min_100m} /100m`
                             : '—'
                           : v.velocidad_media_kmh != null
-                            ? `${v.velocidad_media_kmh} km/h`
+                            ? `${num(v.velocidad_media_kmh, 1)} km/h`
                             : '—'}
                     </td>
                     {colFc && <td style={tdStyle}>{v.fc_media != null ? `${v.fc_media} ppm` : '—'}</td>}
@@ -294,21 +296,14 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
           title="Cerrar"
           onClick={onClose}
           style={{
+            ...iconButtonStyle,
             position: 'absolute',
-            top: 16,
-            right: 16,
-            background: 'transparent',
-            border: `1px solid ${COLORS.cardBorder}`,
-            borderRadius: 8,
-            color: COLORS.textSecondary,
-            width: 32,
-            height: 32,
-            fontSize: 16,
-            cursor: 'pointer',
-            lineHeight: 1,
+            top: 14,
+            right: 14,
+            zIndex: 1,
           }}
         >
-          <Icon name="close" size={16} style={{ margin: '0 auto' }} />
+          <Icon name="close" size={18} />
         </button>
 
         {cargando && <p style={{ color: COLORS.textSecondary }}>Cargando detalle…</p>}
@@ -317,7 +312,7 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
         {!cargando && !error && act && (
           <>
             <header style={{ marginBottom: 20, paddingRight: 48, paddingLeft: 14, ...railStyle(act.disciplina) }}>
-              <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 700, color: COLORS.textPrimary, lineHeight: 1.25 }}>
+              <h2 style={{ margin: 0, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontStretch: '112%', letterSpacing: '-0.015em', color: COLORS.textPrimary, lineHeight: 1.15, paddingRight: 52 }}>
                 {act.nombre || 'Actividad'}
               </h2>
               {/* Deporte en texto + filo de color (sin pastilla rellena) */}
@@ -351,7 +346,7 @@ export default function ActivityDetail({ activityId, athleteId, onClose }) {
                     minWidth: 0,
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: isMobile ? 14 : 17, fontWeight: 600, color: COLORS.textPrimary, fontFamily: FONTS.mono, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 750, color: COLORS.textPrimary, fontFamily: FONTS.mono, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {m.valor}
                   </p>
                   <p style={{ margin: '2px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
