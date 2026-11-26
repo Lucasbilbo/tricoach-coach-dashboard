@@ -429,7 +429,11 @@ export default function AthleteHome() {
   const semanas = datos?.semanas || []
   const rangoDatos = useDatosRango(userId, periodo, refrescoStrava)
   const datosAnalisis = rangoDatos.activo ? rangoDatos.datos : datos
-  const cargandoAnalisis = rangoDatos.activo ? rangoDatos.cargando : cargandoStrava
+  // Sin datos ni error también es «cargando»: `cargandoStrava` empieza en false, y en
+  // el primer render tras abrir Análisis se montaba StravaAnalysis vacío, cuyo
+  // efecto (los de los hijos corren antes que los del padre) pedía la serie de 26
+  // semanas por su cuenta y la caché ya no podía unirla a la petición del periodo.
+  const cargandoAnalisis = rangoDatos.activo ? rangoDatos.cargando : (cargandoStrava || (!datos && !errorStrava))
   const errorAnalisis = rangoDatos.activo ? rangoDatos.error : errorStrava
   const asignacion = asignarActividades(pasadas, estadoActs.actividades)
   const intervalsOk = !!perfil?.conexiones?.intervals
