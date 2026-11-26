@@ -384,6 +384,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   lo marcado con la misma duración que el plan (`tomadoEfectivo` /
   `nutricionEfectiva` en `lib/nutricion.js`), así "45 de 88 g/h" y el aviso de
   < 70 % siguen funcionando; "3/5" en el resumen y Jon ve "Sin tomar: …".
+  UI (rediseño 2026-11): fila plegada con gota y barra de avance; lista con
+  «Siguiente» y `PistaTiempo` (PlanProductos): la sesión de 0′ al final con
+  cada toma en su minuto (teal = tomada).
   Sin productos (planes antiguos) se siguen escribiendo g/h a mano. Claves que
   ya no existen en el plan se ignoran.
 - **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
@@ -618,7 +621,7 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   entreno (como "Hechos y pendientes"); al pulsar se abre con notas, reloj,
   entreno y nutrición. El aviso de reloj (icono ámbar) solo si toca hoy o
   mañana. "¿Cómo te fue?" de hoy es un botón (teal) hasta que hay feedback.
-  Títulos de sección (`sectionTitleStyle`) en frase normal, 15 px, Ink.
+  Títulos de sección (`sectionTitleStyle`) en frase normal, Ink (20 px desde el rediseño 2026-11).
 - **Panel más corto en móvil (2026-11-19)**:
   - `SemanaCalendario` en móvil: la rejilla horaria va PLEGADA; el día sale como
     lista corta de sesiones y un botón «Ver horas y planificar» la abre (medía
@@ -717,7 +720,7 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
   `estadoForma`.
 - Revisar en iPhone e iPad: `REPASO_VISTAS=iphone,ipad npm run repaso`.
 - Primitivas en `src/components/ui/`: `Icon` (SVG de trazo, NUNCA emojis en la UI),
-  `PageHeader`, `Tabs` (fijas arriba, etiquetas cortas de una línea), `SectionTitle`,
+  `PageHeader`, `Tabs` (abajo en el móvil, arriba en tablet; etiquetas cortas de una línea), `SectionTitle`,
   `Segmented`, `DisciplineTag`, `Metric`. Estilos en theme.js: `ghostButtonStyle`,
   `iconButtonStyle`, `sectionTitleStyle`, `RADIUS`.
 - Títulos en frase normal (sin MAYÚSCULAS espaciadas). Chips de filtro neutros
@@ -749,7 +752,7 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
   van en gráficos separados — `TSSChart` (barras, semana en curso tenue) y
   `FormaChart` (CTL/ATL diarios del rango del selector, calentados con la serie
   de 26 semanas; valores de hoy en la leyenda, TSB en el tooltip).
-- Leyenda en cuanto hay ≥2 series; números de los ejes en JetBrains Mono;
+- Leyenda en cuanto hay ≥2 series; números de los ejes con cifras tabulares (Archivo);
   marcas del eje Y redondas y equiespaciadas.
 - **TSS del panel del coach**: violeta de carga + "Por encima / En su línea / Por
   debajo" frente a la media de SUS 4 semanas completas anteriores (±20 %,
@@ -776,7 +779,7 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
 - **Actividades**: filo de disciplina también en la tabla de escritorio, deporte
   en texto (sin pastillas); filas abribles con teclado. **Detalle**
   (`ActivityDetail`): pantalla completa en móvil, métricas de 3 en 3, valores
-  en mono, splits de Ink (rápido) a gris (lento), columnas vacías de vueltas
+  con cifras tabulares, splits de Ink (rápido) a gris (lento), columnas vacías de vueltas
   ocultas, Escape cierra. **Orden (2026-11-22)**: en bici van primero las
   Vueltas (el entreno hecho) y debajo los Splits por km; en carrera y natación
   siguen Splits → Vueltas.

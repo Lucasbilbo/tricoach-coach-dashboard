@@ -8,7 +8,7 @@
 // BIDÓN en cada sesión. Cada item copia los valores del producto, así editar la
 // despensa no cambia planes ya hechos.
 import { useState } from 'react'
-import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
+import { COLORS, FONTS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { LIMITE_NOTAS, resumenNutricion } from '../lib/nutricion'
 import {
   LIMITES_PRODUCTO, MAX_CANTIDAD, MAX_MINUTO, TIPOS, detalleProducto, itemDeProducto, lineaTiempo, minutoComoHora,
@@ -19,12 +19,18 @@ import Icon from './ui/Icon'
 
 const etiqueta = { fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
 const botonCantidad = {
-  width: 36, height: 36, borderRadius: RADIUS.sm, border: `1px solid ${COLORS.cardBorder}`, background: 'transparent',
-  color: COLORS.textPrimary, fontFamily: FONTS.mono, fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 0,
+  width: 40, height: 40, borderRadius: 20, border: 'none', background: COLORS.raised,
+  color: COLORS.textPrimary, fontSize: 20, fontWeight: 600, lineHeight: 1, cursor: 'pointer', padding: 0,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
 const textoBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '8px 0',
-  minHeight: 36, fontSize: 14.5, fontWeight: 500, cursor: 'pointer', color: COLORS.textSecondary,
+  minHeight: 40, fontSize: 14.5, fontWeight: 600, cursor: 'pointer', color: COLORS.textSecondary,
+}
+// Píldora pequeña para acciones secundarias dentro del plan («Repartir»)
+const pildora = {
+  display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 999, padding: '0 14px',
+  minHeight: 34, fontSize: 13.5, fontWeight: 600, cursor: 'pointer', background: COLORS.raised, color: COLORS.textSoft,
 }
 
 const FORM_VACIO = { nombre: '', tipo: 'gel', carbohidratos_g: '', cafeina_mg: '', sodio_mg: '', volumen_ml: '', maltodextrina_g: '', fructosa_g: '', sales_g: '' }
@@ -35,7 +41,7 @@ function Stepper({ cantidad, onMenos, onMas, nombre }) {
       <button type="button" onClick={onMenos} disabled={!cantidad} aria-label={`Quitar uno de ${nombre}`} style={{ ...botonCantidad, opacity: cantidad ? 1 : 0.35, cursor: cantidad ? 'pointer' : 'default' }}>
         −
       </button>
-      <span style={{ width: 24, textAlign: 'center', fontFamily: FONTS.mono, fontSize: 15, color: cantidad ? COLORS.textPrimary : COLORS.textTertiary }}>{cantidad}</span>
+      <span style={{ width: 26, textAlign: 'center', fontSize: 18, fontWeight: 800, color: cantidad ? COLORS.textPrimary : COLORS.textTertiary }}>{cantidad}</span>
       <button type="button" onClick={onMas} disabled={cantidad >= MAX_CANTIDAD} aria-label={`Añadir uno de ${nombre}`} style={botonCantidad}>
         +
       </button>
@@ -47,7 +53,7 @@ function Mezcla({ item, onCambiar }) {
   // Bidón con receta propia: se da tal cual, sin cifras que escribir
   if (item.receta) {
     return (
-      <p style={{ margin: 0, padding: '0 0 10px 12px', fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+      <p style={{ margin: 0, padding: '0 6px 10px 0', fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.45 }}>
         Receta: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoReceta(item)}</span>
         {tonicidadBidon(item) && <span style={{ fontFamily: FONTS.mono }}> · {tonicidadBidon(item).texto}</span>}
       </p>
@@ -65,13 +71,13 @@ function Mezcla({ item, onCambiar }) {
         value={item[clave] === 0 ? '' : item[clave]}
         placeholder="0"
         onChange={(e) => onCambiar(clave, e.target.value)}
-        style={{ ...inputStyle, fontFamily: FONTS.mono, padding: '8px 10px' }}
+        style={{ ...inputStyle, padding: '8px 12px', fontWeight: 600 }}
       />
     </label>
   )
   const receta = textoReceta(item)
   return (
-    <div style={{ padding: '0 0 10px 12px' }}>
+    <div style={{ padding: '0 6px 10px 0' }}>
       <div style={{ display: 'flex', gap: 8 }}>
         {campo('carbohidratos_g', 'Hidratos', 'g / bidón', LIMITES_PRODUCTO.carbohidratos_g)}
         {campo('sodio_mg', 'Sodio', 'mg / bidón', LIMITES_PRODUCTO.sodio_mg)}
@@ -94,11 +100,11 @@ function Momentos({ item, minutos, onCambiar }) {
   const poner = (i, v) => onCambiar(valores.map((x, j) => (j === i ? v : x)))
   const sugerido = minutos > 0 ? repartirMinutos(n, minutos, item.tipo) : []
   return (
-    <div style={{ padding: '0 0 10px 12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+    <div style={{ padding: '0 6px 10px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
         <span style={{ ...etiqueta, margin: 0, fontWeight: 500 }}>{item.tipo === 'bidon' ? 'Empezar en el minuto' : 'Tomar en el minuto'}</span>
         {sugerido.length > 0 && (
-          <button type="button" onClick={() => onCambiar(sugerido)} style={{ ...textoBtn, padding: '4px 0', minHeight: 28, fontSize: 13.5 }}>
+          <button type="button" onClick={() => onCambiar(sugerido)} style={pildora}>
             Repartir
           </button>
         )}
@@ -115,7 +121,7 @@ function Momentos({ item, minutos, onCambiar }) {
             placeholder={n > 1 ? `${i + 1}º` : 'min'}
             aria-label={`${item.nombre}${n > 1 ? ` nº ${i + 1}` : ''}, minuto`}
             onChange={(e) => poner(i, e.target.value)}
-            style={{ ...inputStyle, fontFamily: FONTS.mono, padding: '8px 10px', width: 72, flex: '0 0 auto' }}
+            style={{ ...inputStyle, padding: '8px 10px', width: 76, minHeight: 44, textAlign: 'center', fontWeight: 600, flex: '0 0 auto' }}
           />
         ))}
       </div>
@@ -123,25 +129,62 @@ function Momentos({ item, minutos, onCambiar }) {
   )
 }
 
-// Orden en el que se toma todo: "Min 40 · Gel 45 g". Vacío si nadie tiene minuto.
+// Pista de la sesión de 0′ al final con un punto por cada toma, donde cae.
+// `on`: true = tomada (teal), false = pendiente (aro), undefined = plan (Ink).
+// Se lee de un vistazo si las tomas están repartidas o amontonadas.
+export function PistaTiempo({ puntos, minutos }) {
+  if (!(minutos > 0) || !puntos.length) return null
+  return (
+    <div aria-hidden="true" style={{ padding: '6px 8px 0' }}>
+      <div style={{ position: 'relative', height: 22 }}>
+        <span style={{ position: 'absolute', left: 0, right: 0, top: 9, height: 4, borderRadius: 2, background: COLORS.cardBorder }} />
+        {puntos.map((p, i) => {
+          const pct = Math.min(100, Math.max(0, (p.min / minutos) * 100))
+          const relleno = p.on === false ? COLORS.card : p.on ? COLORS.accent : COLORS.textPrimary
+          return (
+            <span
+              key={i}
+              title={`Min ${p.min} · ${p.nombre}`}
+              style={{
+                position: 'absolute', left: `calc(${pct}% - 8px)`, top: 3, width: 16, height: 16, borderRadius: 8,
+                background: p.pasa ? COLORS.warning : relleno,
+                boxShadow: `0 0 0 3px ${COLORS.card}${p.on === false ? `, inset 0 0 0 2px ${COLORS.textSoft}` : ''}`,
+              }}
+            />
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12.5, color: COLORS.textTertiary }}>
+        <span>0′</span>
+        <span>{minutos}′</span>
+      </div>
+    </div>
+  )
+}
+
+// Orden en el que se toma todo: la pista y debajo «min 40 · Gel 45 g». Vacío si
+// nadie tiene minuto.
 export function LineaTiempo({ items, minutos }) {
   const { eventos, sinHora } = lineaTiempo(items, minutos)
   if (!eventos.length) return null
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <p style={{ ...etiqueta, margin: 0 }}>Cuándo tomarlo</p>
-      {eventos.map((e, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 14.5, lineHeight: 1.4 }}>
-          <span style={{ width: 62, flexShrink: 0, fontFamily: FONTS.mono, color: e.pasa ? COLORS.warning : COLORS.textPrimary }}>
-            Min {e.min}
-          </span>
-          <span style={{ color: COLORS.textPrimary }}>
-            {e.nombre}
-            {e.min >= 60 && <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textTertiary }}> · {minutoComoHora(e.min)}</span>}
-            {e.pasa && <span style={{ fontSize: 13, color: COLORS.warning }}> · después del final</span>}
-          </span>
-        </div>
-      ))}
+      <PistaTiempo puntos={eventos} minutos={minutos} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+        {eventos.map((e, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, lineHeight: 1.35 }}>
+            <span style={{ minWidth: 64, flexShrink: 0, textAlign: 'center', padding: '4px 8px', borderRadius: 999, background: e.pasa ? 'rgba(232,184,74,0.14)' : COLORS.raised, fontSize: 13.5, fontWeight: 700, color: e.pasa ? COLORS.warning : COLORS.textPrimary }}>
+              min {e.min}
+            </span>
+            <span style={{ color: COLORS.textPrimary, minWidth: 0 }}>
+              {e.nombre}
+              {e.min >= 60 && <span style={{ fontSize: 13.5, color: COLORS.textTertiary }}> · {minutoComoHora(e.min)}</span>}
+              {e.pasa && <span style={{ fontSize: 13.5, color: COLORS.warning }}> · después del final</span>}
+            </span>
+          </div>
+        ))}
+      </div>
       {sinHora.length > 0 && (
         <p style={{ margin: '2px 0 0', fontSize: 13.5, color: COLORS.textSecondary }}>
           Sin hora: {sinHora.map((s) => `${s.cantidad} × ${s.nombre}`).join(' · ')}
@@ -209,9 +252,9 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: `1px solid ${COLORS.cardBorder}`, borderRadius: RADIUS.md }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, background: COLORS.sunken, borderRadius: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: COLORS.textPrimary }}>Mis productos</p>
+        <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: COLORS.textPrimary }}>Mis productos</p>
         <button type="button" onClick={onCerrar} style={{ ...textoBtn, padding: '4px 0' }}>Cerrar</button>
       </div>
 
@@ -223,11 +266,11 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
           <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: COLORS.textPrimary, lineHeight: 1.35 }}>
             {p.nombre} <span style={{ fontFamily: FONTS.mono, fontSize: 13.5, color: COLORS.textSecondary }}>{detalleProducto(p)}</span>
           </span>
-          <button type="button" onClick={() => abrir(p)} aria-label={`Editar ${p.nombre}`} style={{ ...textoBtn, padding: 0, width: 32, justifyContent: 'center' }}>
-            <Icon name="edit" size={15} />
+          <button type="button" onClick={() => abrir(p)} aria-label={`Editar ${p.nombre}`} style={{ ...textoBtn, padding: 0, width: 40, justifyContent: 'center' }}>
+            <Icon name="edit" size={17} />
           </button>
-          <button type="button" onClick={() => borrar(p.id)} aria-label={`Quitar ${p.nombre}`} style={{ ...textoBtn, padding: 0, width: 32, justifyContent: 'center' }}>
-            <Icon name="trash" size={15} />
+          <button type="button" onClick={() => borrar(p.id)} aria-label={`Quitar ${p.nombre}`} style={{ ...textoBtn, padding: 0, width: 40, justifyContent: 'center' }}>
+            <Icon name="trash" size={17} />
           </button>
         </div>
       ))}
@@ -253,10 +296,9 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
                   aria-checked={sel}
                   onClick={() => cambiar('tipo', t.value)}
                   style={{
-                    flex: 1, height: 36, borderRadius: RADIUS.sm, padding: 0, cursor: 'pointer', fontSize: 14.5,
-                    border: `1px solid ${sel ? COLORS.textPrimary : COLORS.cardBorder}`,
-                    background: sel ? 'rgba(237,238,242,0.08)' : 'transparent',
-                    color: sel ? COLORS.textPrimary : COLORS.textSecondary, fontWeight: sel ? 600 : 500,
+                    flex: 1, height: 42, borderRadius: 999, padding: 0, cursor: 'pointer', fontSize: 14.5, border: 'none',
+                    background: sel ? COLORS.textPrimary : COLORS.raised,
+                    color: sel ? COLORS.background : COLORS.textSecondary, fontWeight: sel ? 700 : 500,
                   }}
                 >
                   {t.label}
@@ -287,10 +329,10 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
           )}
           {error && <p style={{ margin: 0, fontSize: 14.5, color: COLORS.error }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button type="button" onClick={guardar} disabled={!fila || guardando} style={{ ...buttonStyle, padding: '8px 16px', opacity: !fila || guardando ? 0.5 : 1 }}>
+            <button type="button" onClick={guardar} disabled={!fila || guardando} style={{ ...buttonStyle, opacity: !fila || guardando ? 0.5 : 1 }}>
               {guardando ? 'Guardando…' : editando === 'nuevo' ? 'Añadir' : 'Guardar'}
             </button>
-            <button type="button" onClick={() => setEditando(null)} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 14.5 }}>Cancelar</button>
+            <button type="button" onClick={() => setEditando(null)} style={ghostButtonStyle}>Cancelar</button>
           </div>
         </div>
       )}
@@ -353,19 +395,19 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
           )}
           {/* Despensa entera a la vista, con +/−: primero geles (y guayaba), luego
               bidones. Sin pasos intermedios: se ve qué hay y se elige cuántos. */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {gruposProductos(productos).map((g) => (
-              <div key={g.clave}>
-                <p style={{ ...etiqueta, margin: '4px 0 2px' }}>{g.titulo}</p>
+              <div key={g.clave} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p style={{ ...etiqueta, margin: '0 0 2px', fontSize: 14 }}>{g.titulo}</p>
                 {g.productos.map((p) => {
                   const item = itemDe(p.id)
                   const cantidad = item ? Number(item.cantidad) || 0 : 0
                   return (
-                    <div key={p.id}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48 }}>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: cantidad ? COLORS.textPrimary : COLORS.textSecondary, lineHeight: 1.3 }}>
+                    <div key={p.id} style={{ borderRadius: 16, background: cantidad ? 'rgba(47,191,175,0.07)' : COLORS.sunken, boxShadow: cantidad ? 'inset 0 0 0 1.5px rgba(47,191,175,0.35)' : 'none', padding: '6px 8px 6px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 52 }}>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: cantidad ? 650 : 500, color: cantidad ? COLORS.textPrimary : COLORS.textSoft, lineHeight: 1.3 }}>
                           {p.nombre}
-                          <span style={{ display: 'block', fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textTertiary }}>{detalleProducto(p)}</span>
+                          <span style={{ display: 'block', fontSize: 13.5, fontWeight: 400, color: COLORS.textTertiary, marginTop: 2 }}>{detalleProducto(p)}</span>
                         </span>
                         <Stepper cantidad={cantidad} nombre={p.nombre} onMenos={() => cambiarCantidad(p, -1)} onMas={() => cambiarCantidad(p, 1)} />
                       </div>
@@ -392,12 +434,15 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
           </div>
 
           {textoTotal && (
-            <p style={{ margin: 0, fontSize: 14.5, color: COLORS.textSecondary, lineHeight: 1.5 }}>
-              Total: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoTotal}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 16, background: COLORS.raised }}>
               {ph && ph.carbohidratos_g_h > 0 && (
-                <> · <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{ph.carbohidratos_g_h} g/h</span> de hidratos</>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1 }}>{ph.carbohidratos_g_h}</span>
+                  <span style={{ fontSize: 14, color: COLORS.textSecondary }}>g/h de hidratos</span>
+                </span>
               )}
-            </p>
+              <span style={{ fontSize: 14, color: COLORS.textSoft, lineHeight: 1.45, flex: '1 1 160px' }}>Total: {textoTotal}</span>
+            </div>
           )}
 
           <LineaTiempo items={limpios} minutos={minutos} />
