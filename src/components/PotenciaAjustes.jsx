@@ -22,6 +22,7 @@ const MENSAJE_SYNC = {
 }
 
 function Interruptor({ activo, onChange, etiqueta }) {
+  // Zona táctil de 44 px; el interruptor dibujado sigue siendo de 46×28.
   return (
     <button
       type="button"
@@ -30,13 +31,21 @@ function Interruptor({ activo, onChange, etiqueta }) {
       aria-label={etiqueta}
       onClick={() => onChange(!activo)}
       style={{
-        flexShrink: 0, width: 46, height: 28, borderRadius: 14, padding: 3, cursor: 'pointer',
-        border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
-        background: activo ? 'rgba(47,191,175,0.18)' : COLORS.background,
-        display: 'flex', justifyContent: activo ? 'flex-end' : 'flex-start', transition: 'all 150ms',
+        flexShrink: 0, minWidth: 52, minHeight: 44, padding: 0, cursor: 'pointer',
+        border: 'none', background: 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
-      <span style={{ width: 20, height: 20, borderRadius: 10, background: activo ? COLORS.accent : COLORS.textSecondary }} />
+      <span
+        style={{
+          width: 46, height: 28, borderRadius: 14, padding: 3, boxSizing: 'border-box',
+          border: `1px solid ${activo ? COLORS.accent : COLORS.cardBorder}`,
+          background: activo ? 'rgba(47,191,175,0.18)' : COLORS.background,
+          display: 'flex', justifyContent: activo ? 'flex-end' : 'flex-start', transition: 'all 150ms',
+        }}
+      >
+        <span style={{ width: 20, height: 20, borderRadius: 10, background: activo ? COLORS.accent : COLORS.textSecondary }} />
+      </span>
     </button>
   )
 }

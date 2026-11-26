@@ -30,7 +30,7 @@ const NOMBRE_DIA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sába
 const AMBAR = '#E8B84A'
 const PX_ESCRITORIO = 0.5 // px por minuto (30 px/h)
 const PX_MOVIL = 0.6 // 36 px/h
-const ANCHO_HORAS = 32
+const ANCHO_HORAS = 36
 const CARRIL = { swim: 3, bike: 7, run: 11, strength: 15 } // x de cada carril (3 px)
 const MARGEN_TARJETA = 21 // las tarjetas empiezan tras los carriles
 const RAYADO = 'repeating-linear-gradient(135deg, #1B202C 0 5px, transparent 5px 11px)'
@@ -101,7 +101,7 @@ function Tarjeta({ sesion, top, height, left, right, aviso, movidaPor, estilo = 
       }}
     >
       {fantasma ? (
-        <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textTertiary }}>{h || 'antes'}</span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>{h || 'antes'}</span>
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: enUnaLinea ? '1 1 auto' : undefined }}>
@@ -260,8 +260,8 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
         ))}
         {inf.libre && (
           <div style={{ position: 'absolute', left: 6, right: 6, top: 8, background: COLORS.card, border: `1px solid ${COLORS.restBorder}`, borderRadius: 7, padding: '6px 8px' }}>
-            <div style={{ fontSize: 11.5, fontWeight: 600 }}>No disponible</div>
-            {dia.nota && <div style={{ fontSize: 10.5, color: COLORS.textSecondary, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dia.nota}</div>}
+            <div style={{ fontSize: 12, fontWeight: 600 }}>No disponible</div>
+            {dia.nota && <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dia.nota}</div>}
           </div>
         )}
         {/* sesiones a su hora */}
@@ -302,7 +302,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
           />
         )}
         {enArrastre && destino && destino.fecha === dia.fecha && destino.hora != null && (
-          <span style={{ position: 'absolute', zIndex: 6, left: MARGEN_TARJETA, top: Math.min(y(destino.hora + (durMin(enArrastre) || 60)) + 4, alto - 18), padding: '1px 6px', borderRadius: 5, background: COLORS.accent, color: COLORS.background, fontFamily: FONTS.mono, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          <span style={{ position: 'absolute', zIndex: 6, left: MARGEN_TARJETA, top: Math.min(y(destino.hora + (durMin(enArrastre) || 60)) + 4, alto - 18), padding: '1px 6px', borderRadius: 5, background: COLORS.accent, color: COLORS.background, fontFamily: FONTS.mono, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
             {formatHora(destino.hora)}{durMin(enArrastre) ? ` – ${duracionPrevista(enArrastre).estimada ? '~' : ''}${formatHora(destino.hora + durMin(enArrastre))}` : ''}
           </span>
         )}
@@ -323,7 +323,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
 
   function ejeHoras() {
     return (
-      <div style={{ position: 'relative', height: alto, fontFamily: FONTS.mono, fontSize: 10.5, color: COLORS.textTertiary }}>
+      <div style={{ position: 'relative', height: alto, fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textTertiary }}>
         {marcas(MIN, MAX).map((m) => (
           <span key={m} style={{ position: 'absolute', right: 6, top: y(m), transform: 'translateY(-50%)', whiteSpace: 'nowrap' }}>{esMovil ? formatHora(m) : m / 60}</span>
         ))}
@@ -377,9 +377,9 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
                 }}
               >
                 {n.choca && <span style={{ position: 'absolute', top: 6, right: 7, width: 6, height: 6, borderRadius: '50%', background: AMBAR }} />}
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: activo ? COLORS.background : n.esHoy ? COLORS.accent : COLORS.textSecondary }}>{n.esHoy ? 'Hoy' : INICIAL_DIA[i]}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: activo ? COLORS.background : n.esHoy ? COLORS.accent : COLORS.textSecondary }}>{n.esHoy ? 'Hoy' : INICIAL_DIA[i]}</div>
                 <div style={{ fontSize: 19, fontWeight: 800, fontStretch: '112%', lineHeight: 1.15 }}>{Number(d.fecha.slice(8))}</div>
-                <div style={{ fontSize: 10.5, fontWeight: 500, color: activo ? '#3A3F4B' : n.choca ? AMBAR : COLORS.textTertiary, minHeight: 13 }}>{n.minutos > 0 ? (n.estimadas ? '~' : '') + fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: activo ? '#3A3F4B' : n.choca ? AMBAR : COLORS.textTertiary, minHeight: 13 }}>{n.minutos > 0 ? (n.estimadas ? '~' : '') + fmtDur(n.minutos) : n.delDia.length ? '·' : ''}</div>
               </button>
             )
           })}
@@ -416,7 +416,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
           <>
             {sueltas.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-                <span style={{ fontSize: 11, color: COLORS.textTertiary }}>Sin hora</span>
+                <span style={{ fontSize: 12, color: COLORS.textTertiary }}>Sin hora</span>
                 {sueltas.map((s) => (
                   <Tarjeta key={s.id} sesion={s} aviso={avisoDe(s)} movidaPor={nombreMovida(s)} onClick={() => abrir(s)} compacta />
                 ))}
@@ -428,7 +428,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
               {columna(dia, sel, inf, true)}
             </div>
             {inf.pulsable && (
-              <p style={{ margin: '6px 0 0', fontSize: 11.5, color: COLORS.textTertiary }}>Toca una hora libre para planificar.</p>
+              <p style={{ margin: '6px 0 0', fontSize: 12, color: COLORS.textTertiary }}>Toca una hora libre para planificar.</p>
             )}
           </>
         )}
@@ -472,7 +472,7 @@ export default function SemanaCalendario({ lunes, datos, sesiones, onDia, onAbri
 
       {haySinHora && (
         <div style={{ display: 'grid', gridTemplateColumns: cols, borderBottom: `1px solid ${COLORS.cardBorder}` }}>
-          <div style={{ fontSize: 9.5, color: COLORS.textTertiary, padding: '8px 0 0 6px', lineHeight: 1.2 }}>sin<br />hora</div>
+          <div style={{ fontSize: 12, color: COLORS.textTertiary, padding: '8px 0 0 6px', lineHeight: 1.2 }}>sin<br />hora</div>
           {dias.map((d, i) => (
             <div key={d.fecha} style={{ borderLeft: `1px solid ${COLORS.cardBorder}`, padding: 5, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, opacity: infos[i].pasado ? 0.6 : 1 }}>
               {sinHora(infos[i].delDia).map((s) => (

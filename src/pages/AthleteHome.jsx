@@ -90,7 +90,7 @@ function BloqueFecha({ fecha, disciplina, apagado = false }) {
       }}
     >
       <span style={{ fontSize: 25, fontWeight: 900, fontStretch: '72%', lineHeight: 0.95, color: apagado ? COLORS.textSecondary : COLORS.textPrimary }}>{d}</span>
-      <span style={{ fontSize: 11.5, fontWeight: 600, color: apagado ? COLORS.textTertiary : COLORS.textSoft, marginTop: 2 }}>{dia}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: apagado ? COLORS.textTertiary : COLORS.textSoft, marginTop: 2 }}>{dia}</span>
     </span>
   )
 }
