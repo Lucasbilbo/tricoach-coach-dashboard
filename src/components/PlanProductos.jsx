@@ -16,6 +16,7 @@ import {
 } from '../lib/productosNutricion'
 import { useProductosNutricion } from '../hooks/useProductosNutricion'
 import Icon from './ui/Icon'
+import { Hoja } from './ui/HojaAcciones'
 
 const etiqueta = { fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
 const botonCantidad = {
@@ -341,12 +342,52 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
   )
 }
 
+// Hoja «Añadir producto»: la despensa entera con un + por producto. Solo se abre al
+// pulsar «Añadir producto»; el plan enseña únicamente lo elegido. Se queda abierta
+// para poder sumar varios. Por encima del cajón del creador (z-index 200).
+function HojaProductos({ grupos, cantidadDe, onMas, onCerrar }) {
+  return (
+    <Hoja titulo="Añadir producto" onCerrar={onCerrar} zIndex={300}>
+      {grupos.map((g) => (
+        <div key={g.clave}>
+          <p style={{ ...etiqueta, margin: '12px 0 0', fontSize: 14 }}>{g.titulo}</p>
+          {g.productos.map((p) => {
+            const cantidad = cantidadDe(p.id)
+            return (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 56, borderBottom: `1px solid ${COLORS.cardBorder}` }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 16, color: COLORS.textPrimary, lineHeight: 1.3 }}>
+                  {p.nombre}
+                  <span style={{ display: 'block', fontSize: 13.5, color: COLORS.textTertiary, marginTop: 2 }}>{detalleProducto(p)}</span>
+                </span>
+                {cantidad > 0 && <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.accent }}>× {cantidad}</span>}
+                <button
+                  type="button"
+                  onClick={() => onMas(p)}
+                  disabled={cantidad >= MAX_CANTIDAD}
+                  aria-label={`Añadir uno de ${p.nombre}`}
+                  style={{ ...botonCantidad, width: 44, height: 44, borderRadius: 22, background: '#2A3040', opacity: cantidad >= MAX_CANTIDAD ? 0.35 : 1 }}
+                >
+                  +
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+      <button type="button" onClick={onCerrar} style={{ ...buttonStyle, width: '100%', marginTop: 14 }}>
+        Listo
+      </button>
+    </Hoja>
+  )
+}
+
 // form: { productos, notas, …legacy }. onCambiar(campo, valor) con campo
 // 'productos' | 'notas'. minutos: duración prevista de la sesión (o null).
 // puedeEditarDespensa: solo el atleta toca su despensa; el coach elige de ella.
 export default function PlanProductos({ athleteId, form, onCambiar, minutos, puedeEditarDespensa = false }) {
   const { productos, disponible, anadir, editar, quitar } = useProductosNutricion(athleteId)
   const [gestorAbierto, setGestorAbierto] = useState(false)
+  const [hojaAbierta, setHojaAbierta] = useState(false)
   const items = Array.isArray(form.productos) ? form.productos : []
   const itemDe = (id) => items.find((i) => i.producto_id === id)
 
@@ -373,6 +414,12 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
   const textoTotal = resumenTotales(totales)
   const hayLegacy = !limpios.length && (form.carbohidratos_g_h !== '' || form.liquido_ml_h !== '' || form.sodio_mg_h !== '')
   const legacy = hayLegacy ? resumenNutricion({ carbohidratos_g_h: form.carbohidratos_g_h === '' ? null : form.carbohidratos_g_h, liquido_ml_h: form.liquido_ml_h, sodio_mg_h: form.sodio_mg_h }) : ''
+  const cantidadDe = (id) => Number(itemDe(id)?.cantidad) || 0
+  const grupos = gruposProductos(productos)
+  // El plan enseña solo lo elegido; el resto de la despensa vive en la hoja «Añadir producto»
+  const elegidos = grupos
+    .map((g) => ({ ...g, productos: g.productos.filter((p) => cantidadDe(p.id) > 0) }))
+    .filter((g) => g.productos.length > 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -393,26 +440,38 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
                 : 'El atleta aún no ha añadido productos a su despensa.'}
             </p>
           )}
-          {/* Despensa entera a la vista, con +/−: primero geles (y guayaba), luego
-              bidones. Sin pasos intermedios: se ve qué hay y se elige cuántos. */}
+          {/* Resumen (g/h y totales) ARRIBA: así se ve su efecto al pulsar +/− sin bajar */}
+          {textoTotal && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 16, background: COLORS.raised }}>
+              {ph && ph.carbohidratos_g_h > 0 && (
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1 }}>{ph.carbohidratos_g_h}</span>
+                  <span style={{ fontSize: 14, color: COLORS.textSecondary }}>g/h de hidratos</span>
+                </span>
+              )}
+              <span style={{ fontSize: 14, color: COLORS.textSoft, lineHeight: 1.45, flex: '1 1 160px' }}>Total: {textoTotal}</span>
+            </div>
+          )}
+
+          {/* Solo lo elegido, con +/−; el resto de la despensa se añade desde la hoja */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {gruposProductos(productos).map((g) => (
+            {elegidos.map((g) => (
               <div key={g.clave} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <p style={{ ...etiqueta, margin: '0 0 2px', fontSize: 14 }}>{g.titulo}</p>
                 {g.productos.map((p) => {
                   const item = itemDe(p.id)
-                  const cantidad = item ? Number(item.cantidad) || 0 : 0
+                  const cantidad = cantidadDe(p.id)
                   return (
-                    <div key={p.id} style={{ borderRadius: 16, background: cantidad ? 'rgba(47,191,175,0.07)' : COLORS.sunken, boxShadow: cantidad ? 'inset 0 0 0 1.5px rgba(47,191,175,0.35)' : 'none', padding: '6px 8px 6px 14px' }}>
+                    <div key={p.id} style={{ borderRadius: 16, background: 'rgba(47,191,175,0.07)', boxShadow: 'inset 0 0 0 1.5px rgba(47,191,175,0.35)', padding: '6px 8px 6px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 52 }}>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: cantidad ? 650 : 500, color: cantidad ? COLORS.textPrimary : COLORS.textSoft, lineHeight: 1.3 }}>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 650, color: COLORS.textPrimary, lineHeight: 1.3 }}>
                           {p.nombre}
                           <span style={{ display: 'block', fontSize: 13.5, fontWeight: 400, color: COLORS.textTertiary, marginTop: 2 }}>{detalleProducto(p)}</span>
                         </span>
                         <Stepper cantidad={cantidad} nombre={p.nombre} onMenos={() => cambiarCantidad(p, -1)} onMas={() => cambiarCantidad(p, 1)} />
                       </div>
-                      {item && cantidad > 0 && p.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => cambiarItem(item, campo, valor)} />}
-                      {item && cantidad > 0 && <Momentos item={item} minutos={minutos} onCambiar={(v) => cambiarItem(item, 'minutos', v)} />}
+                      {item && p.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => cambiarItem(item, campo, valor)} />}
+                      {item && <Momentos item={item} minutos={minutos} onCambiar={(v) => cambiarItem(item, 'minutos', v)} />}
                     </div>
                   )
                 })}
@@ -431,19 +490,20 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
                 </div>
               </div>
             ))}
+            {productos.length > 0 && elegidos.length === 0 && huerfanos.length === 0 && (
+              <p style={{ margin: 0, fontSize: 14.5, color: COLORS.textSecondary, lineHeight: 1.45 }}>Aún no hay productos en esta sesión.</p>
+            )}
+            {productos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setHojaAbierta(true)}
+                aria-haspopup="dialog"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, borderRadius: 16, border: `1px dashed ${COLORS.restBorder}`, background: 'transparent', color: COLORS.textPrimary, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
+              >
+                <Icon name="plus" size={16} strokeWidth={2.4} /> Añadir producto
+              </button>
+            )}
           </div>
-
-          {textoTotal && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 16, background: COLORS.raised }}>
-              {ph && ph.carbohidratos_g_h > 0 && (
-                <span style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                  <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1 }}>{ph.carbohidratos_g_h}</span>
-                  <span style={{ fontSize: 14, color: COLORS.textSecondary }}>g/h de hidratos</span>
-                </span>
-              )}
-              <span style={{ fontSize: 14, color: COLORS.textSoft, lineHeight: 1.45, flex: '1 1 160px' }}>Total: {textoTotal}</span>
-            </div>
-          )}
 
           <LineaTiempo items={limpios} minutos={minutos} />
 
@@ -457,8 +517,10 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
         </>
       )}
 
+      {hojaAbierta && <HojaProductos grupos={grupos} cantidadDe={cantidadDe} onMas={(p) => cambiarCantidad(p, 1)} onCerrar={() => setHojaAbierta(false)} />}
+
       <label style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={etiqueta}>Notas</span>
+        <span style={etiqueta}>Notas de nutrición</span>
         <textarea
           value={form.notas}
           onChange={(e) => onCambiar('notas', e.target.value)}
