@@ -384,6 +384,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   lo marcado con la misma duración que el plan (`tomadoEfectivo` /
   `nutricionEfectiva` en `lib/nutricion.js`), así "45 de 88 g/h" y el aviso de
   < 70 % siguen funcionando; "3/5" en el resumen y Jon ve "Sin tomar: …".
+  UI (rediseño 2026-11): fila plegada con gota y barra de avance; lista con
+  «Siguiente» y `PistaTiempo` (PlanProductos): la sesión de 0′ al final con
+  cada toma en su minuto (teal = tomada).
   Sin productos (planes antiguos) se siguen escribiendo g/h a mano. Claves que
   ya no existen en el plan se ignoran.
 - **Lo tomado** (misma fila): `tomado_carbohidratos_g_h`, `tomado_liquido_ml_h`,
