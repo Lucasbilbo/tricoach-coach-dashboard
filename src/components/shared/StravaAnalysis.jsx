@@ -97,7 +97,7 @@ function EscalaForma({ tsb }) {
         ))}
         <span style={{ position: 'absolute', left: `calc(${pct}% - 7px)`, top: -4, width: 14, height: 14, borderRadius: 7, background: COLORS.textPrimary, boxShadow: `0 0 0 3px ${COLORS.card}` }} />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11.5, color: COLORS.textTertiary }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: COLORS.textTertiary }}>
         <span>Fatiga</span><span>Fresco</span>
       </div>
     </div>
@@ -375,7 +375,7 @@ export default function StravaAnalysis({
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', gap: 6 }}>
                   <span style={{ fontFamily: FONTS.mono, fontSize: 12.5, fontWeight: 600, color: COLORS.textSoft }}>{p.pace}</span>
                   <div style={{ width: '100%', maxWidth: 28, height: `${p.heightPct}%`, background: DISCIPLINE_COLORS.run, borderRadius: '4px 4px 0 0', opacity: p.opacity, transition: 'height 180ms ease' }} />
-                  <span style={{ fontSize: 11.5, color: COLORS.textTertiary }}>{p.label}</span>
+                  <span style={{ fontSize: 12, color: COLORS.textTertiary }}>{p.label}</span>
                 </div>
               ))}
             </div>
@@ -568,7 +568,7 @@ export default function StravaAnalysis({
                   title={act.metros_tecnica ? `Incluye ${act.metros_tecnica} m de técnica/pies que el reloj no cuenta` : undefined}
                 >
                   {act.distancia_km != null ? `${num(act.distancia_km)} km` : '—'}
-                  {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary, fontSize: 11 }}> +{act.metros_tecnica} téc.</span> : null}
+                  {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary, fontSize: 12 }}> +{act.metros_tecnica} téc.</span> : null}
                 </span>
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textSecondary }}>
@@ -600,7 +600,7 @@ export default function StravaAnalysis({
       )}
 
       {actividadesFiltradas.some((a) => a.tss_estimado_sin_fc) && (
-        <p style={{ margin: '8px 2px 0', fontSize: 11, color: COLORS.textTertiary, fontFamily: FONTS.sans }}>
+        <p style={{ margin: '8px 2px 0', fontSize: 12, color: COLORS.textTertiary, fontFamily: FONTS.sans }}>
           ~ TSS estimado por duración y disciplina (actividad sin frecuencia cardiaca).
         </p>
       )}

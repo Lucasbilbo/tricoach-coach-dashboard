@@ -139,7 +139,7 @@ export function CuentaAtras({ evento, hoy, destacada = false }) {
       }}
     >
       <span style={{ fontSize: grande.length > 3 ? 22 : 30, fontWeight: 900, fontStretch: '70%', lineHeight: 0.95 }}>{grande}</span>
-      {pie && <span style={{ fontSize: 11.5, fontWeight: 600, marginTop: 3, color: destacada ? '#3A3F4B' : COLORS.textSecondary }}>{pie}</span>}
+      {pie && <span style={{ fontSize: 12, fontWeight: 600, marginTop: 3, color: destacada ? '#3A3F4B' : COLORS.textSecondary }}>{pie}</span>}
     </span>
   )
 }
