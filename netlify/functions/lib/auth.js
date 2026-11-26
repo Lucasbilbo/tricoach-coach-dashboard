@@ -4,12 +4,25 @@
 // el JWT de la sesión es la fuente de verdad sobre QUIÉN llama. La identidad
 // nunca se lee del body.
 //
-// Método de verificación: GET /auth/v1/user con el JWT del cliente en
-// Authorization. GoTrue valida firma, expiración y revocación de sesión y
-// devuelve el usuario — funciona igual con claves HS256 o asimétricas, sin
-// dependencias (regla del proyecto: sin supabase-js en functions).
+// Método de verificación (2026-11-26): primero EN LOCAL (lib/jwt-local.js:
+// firma ES256/RS256 con el JWKS público del proyecto o HS256 con
+// SUPABASE_JWT_SECRET; caducidad, emisor, audiencia y rol). Si no se puede
+// decidir ahí, GET /auth/v1/user como siempre (GoTrue). Sin dependencias.
 
 const https = require('https')
+const { verificarLocal } = require('./jwt-local')
+const { crearTtlCache } = require('./ttl-cache')
+
+// Cachés por instancia caliente (best-effort: en frío empiezan vacías).
+// - Whitelist de coaches: 60 s (altas y bajas son manuales y rarísimas).
+// - Relación coach↔atleta: SOLO los «sí», 60 s. Un «no» nunca se cachea, así
+//   una invitación recién aceptada funciona al instante; una baja tarda ≤ 60 s.
+const cacheCoach = crearTtlCache({ ttlMs: 60 * 1000, max: 500 })
+const cacheRelacion = crearTtlCache({ ttlMs: 60 * 1000, max: 2000 })
+function reiniciarCachesAuth() {
+  cacheCoach.clear()
+  cacheRelacion.clear()
+}
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -71,6 +84,18 @@ function leerCoach(hostname, SERVICE_KEY, uid) {
   )
 }
 
+// ¿Está en la whitelist? true/false; lanza si la consulta no llega (falla cerrado).
+async function esCoach(hostname, SERVICE_KEY, uid) {
+  const guardado = cacheCoach.get(uid)
+  if (guardado !== undefined) return guardado
+  const r = await leerCoach(hostname, SERVICE_KEY, uid)
+  // Respuesta rara (no es una lista): no es coach, pero no se cachea.
+  if (r.status !== 200 || !Array.isArray(r.json)) return false
+  const si = r.json.length > 0
+  cacheCoach.set(uid, si)
+  return si
+}
+
 // Verifica el JWT del header Authorization contra Supabase Auth.
 // Devuelve { uid, isCoach } si el token es válido, o null en cualquier otro
 // caso (sin token, malformado, expirado, revocado). Falla cerrado.
@@ -89,9 +114,27 @@ async function verifyAuth(event) {
 
   const hostname = new URL(SUPABASE_URL).hostname
 
+  // 1) En local (firma con las claves públicas del proyecto o el secreto
+  //    HS256): sin ida a Supabase. null = token inválido → fuera.
+  let local
+  try {
+    local = await verificarLocal(jwt)
+  } catch {
+    local = undefined
+  }
+  if (local === null) return null
+  if (local) {
+    try {
+      return { uid: local.uid, isCoach: await esCoach(hostname, SERVICE_KEY, local.uid), via: 'local' }
+    } catch {
+      return null
+    }
+  }
+
+  // 2) No se pudo decidir en local → GoTrue, con la whitelist adelantada.
   const supuesto = uidSinVerificar(event)
   const coachAdelantado = supuesto
-    ? leerCoach(hostname, SERVICE_KEY, supuesto).then((r) => ({ r }), (err) => ({ err }))
+    ? esCoach(hostname, SERVICE_KEY, supuesto).then((si) => ({ si }), (err) => ({ err }))
     : null
 
   let userRes
@@ -113,22 +156,19 @@ async function verifyAuth(event) {
   const uid = userRes.status === 200 ? userRes.json?.id : null
   if (!uid || !UUID_REGEX.test(uid)) return null
 
-  // Whitelist de coaches: consulta con service key (bypasa RLS)
-  let coachRes
+  let isCoach
   if (coachAdelantado && supuesto === uid) {
     const adelantado = await coachAdelantado
     if (adelantado.err) return null
-    coachRes = adelantado.r
+    isCoach = adelantado.si
   } else {
     try {
-      coachRes = await leerCoach(hostname, SERVICE_KEY, uid)
+      isCoach = await esCoach(hostname, SERVICE_KEY, uid)
     } catch {
       return null
     }
   }
-
-  const isCoach = Array.isArray(coachRes.json) && coachRes.json.length > 0
-  return { uid, isCoach }
+  return { uid, isCoach, via: 'remoto' }
 }
 
 // Comprueba la relación coach-atleta con service key. Devuelve boolean.
@@ -138,6 +178,8 @@ async function coachOwnsAthlete(coachId, athleteId) {
   if (!SUPABASE_URL || !SERVICE_KEY) return false
   if (!UUID_REGEX.test(coachId || '') || !UUID_REGEX.test(athleteId || '')) return false
 
+  const clave = `${coachId}|${athleteId}`
+  if (cacheRelacion.get(clave)) return true
   const hostname = new URL(SUPABASE_URL).hostname
   try {
     const res = await withTimeout(
@@ -152,7 +194,9 @@ async function coachOwnsAthlete(coachId, athleteId) {
       }),
       5000
     )
-    return Array.isArray(res.json) && res.json.length > 0
+    const si = Array.isArray(res.json) && res.json.length > 0
+    if (si) cacheRelacion.set(clave, true)
+    return si
   } catch {
     return false
   }
@@ -184,4 +228,12 @@ async function canCoachSession(auth, session) {
   return coachOwnsAthlete(session.coach_id, session.athlete_id)
 }
 
-module.exports = { verifyAuth, uidSinVerificar, coachOwnsAthlete, canAccessAthlete, canCoachSession, UUID_REGEX }
+module.exports = {
+  verifyAuth,
+  uidSinVerificar,
+  coachOwnsAthlete,
+  canAccessAthlete,
+  canCoachSession,
+  reiniciarCachesAuth,
+  UUID_REGEX,
+}

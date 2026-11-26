@@ -245,6 +245,7 @@ exports.handler = async (event) => {
   // 2. Verificar JWT (la identidad nunca viene del body)
   const auth = await verifyAuth(event)
   if (!auth) return respuesta(401, { error: 'Unauthorized' })
+  if (auth.via) medidor.contar(`auth-${auth.via}`)
 
   // 3. Parse + validación de input
   let parsed

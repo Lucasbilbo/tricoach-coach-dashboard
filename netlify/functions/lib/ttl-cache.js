@@ -23,7 +23,7 @@ function crearTtlCache({ ttlMs, max, now = Date.now }) {
     while (mapa.size > max) mapa.delete(mapa.keys().next().value)
   }
 
-  return { get, set, size: () => mapa.size }
+  return { get, set, clear: () => mapa.clear(), size: () => mapa.size }
 }
 
 module.exports = { crearTtlCache }
