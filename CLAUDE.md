@@ -141,7 +141,12 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `athleteDataCache` la SIEMBRA como la clave (26, records:false), también en
   vuelo (`pedirDatosAtleta(id, weeks, { carga: SEMANAS_CARGA })`); si la respuesta
   no la trae, se pide aparte como antes. Tests: `athlete-data-cache`,
-  `coach-athlete-data`.
+  `coach-athlete-data`. **Trampa**: los efectos de un hijo corren ANTES que los
+  del padre; si `StravaAnalysis` se monta vacío en el primer render, pide la
+  serie de 26 semanas por su cuenta y no hay unión posible (pasó en `/home`:
+  `cargandoStrava` empieza en false; ahora «sin datos ni error» cuenta como
+  cargando). Comprobar siempre en producción con un hook de `fetch` que sale UNA
+  llamada con `cargaSemanas` al abrir Análisis.
 - Hecho 2026-11-26: verificación del JWT en local, cachés de auth y webhook de
   Strava (activo en producción, ver arriba).
 - Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →
