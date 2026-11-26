@@ -58,6 +58,7 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
   disciplina (discontinuo = estimada); días del móvil en píldora.
 - Análisis: escala de forma (`EscalaForma`) bajo el TSB con los cortes de
   `estadoForma`.
+- **Controles de Análisis en móvil del coach (2026-11-27, variante A de Claude Design)**: por debajo de 700 px, `SelectorPeriodo` con `compacto` pone los presets (4/8/12/24 sem) en una sola fila y un botón «⋯» que abre `ui/HojaAcciones` (Semana concreta, Rango de fechas, Comparar semanas, Actualizar datos). «Prescribir entreno» se muestra como «Prescribir» en la misma fila que el nombre (`PageHeader` acepta `anchoTitulo`). Escritorio, tablet y la vista del atleta no cambian. Repaso: pantalla `atleta-analisis-mas` (solo móvil).
 - Revisar en iPhone e iPad: `REPASO_VISTAS=iphone,ipad npm run repaso`.
 - Primitivas en `src/components/ui/`: `Icon` (SVG de trazo, NUNCA emojis en la UI),
   `PageHeader`, `Tabs` (abajo en el móvil, arriba en tablet; etiquetas cortas de una línea), `SectionTitle`,
