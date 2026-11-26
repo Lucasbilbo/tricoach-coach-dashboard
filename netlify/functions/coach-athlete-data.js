@@ -13,7 +13,7 @@ const { crearTtlCache } = require('./lib/ttl-cache')
 const { crearMedidor } = require('./lib/server-timing')
 const { actividadesDesde } = require('./lib/strava-lista')
 const supabaseRest = require('./lib/supabase-rest')
-const { crearStore, dbSupabase } = require('./lib/actividades-store')
+const { crearStore, dbSupabase, frescoSegunEntorno } = require('./lib/actividades-store')
 const { getStravaAccessToken } = require('./lib/strava')
 const { round, mapDisciplina, intensidadPct, zonaFc, cargaActividad, potenciaDe, fechaMadrid } = require('./lib/metrics')
 const { leerPotencia } = require('./lib/potencia')
@@ -318,6 +318,8 @@ exports.handler = async (event) => {
     const store = crearStore({
       db: dbSupabase({ supabaseHost, SERVICE_KEY, rest: supabaseRest }),
       listar: (token, desde) => actividadesDesde(token, desde, medidor),
+
+      frescoMs: frescoSegunEntorno(),
     })
     const actRes = await store.obtener({ athleteId, afterUnix: after, obtenerToken, force: parsed.force === true, medidor })
     if (!actRes.ok) {
