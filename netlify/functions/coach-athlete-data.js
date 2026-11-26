@@ -263,6 +263,11 @@ exports.handler = async (event) => {
   if (!UUID_REGEX.test(athleteId || '')) {
     return respuesta(400, { error: 'athleteId debe ser un UUID válido' })
   }
+  // `cargaSemanas` (opcional, solo con `weeks`): además del periodo, devuelve en
+  // `carga` las actividades de las últimas N semanas (serie de ATL/CTL). Así el
+  // análisis pide UNA vez en lugar de dos: Netlify ejecuta en cola las peticiones
+  // concurrentes de un mismo usuario y la segunda esperaba a la primera (~2 s).
+  const cargaSemanas = Math.min(Math.max(parseInt(parsed.cargaSemanas, 10) || 0, 0), WEEKS_MAX)
   // `desde`/`hasta` (opcionales) sustituyen a `weeks`: todo sale de ese tramo
   const lectura = leerRango(parsed.desde, parsed.hasta, fechaMadrid(new Date()), WEEKS_MAX)
   if (!lectura.ok) return respuesta(400, { error: lectura.error })
@@ -314,14 +319,17 @@ exports.handler = async (event) => {
 
     // 7. Actividades desde el inicio del rango: copia en Supabase + lo nuevo de
     // Strava (lib/actividades-store.js). `force` (botón Actualizar) resincroniza.
-    const after = rango ? afterUnixDesde(rango.desde) : Math.floor(Date.now() / 1000) - weeks * 7 * 86400
+    const ahoraUnix = Math.floor(Date.now() / 1000)
+    const after = rango ? afterUnixDesde(rango.desde) : ahoraUnix - weeks * 7 * 86400
+    // Ventana larga de la serie de carga: solo si es más larga que el periodo
+    const afterCarga = !rango && cargaSemanas > weeks ? ahoraUnix - cargaSemanas * 7 * 86400 : null
     const store = crearStore({
       db: dbSupabase({ supabaseHost, SERVICE_KEY, rest: supabaseRest }),
       listar: (token, desde) => actividadesDesde(token, desde, medidor),
 
       frescoMs: frescoSegunEntorno(),
     })
-    const actRes = await store.obtener({ athleteId, afterUnix: after, obtenerToken, force: parsed.force === true, medidor })
+    const actRes = await store.obtener({ athleteId, afterUnix: afterCarga ?? after, obtenerToken, force: parsed.force === true, medidor })
     if (!actRes.ok) {
       if (actRes.motivo === 'token') return respuesta(502, { error: 'No se pudo refrescar el token de Strava' })
       console.error('Strava error', actRes.status)
@@ -331,18 +339,42 @@ exports.handler = async (event) => {
     // 8. Transformar y agrupar
     const fcMax = perfil.fc_maxima || FC_MAX_DEFAULT
     const ajustes = await ajustesPromesa
-    let actividades = actRes.actividades
+    const transformar = (lista) => lista
       .map((a) => transformarActividad(a, fcMax, ajustes))
       .sort((a, b) => (a.fecha > b.fecha ? -1 : 1))
+    // Con ventana larga, el periodo es lo que Strava habría devuelto con su
+    // `after` (mismo criterio que la copia de Supabase: sin start_date se queda).
+    const crudasPeriodo = afterCarga
+      ? actRes.actividades.filter((a) => !a.start_date || Date.parse(a.start_date) / 1000 >= after)
+      : actRes.actividades
+    let actividades = transformar(crudasPeriodo)
     // Con rango, se pidió a Strava desde un día antes por el margen horario: se
     // recorta al tramo exacto (y las mejores marcas salen solo de él).
     if (rango) actividades = actividades.filter((a) => a.fecha >= rango.desde && a.fecha <= rango.hasta)
     // Metros de técnica/pies que el reloj no cuenta (de la sesión prescrita).
     const desde = rango ? rango.desde : fechaMadrid(new Date(after * 1000))
     const hasta = rango ? rango.hasta : fechaMadrid(new Date())
-    sumarTecnica(actividades, await sesionesNatacion(supabaseGet, supabaseHost, SERVICE_KEY, athleteId, desde))
+    // Una sola lectura de las sesiones de natación, desde el inicio de la ventana más larga
+    const sesionesNat = await sesionesNatacion(
+      supabaseGet, supabaseHost, SERVICE_KEY, athleteId, afterCarga ? fechaMadrid(new Date(afterCarga * 1000)) : desde
+    )
+    sumarTecnica(actividades, sesionesNat)
     // Todas las semanas del rango hasta hoy, también las vacías (lesión, vacaciones).
     const semanas = agruparSemanas(actividades, { desde, hasta })
+    // Serie de carga (best-effort: si falla, el periodo sale igual y el cliente la pide aparte)
+    let carga
+    if (afterCarga) {
+      try {
+        const actividadesCarga = transformar(actRes.actividades)
+        sumarTecnica(actividadesCarga, sesionesNat)
+        carga = {
+          actividades: actividadesCarga,
+          semanas: agruparSemanas(actividadesCarga, { desde: fechaMadrid(new Date(afterCarga * 1000)), hasta }),
+        }
+      } catch (e) {
+        console.error('coach-athlete-data carga error:', e.message)
+      }
+    }
 
     // fc_maxima_por_defecto: sin FC máxima en el perfil, TSS/zonas/CTL salen con el
     // 185 genérico; la UI lo avisa y deja ponerla (set-fc-max).
@@ -352,7 +384,7 @@ exports.handler = async (event) => {
       fc_maxima: fcMax,
       fc_maxima_por_defecto: !perfil.fc_maxima,
     }
-    if (!conRecords) return respuesta(200, { atleta, actividades, semanas }, medidor)
+    if (!conRecords) return respuesta(200, { atleta, actividades, semanas, ...(carga ? { carga } : {}) }, medidor)
 
     // 9. PRs cortos con splits reales (las actividades ya vienen ordenadas desc)
     const records = calcularRecords(actividades)
@@ -379,6 +411,7 @@ exports.handler = async (event) => {
       atleta,
       actividades,
       semanas,
+      ...(carga ? { carga } : {}),
       records: {
         ...records,
         // Si los splits no dan resultado, conservar la aproximación por rangos

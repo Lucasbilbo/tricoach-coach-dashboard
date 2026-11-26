@@ -174,3 +174,63 @@ test('desde/hasta mal formados → 400 y Strava sin tocar', async () => {
   }
   assert.equal(r.llamadas.length, 0)
 })
+
+// Actividades a distintas edades (días): unas dentro de 4 semanas y otras fuera
+function actsEdades(dias) {
+  return dias.map((d, i) => ({
+    id: 5000 + i,
+    type: 'Run',
+    sport_type: 'Run',
+    start_date: new Date(Date.now() - d * 86400e3).toISOString(),
+    moving_time: 1800,
+    distance: 5000,
+    average_heartrate: 140,
+  }))
+}
+
+test('cargaSemanas: UNA lectura de Strava; periodo y serie de carga idénticos a dos peticiones separadas', async () => {
+  const paginas = [actsEdades([1, 3, 10, 20, 27, 31, 60, 100, 150, 200])]
+
+  const unida = cargarHandler({ paginas })
+  const resU = await unida.handler(evento({ athleteId: ATHLETE, weeks: 4, cargaSemanas: 26, records: false }))
+  assert.equal(resU.statusCode, 200)
+  const u = JSON.parse(resU.body)
+  assert.equal(unida.llamadas.filter((p) => p.startsWith('/api/v3/athlete/activities')).length, 1)
+
+  const sola = cargarHandler({ paginas })
+  const periodo = JSON.parse((await sola.handler(evento({ athleteId: ATHLETE, weeks: 4, records: false }))).body)
+  const larga = cargarHandler({ paginas })
+  const serie = JSON.parse((await larga.handler(evento({ athleteId: ATHLETE, weeks: 26, records: false }))).body)
+
+  assert.deepEqual(u.actividades, periodo.actividades)
+  assert.deepEqual(u.semanas, periodo.semanas)
+  assert.equal(u.actividades.length, 5) // 1, 3, 10, 20, 27 días
+  assert.deepEqual(u.carga.actividades, serie.actividades)
+  assert.deepEqual(u.carga.semanas, serie.semanas)
+  assert.equal(u.carga.actividades.length, 9) // 26 semanas = 182 días: la de 200 queda fuera
+})
+
+test('cargaSemanas con records: marcas solo del periodo; sin cargaSemanas o con rango no hay `carga`', async () => {
+  const paginas = [actsEdades([1, 3, 10, 40, 100])]
+  let r = cargarHandler({ paginas })
+  let body = JSON.parse((await r.handler(evento({ athleteId: ATHLETE, weeks: 4, cargaSemanas: 26 }))).body)
+  assert.ok(body.records)
+  assert.equal(body.actividades.length, 3)
+  assert.equal(body.carga.actividades.length, 5)
+
+  r = cargarHandler({ paginas })
+  body = JSON.parse((await r.handler(evento({ athleteId: ATHLETE, weeks: 4, records: false }))).body)
+  assert.equal(body.carga, undefined)
+
+  // Periodo ya igual o mayor que la carga: nada que añadir
+  r = cargarHandler({ paginas })
+  body = JSON.parse((await r.handler(evento({ athleteId: ATHLETE, weeks: 26, cargaSemanas: 26, records: false }))).body)
+  assert.equal(body.carga, undefined)
+
+  // Con rango, `cargaSemanas` se ignora
+  const { fechaMadrid } = require('../netlify/functions/lib/metrics')
+  const dia = (n) => fechaMadrid(new Date(Date.now() - n * 86400e3))
+  r = cargarHandler({ paginas })
+  body = JSON.parse((await r.handler(evento({ athleteId: ATHLETE, desde: dia(5), hasta: dia(0), cargaSemanas: 26 }))).body)
+  assert.equal(body.carga, undefined)
+})
