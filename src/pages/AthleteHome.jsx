@@ -32,7 +32,7 @@ import NutricionSesion from '../components/NutricionSesion'
 import Cumplimiento from '../components/Cumplimiento'
 import DuracionSesion from '../components/DuracionSesion'
 import { duracionPrevista } from '../lib/tssPrevisto'
-import { SEMANAS_BASE, claveArchivo, esPreset, periodoInicial } from '../lib/periodo'
+import { SEMANAS_BASE, SEMANAS_CARGA, claveArchivo, esPreset, periodoInicial } from '../lib/periodo'
 import { useDatosRango } from '../hooks/useDatosRango'
 
 
@@ -290,7 +290,8 @@ export default function AthleteHome() {
       try {
         // El atleta pide SUS datos: el backend lo autoriza porque el uid del
         // JWT coincide con athleteId
-        const res = await pedirDatosAtleta(userId, weeks)
+        // `carga`: la misma respuesta trae la serie de 26 semanas del análisis (ATL/CTL)
+        const res = await pedirDatosAtleta(userId, weeks, { carga: SEMANAS_CARGA })
         const json = res.json
         if (!activo) return
         if (res.status === 409) {
