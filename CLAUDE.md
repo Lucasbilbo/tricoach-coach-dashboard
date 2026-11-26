@@ -69,8 +69,13 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   BD. Si las tablas fallan, cae a Strava directo. Con el webhook activo la
   frescura pasa de 5 min a 6 h (ver «Webhook de Strava»). El token de Strava solo se
   refresca si hay que llamar. "Actualizar" manda `force:true` 15 s
-  (`forzarDatosAtleta`). NO hay webhook de Strava en ningún proyecto.
-- **Webhook de Strava** (2026-11-26, APAGADO hasta configurarlo):
+  (`forzarDatosAtleta`). Webhook de Strava ACTIVO desde 2026-11-26 (ver abajo).
+- **Webhook de Strava** (2026-11-26, ACTIVO: suscripción 391494 creada con
+  `callback_url` en `jongarcia.getricoach.com`, y `STRAVA_WEBHOOK_VERIFY_TOKEN`,
+  `STRAVA_WEBHOOK_SUBSCRIPTION_ID` y `STRAVA_WEBHOOK_ACTIVO=1` puestas en Netlify.
+  Comprobar que está viva: `curl -G https://www.strava.com/api/v3/push_subscriptions
+  -d client_id=… -d client_secret=…`. Para volver a la frescura de 5 min: borrar
+  `STRAVA_WEBHOOK_ACTIVO` y redesplegar). Pasos de la alta, por si hay que repetirla:
   `netlify/functions/strava-webhook.js` + `lib/strava-webhook.js`. Por cada
   actividad creada/editada/borrada envejece la `strava_sync` de ese atleta (el
   atleta sale del `owner_id` buscando en `strava_actividades.datos->athlete->>id`;
@@ -117,8 +122,15 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   panel del coach guarda la última respuesta en localStorage por uid
   (`dashboardGuardado`, 7 días, se borra al cambiar de usuario) y la pinta al
   instante con «Actualizando…».
+- **Gráficos de Análisis** (2026-11-26): `StravaAnalysis` solo se monta cuando ya
+  han llegado los datos, así que su `React.lazy` pedía Recharts DESPUÉS de la
+  función (Forma y Carga semanal salían como cuadro vacío unos segundos).
+  `src/lib/precargarGraficos.js` pide FormaChart y TSSChart al abrir la pestaña
+  Análisis (efecto en `AthleteHome` y `AthleteView`, también con `?tab=analisis`),
+  en paralelo con los datos. Solo ahí: las demás pestañas NO descargan Recharts.
+  Mismas rutas que en `StravaAnalysis` = mismo chunk. No precargar en el arranque.
 - Hecho 2026-11-26: verificación del JWT en local, cachés de auth y webhook de
-  Strava preparado (ver arriba).
+  Strava (activo en producción, ver arriba).
 - Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →
   Functions → Region; requiere plan Pro). Es la mejora grande: cada ida
   bajaría a ~10–30 ms. Strava (EE. UU.) iría algo más lento, pero casi nunca

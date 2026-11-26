@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { pedirDatosAtleta, forzarDatosAtleta } from '../lib/athleteData'
 import { hoyMadrid } from '../lib/chartUtils'
+import { precargarGraficos } from '../lib/precargarGraficos'
 import { COLORS, pageStyle, buttonStyle, ghostButtonStyle, iconButtonStyle } from '../lib/theme'
 import Icon from './ui/Icon'
 import { PageHeader, Tabs } from './ui/Layout'
@@ -41,6 +42,12 @@ export default function AthleteView() {
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [refrescos, setRefrescos] = useState(0)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
+
+  // Al abrir Análisis (también con ?tab=analisis) se pide ya el paquete de
+  // gráficos, en paralelo con los datos
+  useEffect(() => {
+    if (activeTab === 'analisis') precargarGraficos()
+  }, [activeTab])
 
   useEffect(() => {
     let activo = true
