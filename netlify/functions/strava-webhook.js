@@ -3,7 +3,7 @@
 // INERTE hasta que se configure: sin STRAVA_WEBHOOK_VERIFY_TOKEN no valida
 // ninguna suscripción, y sin STRAVA_WEBHOOK_ACTIVO=1 el panel sigue con la
 // frescura de 5 min de siempre (los eventos que lleguen no hacen daño).
-// Pasos para activarlo: ver CLAUDE.md («Webhook de Strava»).
+// Pasos para activarlo: ver docs/rendimiento.md («Webhook de Strava»).
 //
 // GET  → validación de la suscripción (hub.challenge).
 // POST → evento de actividad: se busca qué atleta es (owner_id = id de Strava,
