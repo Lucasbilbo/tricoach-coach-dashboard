@@ -15,7 +15,7 @@ export const miniBtn = {
   borderRadius: 10,
   color: COLORS.textSecondary,
   padding: '6px 10px',
-  minHeight: 36,
+  minHeight: 44, // objetivo táctil mínimo (antes 36)
   fontSize: 14,
   cursor: 'pointer',
   fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",

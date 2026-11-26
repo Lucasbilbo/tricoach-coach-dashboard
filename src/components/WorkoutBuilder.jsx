@@ -662,9 +662,12 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   background: 'transparent',
                   border: 'none',
                   color: COLORS.textSecondary,
-                  fontSize: 12,
+                  fontSize: 13,
                   cursor: 'pointer',
                   padding: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  minHeight: 44,
                   fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif",
                 }}
               >
