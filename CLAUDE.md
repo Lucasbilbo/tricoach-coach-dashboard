@@ -129,6 +129,19 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   Análisis (efecto en `AthleteHome` y `AthleteView`, también con `?tab=analisis`),
   en paralelo con los datos. Solo ahí: las demás pestañas NO descargan Recharts.
   Mismas rutas que en `StravaAnalysis` = mismo chunk. No precargar en el arranque.
+- **Peticiones concurrentes en cola (2026-11-26)**: medido en producción, dos
+  llamadas a `coach-athlete-data` a la vez NO corren en paralelo: la segunda
+  espera a que acabe la primera (hueco de ~1,9 s entre su `total` de servidor y
+  el tiempo del navegador; en serie el hueco es de 240–480 ms). No es arranque en
+  frío (la función son 148 KB sin dependencias). Regla: **no lanzar dos llamadas
+  a la misma función a la vez**; unirlas. Aplicado: `cargaSemanas` en
+  `coach-athlete-data` (solo con `weeks`, mayor que él, sin rango) devuelve en
+  `carga: { actividades, semanas }` la serie de 26 semanas de ATL/CTL en la misma
+  respuesta (periodo exacto por el `after` de Strava; best-effort) y
+  `athleteDataCache` la SIEMBRA como la clave (26, records:false), también en
+  vuelo (`pedirDatosAtleta(id, weeks, { carga: SEMANAS_CARGA })`); si la respuesta
+  no la trae, se pide aparte como antes. Tests: `athlete-data-cache`,
+  `coach-athlete-data`.
 - Hecho 2026-11-26: verificación del JWT en local, cachés de auth y webhook de
   Strava (activo en producción, ver arriba).
 - Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →

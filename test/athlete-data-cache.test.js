@@ -5,17 +5,19 @@ import { createAthleteDataCache } from '../src/lib/athleteDataCache.js'
 function montar({ ttl = 1000 } = {}) {
   let t = 0
   const llamadas = []
+  const cargas = []
   let respuesta = () => ({ ok: true, status: 200, json: { n: llamadas.length } })
   const cache = createAthleteDataCache({
-    request: async (athleteId, weeks, records) => {
+    request: async (athleteId, weeks, records, rango, carga) => {
       llamadas.push([athleteId, weeks, records])
+      cargas.push(carga)
       await Promise.resolve()
       return respuesta()
     },
     now: () => t,
     ttl,
   })
-  return { cache, llamadas, avanzar: (ms) => { t += ms }, responder: (fn) => { respuesta = fn } }
+  return { cache, llamadas, cargas, avanzar: (ms) => { t += ms }, responder: (fn) => { respuesta = fn } }
 }
 
 test('peticiones idénticas simultáneas comparten una sola llamada', async () => {
@@ -113,4 +115,74 @@ test('un rango no se mezcla con las últimas N semanas ni con otro rango, y se p
   cache.invalidate('x') // invalida también los rangos del atleta
   await cache.get('x', 8, { rango: r1 })
   assert.equal(pedidos.length, 4)
+})
+
+const CON_CARGA = { ok: true, status: 200, json: { atleta: { id: 'x' }, actividades: [1], semanas: ['p'], carga: { actividades: [9, 8], semanas: ['c'] } } }
+
+test('carga: una petición trae también la serie larga y se siembra en la caché', async () => {
+  const { cache, llamadas, cargas, responder } = montar()
+  responder(() => CON_CARGA)
+  const principal = await cache.get('x', 4, { carga: 26 })
+  assert.deepEqual(principal.json.actividades, [1])
+  assert.equal(cargas[0], 26) // se pide al backend con cargaSemanas
+  const larga = await cache.get('x', 26, { records: false })
+  assert.equal(llamadas.length, 1) // sin segunda petición
+  assert.deepEqual(larga.json, { atleta: { id: 'x' }, actividades: [9, 8], semanas: ['c'] })
+})
+
+test('carga: quien pide la serie larga mientras vuela la principal comparte esa petición', async () => {
+  const { cache, llamadas, responder } = montar()
+  responder(() => CON_CARGA)
+  const [p, l] = await Promise.all([cache.get('x', 4, { carga: 26 }), cache.get('x', 26, { records: false })])
+  assert.equal(llamadas.length, 1)
+  assert.deepEqual(p.json.actividades, [1])
+  assert.deepEqual(l.json.actividades, [9, 8])
+})
+
+test('carga: si la respuesta no la trae, la serie larga se pide aparte como antes', async () => {
+  const { cache, llamadas, cargas, responder } = montar()
+  responder(() => ({ ok: true, status: 200, json: { actividades: [1], semanas: [] } }))
+  const [, l] = await Promise.all([cache.get('x', 4, { carga: 26 }), cache.get('x', 26, { records: false })])
+  assert.equal(llamadas.length, 2)
+  assert.deepEqual(llamadas[1].slice(0, 3), ['x', 26, false])
+  assert.equal(cargas[1], 0)
+  assert.equal(l.ok, true)
+})
+
+test('carga: si la principal falla, la serie larga recibe el mismo fallo sin otra petición y no queda cacheado', async () => {
+  const { cache, llamadas, responder } = montar()
+  responder(() => ({ ok: false, status: 429, json: { code: 'RATE_LIMITED' } }))
+  const [, l] = await Promise.all([cache.get('x', 4, { carga: 26 }), cache.get('x', 26, { records: false })])
+  assert.equal(llamadas.length, 1)
+  assert.equal(l.status, 429)
+  responder(() => ({ ok: true, status: 200, json: { n: 'ya bien' } }))
+  const otra = await cache.get('x', 26, { records: false })
+  assert.equal(otra.json.n, 'ya bien')
+})
+
+test('carga: no se siembra si el periodo ya cubre la serie, con rango, ni pisa lo ya cacheado', async () => {
+  const { cache, cargas, responder } = montar()
+  responder(() => CON_CARGA)
+  await cache.get('x', 26, { carga: 26 })
+  assert.equal(cargas[0], 0)
+  await cache.get('x', 0, { rango: { desde: '2026-11-01', hasta: '2026-11-07' }, carga: 26 })
+  assert.equal(cargas[1], 0)
+  // Serie larga ya pedida: la petición con carga no la sustituye
+  const { cache: c2, llamadas: l2, responder: r2 } = montar()
+  r2(() => ({ ok: true, status: 200, json: { origen: 'aparte' } }))
+  await c2.get('y', 26, { records: false })
+  r2(() => CON_CARGA)
+  await c2.get('y', 4, { carga: 26 })
+  const larga = await c2.get('y', 26, { records: false })
+  assert.equal(l2.length, 2)
+  assert.equal(larga.json.origen, 'aparte')
+})
+
+test('carga: invalidar al atleta borra también la serie sembrada', async () => {
+  const { cache, llamadas, responder } = montar()
+  responder(() => CON_CARGA)
+  await cache.get('x', 4, { carga: 26 })
+  cache.invalidate('x')
+  await cache.get('x', 26, { records: false })
+  assert.equal(llamadas.length, 2)
 })

@@ -12,7 +12,7 @@ import { invalidarPlanCarga } from './planCarga'
 const FORZAR_MS = 15000
 const forzados = new Map() // athleteId → hasta (ms)
 
-async function request(athleteId, weeks, records, rango) {
+async function request(athleteId, weeks, records, rango, carga = 0) {
   const force = (forzados.get(athleteId) || 0) > Date.now()
   const res = await fetch('/.netlify/functions/coach-athlete-data', {
     method: 'POST',
@@ -22,6 +22,7 @@ async function request(athleteId, weeks, records, rango) {
     body: JSON.stringify({
       athleteId,
       ...(rango ? { desde: rango.desde, hasta: rango.hasta } : { weeks }),
+      ...(carga ? { cargaSemanas: carga } : {}),
       ...(records ? {} : { records: false }),
       ...(force ? { force: true } : {}),
     }),

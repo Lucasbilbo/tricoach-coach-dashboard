@@ -24,8 +24,13 @@ export function createAthleteDataCache({ request, now = Date.now, ttl = TTL_MS }
 
   // Devuelve { ok, status, json }. Lanza si la red falla (como fetch).
   // `force` salta la caché (botón de refrescar / reintento explícito).
-  function get(athleteId, weeks, { records = true, force = false, rango = null } = {}) {
+  // `carga` (semanas, solo con `weeks` más corto): la misma petición trae también
+  // la serie larga de ATL/CTL en `json.carga` y se siembra como si se hubiera
+  // pedido aparte con (carga, records:false). Netlify ejecuta en cola las
+  // peticiones concurrentes de un usuario, así que dos llamadas costaban las dos.
+  function get(athleteId, weeks, { records = true, force = false, rango = null, carga = 0 } = {}) {
     const k = clave(athleteId, weeks, records, rango)
+    const conCarga = !rango && carga > weeks
 
     if (!force) {
       const hit = guardado.get(k)
@@ -34,7 +39,7 @@ export function createAthleteDataCache({ request, now = Date.now, ttl = TTL_MS }
       if (pendiente) return pendiente
     }
 
-    const promesa = request(athleteId, weeks, records, rango)
+    const promesa = request(athleteId, weeks, records, rango, conCarga ? carga : 0)
       .then((resultado) => {
         // Si se invalidó el atleta mientras volaba, no guardar un dato posiblemente viejo
         if (resultado.ok && enVuelo.get(k) === promesa) guardado.set(k, { t: now(), resultado })
@@ -44,7 +49,33 @@ export function createAthleteDataCache({ request, now = Date.now, ttl = TTL_MS }
         if (enVuelo.get(k) === promesa) enVuelo.delete(k)
       })
     enVuelo.set(k, promesa)
+    if (conCarga) sembrarCarga(athleteId, carga, promesa, force)
     return promesa
+  }
+
+  // Deja en la caché (y en vuelo) la serie larga que viene dentro de `principal`.
+  // Si la respuesta no la trae (error parcial del backend), la pide aparte como
+  // antes; si la principal falla, el mismo fallo (no se duplica una petición que
+  // va a fallar igual, p. ej. 429 o atleta sin Strava).
+  function sembrarCarga(athleteId, carga, principal, force) {
+    const kc = clave(athleteId, carga, false, null)
+    const hit = guardado.get(kc)
+    if (!force && ((hit && now() - hit.t < ttl) || enVuelo.has(kc))) return
+    const derivada = principal
+      .then((r) => {
+        if (!r.ok) return r
+        if (r.json?.carga) return { ok: true, status: r.status, json: { atleta: r.json.atleta, ...r.json.carga } }
+        return request(athleteId, carga, false, null, 0)
+      })
+      .then((resultado) => {
+        if (resultado.ok && enVuelo.get(kc) === derivada) guardado.set(kc, { t: now(), resultado })
+        return resultado
+      })
+      .finally(() => {
+        if (enVuelo.get(kc) === derivada) enVuelo.delete(kc)
+      })
+    derivada.catch(() => {}) // si nadie la espera, que un fallo de red no sea un rechazo suelto
+    enVuelo.set(kc, derivada)
   }
 
   // Olvida todo lo de un atleta (guardado y en vuelo).

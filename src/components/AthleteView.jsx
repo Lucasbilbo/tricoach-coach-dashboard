@@ -16,7 +16,7 @@ import StravaAnalysis from './shared/StravaAnalysis'
 import SinStrava from './shared/SinStrava'
 import AnalisisCargando from './shared/AnalisisCargando'
 import SeasonPanel from './season/SeasonPanel'
-import { SEMANAS_BASE, claveArchivo, esPreset, periodoInicial } from '../lib/periodo'
+import { SEMANAS_BASE, SEMANAS_CARGA, claveArchivo, esPreset, periodoInicial } from '../lib/periodo'
 import { useDatosRango } from '../hooks/useDatosRango'
 
 export default function AthleteView() {
@@ -60,14 +60,13 @@ export default function AthleteView() {
         // Lanzar sesión y datos en paralelo: getSession lee de localStorage
         // (sin red en supabase-js v2), así que no hay coste, pero sí había
         // un await serial que retrasaba la petición al backend.
-        // Si el selector está en menos de 26 semanas, pre-calentar la serie
-        // larga en paralelo: cuando StravaAnalysis la pida, estará en caché.
-        const peticiones = [
+        // `carga`: si el selector está en menos de 26 semanas, la misma respuesta
+        // trae la serie larga (una sola petición: Netlify pone en cola las
+        // concurrentes) y StravaAnalysis la encuentra ya en caché.
+        const [{ data: sessionData }, res] = await Promise.all([
           supabase.auth.getSession(),
-          pedirDatosAtleta(id, weeks),
-        ]
-        if (weeks < 26) peticiones.push(pedirDatosAtleta(id, 26, { records: false }))
-        const [{ data: sessionData }, res] = await Promise.all(peticiones)
+          pedirDatosAtleta(id, weeks, { carga: SEMANAS_CARGA }),
+        ])
         const usuarioId = sessionData?.session?.user?.id
         if (!usuarioId) {
           navigate('/')
