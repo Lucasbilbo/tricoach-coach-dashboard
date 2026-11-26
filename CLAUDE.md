@@ -117,6 +117,13 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   panel del coach guarda la última respuesta en localStorage por uid
   (`dashboardGuardado`, 7 días, se borra al cambiar de usuario) y la pinta al
   instante con «Actualizando…».
+- **Gráficos de Análisis** (2026-11-26): `StravaAnalysis` solo se monta cuando ya
+  han llegado los datos, así que su `React.lazy` pedía Recharts DESPUÉS de la
+  función (Forma y Carga semanal salían como cuadro vacío unos segundos).
+  `src/lib/precargarGraficos.js` pide FormaChart y TSSChart al abrir la pestaña
+  Análisis (efecto en `AthleteHome` y `AthleteView`, también con `?tab=analisis`),
+  en paralelo con los datos. Solo ahí: las demás pestañas NO descargan Recharts.
+  Mismas rutas que en `StravaAnalysis` = mismo chunk. No precargar en el arranque.
 - Hecho 2026-11-26: verificación del JWT en local, cachés de auth y webhook de
   Strava preparado (ver arriba).
 - Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →

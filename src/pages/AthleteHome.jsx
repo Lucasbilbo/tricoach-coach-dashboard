@@ -8,6 +8,7 @@ import { pedirDatosAtleta } from '../lib/athleteData'
 import { misConexiones } from '../lib/connections'
 import { ESTADO, asignarActividades, estadoDeSesion, fechaHaceSemanas, semanasNecesarias } from '../lib/estadoSesion'
 import { hoyMadrid, MESES_CORTOS } from '../lib/chartUtils'
+import { precargarGraficos } from '../lib/precargarGraficos'
 import { COLORS, DISCIPLINE_COLORS, buttonStyle, cardStyle, displayStyle, ghostButtonStyle, iconButtonStyle, pageStyle } from '../lib/theme'
 import Icon from '../components/ui/Icon'
 import { PageHeader, SectionTitle, Tabs } from '../components/ui/Layout'
@@ -182,6 +183,10 @@ export default function AthleteHome() {
 
   // Tabs
   const [activeTab, setActiveTab] = useState('sesiones')
+  // Al abrir Análisis se pide ya el paquete de gráficos, en paralelo con los datos
+  useEffect(() => {
+    if (activeTab === 'analisis') precargarGraficos()
+  }, [activeTab])
   // Ajustes (potenciómetro, FTP, FC umbral) desde el botón de la cabecera
   const [verAjustes, setVerAjustes] = useState(false)
   // Sube al mover un entreno desde la agenda: recarga la lista de próximos
