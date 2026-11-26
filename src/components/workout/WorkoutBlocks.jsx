@@ -24,7 +24,7 @@ const tarjeta = {
   padding: 12,
   marginBottom: 8,
 }
-const iconBtn = { ...miniBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, padding: 0 }
+const iconBtn = { ...miniBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, padding: 0 }
 
 // Subir / bajar / quitar un bloque, con iconos.
 function BotonesBloque({ idx, total, onMove, onRemove }) {
@@ -36,7 +36,8 @@ function BotonesBloque({ idx, total, onMove, onRemove }) {
       <button type="button" onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={{ ...iconBtn, opacity: idx === total - 1 ? 0.35 : 1 }} aria-label="Bajar bloque">
         <Icon name="chevronDown" size={15} />
       </button>
-      <button type="button" onClick={() => onRemove(idx)} style={iconBtn} aria-label="Quitar bloque">
+      {/* Quitar va aparte de subir/bajar: borrar un bloque no tiene deshacer */}
+      <button type="button" onClick={() => onRemove(idx)} style={{ ...iconBtn, marginLeft: 10 }} aria-label="Quitar bloque">
         <Icon name="trash" size={14} />
       </button>
     </div>

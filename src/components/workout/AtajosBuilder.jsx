@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS, inputStyle } from '../../lib/theme'
 import { useContext } from 'react'
@@ -6,7 +6,7 @@ import { parsearEntreno, zonasAPotencia } from './parser'
 import { PotenciaContext } from './PotenciaContext'
 import { sectionLabel, miniBtn } from './styles'
 
-const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 14, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }
+const linkStyle = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 14, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }
 
 // Atajos del WorkoutBuilder para que el coach prescriba rápido:
 //  1) Escritura rápida: una línea → bloques (parser.js).
@@ -15,6 +15,7 @@ const linkStyle = { marginTop: 6, background: 'transparent', border: 'none', pad
 export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, onBloques }) {
   const bikePotencia = useContext(PotenciaContext) && disciplina === 'bike'
   const [linea, setLinea] = useState('')
+  const lineaRef = useRef(null)
   const [errores, setErrores] = useState([])
   const [plantillas, setPlantillas] = useState(null) // null = no disponible
   const [guardandoComo, setGuardandoComo] = useState(false)
@@ -79,13 +80,25 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
     setAviso(`Guardada como plantilla "${data.nombre}"`)
   }
 
+  // La escritura rápida es una sola línea de texto, pero se ve entera: el campo
+  // crece con lo escrito (antes un input cortaba «15' Z1 + 6x(3' Z4 / 2'…»)
+  useEffect(() => {
+    const el = lineaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [linea])
+
   const propias = (plantillas || []).filter((p) => p.disciplina === disciplina)
 
   return (
     <div style={{ marginBottom: 16 }}>
       <label style={sectionLabel}>Escritura rápida</label>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <input
+      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+        <textarea
+          ref={lineaRef}
+          rows={1}
+          aria-label="Escritura rápida"
           value={linea}
           onChange={(e) => setLinea(e.target.value)}
           onKeyDown={(e) => {
@@ -95,7 +108,7 @@ export default function AtajosBuilder({ disciplina, bloques, nombre, piscina, on
             }
           }}
           placeholder={disciplina === 'swim' ? 'cal 400 + 8x100 1:45 rec 20" + 200 suave' : "15' Z1 + 8x(1' Z5 / 1' Z1) + 10' Z1"}
-          style={{ ...inputStyle, flex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 16 }}
+          style={{ ...inputStyle, flex: 1, minWidth: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 16, lineHeight: 1.4, resize: 'none', overflow: 'hidden', display: 'block' }}
         />
         <button type="button" onClick={generar} style={{ ...miniBtn, padding: '0 18px', minHeight: 46, borderRadius: 999, border: 'none', background: 'rgba(47,191,175,0.14)', color: COLORS.accent, fontWeight: 700, fontSize: 15 }}>
           Generar
