@@ -121,7 +121,10 @@ test('natación: pausa en cada cambio de bloque; con material indica qué poners
       ],
     },
   })
-  assert.equal(t.match(/15s press lap intensity=rest/g).length, 4) // poner aletas+tabla, siguiente (mismo material), cambiar a palas, quitar
+  // poner aletas+tabla, cambiar a palas, quitar. NO hay pausa entre «Pies» y el 200 siguiente
+  // (mismo material y «Pies» ya acaba con vuelta: serían 2 pulsaciones seguidas, 2026-11-26)
+  assert.equal(t.match(/15s press lap intensity=rest/g).length, 3)
+  assert.doesNotMatch(t, /press lap\n\n- Siguiente: 200 metros 15s/)
   assert.match(t, /- Siguiente: 200 metros Pies · aletas, tabla 15s press lap intensity=rest\n\n- Pulsa vuelta al acabar · Pies · aletas, tabla 200mtr press lap/)
   assert.match(t, /- Quita el material · Siguiente: 200 metros 15s press lap intensity=rest\n\n- Vuelta a la calma 200mtr/)
 })
@@ -349,4 +352,34 @@ test('bici sin potenciómetro: los objetivos de potencia ya prescritos van por p
   assert.doesNotMatch(buildIntervalsText(paso('potencia', '70')), /%/)
   // Con medidor no cambia nada
   assert.match(buildIntervalsText(paso('potencia', '70'), { bikePotencia: true }), /20m 70%/)
+})
+
+test('técnica: la marca explícita del coach manda y aletas solas no es técnica (2026-11-26)', () => {
+  const { esTecnica, metrosTecnica } = require('../netlify/functions/lib/intervals-text.cjs')
+  assert.equal(esTecnica({ nombre: 'Rodar', material: ['aletas'] }), false)
+  assert.equal(esTecnica({ nombre: 'Pala aleta contraria', material: ['palas', 'aletas'] }), false)
+  assert.equal(esTecnica({ nombre: 'Pala aleta contraria', material: ['palas', 'aletas'], tecnica: true }), true)
+  assert.equal(esTecnica({ nombre: 'Pies', material: ['tabla'], tecnica: false }), false)
+  assert.equal(metrosTecnica({ bloques: [
+    { tipo: 'step', nombre: 'Un brazo', cantidad: 100, unidad: 'mtr', material: [], tecnica: true },
+    { tipo: 'step', nombre: 'Un brazo', cantidad: 100, unidad: 'mtr', material: ['tabla'], tecnica: false },
+  ] }), 100)
+  const t = buildIntervalsText({ disciplina: 'swim', workout_steps: { bloques: [{ tipo: 'step', nombre: 'Un brazo', cantidad: 100, unidad: 'mtr', material: [], tecnica: true }] } })
+  assert.match(t, /press lap/)
+})
+
+test('pausa: tras un paso de técnica que ya acaba con vuelta, sin cambio de material, no hay pausa extra', () => {
+  const { conPausas } = require('../netlify/functions/lib/intervals-text.cjs')
+  const tec = { tipo: 'step', nombre: 'Un brazo', cantidad: 100, unidad: 'mtr', material: ['aletas'], tecnica: true }
+  const normal = { tipo: 'step', nombre: 'Crol', cantidad: 200, unidad: 'mtr', material: ['aletas'] }
+  // técnica → normal, mismo material: sin pausa
+  assert.deepEqual(conPausas([tec, normal], 'swim').map((b) => b.tipo), ['step', 'step'])
+  // cambia el material: la pausa se mantiene (hay que quitarse algo)
+  const sinAletas = { ...normal, material: [] }
+  assert.deepEqual(conPausas([tec, sinAletas], 'swim').map((b) => b.tipo), ['step', 'pausa', 'step'])
+  // si el bloque anterior acaba en descanso, la pausa se mantiene
+  const desc = { tipo: 'step', nombre: 'Descanso', cantidad: 30, unidad: 's', material: [] }
+  assert.deepEqual(conPausas([tec, desc, normal], 'swim').map((b) => b.tipo), ['step', 'step', 'pausa', 'step'])
+  // paso normal → paso normal: sigue habiendo pausa
+  assert.deepEqual(conPausas([normal, { ...normal }], 'swim').map((b) => b.tipo), ['step', 'pausa', 'step'])
 })

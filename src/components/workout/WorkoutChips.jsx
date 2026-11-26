@@ -3,6 +3,7 @@
 // blanco translúcido; el teal queda para la acción principal.
 import { MATERIAL_POR_DISCIPLINA, ZONAS } from './constants'
 import { chipStyle, labelSm } from './styles'
+import { esTecnica } from '../../lib/intervalsText'
 
 export function MaterialChips({ material, disciplina, onChange }) {
   const items = MATERIAL_POR_DISCIPLINA[disciplina] || []
@@ -48,6 +49,32 @@ export function ZonasChips({ valor, onSelect }) {
             {z}
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// Natación: «No cuenta largos». El reloj solo cuenta largos con brazada; sin ella
+// (tabla, pies/piernas, un brazo…) el paso se cierra pulsando vuelta y sus
+// metros se suman al total. Muestra lo que se detecta solo y deja forzarlo
+// en los dos sentidos (`tecnica: true | false`; sin marca = automático).
+export function TecnicaToggle({ paso, disciplina, onChange }) {
+  if (disciplina !== 'swim') return null
+  const efectivo = esTecnica(paso)
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        aria-pressed={efectivo}
+        onClick={() => onChange({ tecnica: !efectivo })}
+        style={{ ...chipStyle(efectivo), minHeight: 28, padding: '4px 9px', fontSize: 12 }}
+      >
+        No cuenta largos (técnica)
+      </button>
+      <div style={{ ...labelSm, marginTop: 4, textTransform: 'none', letterSpacing: 0 }}>
+        {efectivo
+          ? 'En el reloj acaba al pulsar vuelta y sus metros se suman al total.'
+          : 'El reloj lo cierra solo al contar los largos.'}
       </div>
     </div>
   )

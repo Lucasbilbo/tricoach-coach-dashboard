@@ -73,6 +73,10 @@ const RE_TECNICA = /(^|[^a-záéíóúñ])(pies|piernas?|patadas?|t[eé]cnica|dr
 
 function esTecnica(paso) {
   if (!paso || paso.tipo === 'pausa' || paso.tipo === 'repeat') return false
+  // Marca explícita del coach (interruptor «No cuenta largos» del creador,
+  // 2026-11-26): manda sobre la detección automática, en los dos sentidos.
+  if (paso.tecnica === true) return true
+  if (paso.tecnica === false) return false
   const material = Array.isArray(paso.material) ? paso.material.map((x) => String(x).toLowerCase()) : []
   return material.includes('tabla') || RE_TECNICA.test(paso.nombre || '')
 }
@@ -284,7 +288,12 @@ function conPausas(bloques, disciplina) {
       for (let j = i - 1; j >= 0 && !anterior; j--) anterior = ultimoActivoDe(validos[j])
       const entrada = primeroActivoDe(b)
       const cambia = !!anterior && !!entrada && claveMaterial(anterior) !== claveMaterial(entrada)
-      out.push(pausa(entrada || primeroDe(b), cambia, b))
+      // Si el bloque anterior acaba en un paso de técnica (que ya termina al
+      // PULSAR VUELTA) y el material no cambia, la pausa sería una segunda
+      // pulsación seguida: se omite (2026-11-26, había que dar 2 veces a vuelta).
+      const finalAnterior = ultimoDe(prev)
+      const yaTerminoConVuelta = !!finalAnterior && !esDescanso(finalAnterior) && esTecnica(finalAnterior)
+      if (!(yaTerminoConVuelta && !cambia)) out.push(pausa(entrada || primeroDe(b), cambia, b))
     }
     out.push(bloque)
   })

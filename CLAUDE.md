@@ -249,7 +249,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - **Natación: técnica / pies** (`esTecnica`: material `tabla` o nombre pies,
   patada, técnica, drill, kick, piernas, tabla; 2026-11-20 se añadieron piernas/tabla/patadas: «Piernas aletas con tabla» con el material solo en el nombre no sumaba): el reloj no cuenta largos sin brazada, así que
   el paso va con `press lap` ("pulsa vuelta al acabar") y no se queda esperando
-  largos. El panel SUMA esos metros a la natación del día: `lib/tecnica.js`
+  largos. **Marca explícita** (2026-11-26): el paso lleva `tecnica: true|false`
+  (interruptor «No cuenta largos (técnica)» en el creador, `TecnicaToggle`); manda
+  sobre la detección por nombre/material, en los dos sentidos (sin marca =
+  automático). Aletas solas NO es técnica (el reloj cuenta largos con brazada);
+  sí lo es lo que no tiene brazada normal (tabla, pies/piernas, un brazo). Si un
+  bloque acaba en un paso de técnica (ya termina con vuelta) y el material no
+  cambia, NO se añade la pausa «Siguiente» (eran 2 pulsaciones seguidas). El
+  panel SUMA esos metros a la natación del día: `lib/tecnica.js`
   (`sumarTecnica`) en `coach-athlete-data` (distancia, volumen, Línea de
   Transición, ritmo; marca `metros_tecnica`, la tabla muestra "+200 téc.") y en
   `coach-dashboard-data` (km de 7 días). Cada sesión suma a UNA actividad.

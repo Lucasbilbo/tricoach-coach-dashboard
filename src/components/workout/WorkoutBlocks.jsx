@@ -12,7 +12,7 @@ import { UNIDADES, OBJETIVOS, OBJETIVOS_BIKE_POTENCIA, OBJETIVO_PLACEHOLDER } fr
 import { PotenciaContext } from './PotenciaContext'
 import Icon from '../ui/Icon'
 import { labelSm, miniBtn, addBtnStyle } from './styles'
-import { MaterialChips, ZonasChips } from './WorkoutChips'
+import { MaterialChips, ZonasChips, TecnicaToggle } from './WorkoutChips'
 import { resumenBloque } from './resumen'
 
 const rejilla = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }
@@ -163,6 +163,7 @@ export function BloqueSimple({ bloque, idx, disciplina, total, onUpdate, onRemov
             disciplina={disciplina}
             onChange={(mat) => onUpdate(idx, { material: mat })}
           />
+          <TecnicaToggle paso={bloque} disciplina={disciplina} onChange={(c) => onUpdate(idx, c)} />
         </>
       )}
     </div>
@@ -194,6 +195,7 @@ export function PasoRepeat({ paso, pasoIdx, repeatIdx, disciplina, onUpdatePaso,
       </div>
 
       <MaterialChips material={paso.material} disciplina={disciplina} onChange={(mat) => cambiar({ material: mat })} />
+      <TecnicaToggle paso={paso} disciplina={disciplina} onChange={cambiar} />
     </div>
   )
 }
