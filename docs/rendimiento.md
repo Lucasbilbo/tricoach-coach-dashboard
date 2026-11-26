@@ -102,6 +102,10 @@
   `cargandoStrava` empieza en false; ahora «sin datos ni error» cuenta como
   cargando). Comprobar siempre en producción con un hook de `fetch` que sale UNA
   llamada con `cargaSemanas` al abrir Análisis.
+  **Sesiones (2026-11-27)**: si la sesión pasada más antigua queda fuera de las
+  8 semanas base, `SessionsList` pide SIEMPRE la ventana de 26 semanas
+  (`ESTADO_MAX_SEMANAS`), no una a medida: es la clave que `AthleteView` ya
+  sembró, así que es un acierto de caché y no una segunda llamada a Strava.
 - Hecho 2026-11-26: verificación del JWT en local, cachés de auth y webhook de
   Strava (activo en producción, ver arriba).
 - Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →

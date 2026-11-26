@@ -279,11 +279,12 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
         return
       }
 
-      // 2) Si no, UNA llamada dedicada dimensionada a la sesión más antigua, con
-      //    tope de 26 semanas; lo más antiguo que el tope mostrará "sin datos en
-      //    el rango" (nunca un falso Pendiente). Cacheada por ventana.
-      const dias = Math.ceil((Date.now() - new Date(`${masAntigua}T00:00:00Z`).getTime()) / 86400000)
-      const semanas = Math.min(Math.max(Math.ceil(dias / 7) + 1, 1), ESTADO_MAX_SEMANAS)
+      // 2) Si no, se pide SIEMPRE la ventana de 26 semanas (el tope), no una a
+      //    medida: AthleteView ya la trae sembrada en la caché (athleteDataCache,
+      //    `carga`) y la pestaña Análisis usa esa misma clave, así que casi nunca
+      //    es una llamada nueva a Strava. Lo anterior a las 26 semanas mostrará
+      //    "sin datos en el rango" (nunca un falso Pendiente).
+      const semanas = ESTADO_MAX_SEMANAS
       setCoberturaDesde(fechaMadridHace(semanas))
       const key = `${athleteId}:${semanas}`
       if (estadoCacheRef.current.key === key) return // ya cargado para esta ventana
