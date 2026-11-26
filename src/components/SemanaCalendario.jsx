@@ -4,7 +4,7 @@
 // tienen hora van en la fila "sin hora" de arriba. La usan el coach (Sesiones)
 // y el atleta (/home).
 //
-// Decisiones que NO hay que deshacer sin motivo (ver CLAUDE.md):
+// Decisiones que NO hay que deshacer sin motivo (ver docs/agenda-disponibilidad.md):
 // - Carriles FIJOS natación · bici · carrera · fuerza: cada deporte siempre en
 //   la misma vertical para escanear la semana. Finos (3 px) para dejar sitio a
 //   las tarjetas; el fondo claro dice "aquí puede entrenar".
