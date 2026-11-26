@@ -864,7 +864,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   <span title="Estimada con los ritmos de cada paso" style={{ marginLeft: 8, fontFamily: FONTS.mono, color: COLORS.textSecondary }}>· ~{duracionAviso} min</span>
                 )}
               </div>
-              {form.bloques.length > 0 && <Perfil bloques={form.bloques} disciplina={form.disciplina} />}
+              {form.bloques.length > 0 && <Perfil bloques={form.bloques} disciplina={form.disciplina} alto={56} separacion={2} />}
               <button type="button" onClick={() => setVerTexto((v) => !v)} aria-expanded={verTexto} style={{ background: 'transparent', border: 'none', padding: 0, color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', fontFamily: FONTS.sans, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <Icon name="chevronDown" size={14} style={{ transform: verTexto ? 'rotate(180deg)' : 'none' }} />
                 {verTexto ? 'Ocultar el texto' : 'Ver el texto que recibe el reloj'}
@@ -1033,7 +1033,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   opacity: guardando || enviando ? 0.6 : 1,
                 }}
               >
-                {enviando ? 'Enviando…' : 'Guardar y enviar al reloj'}
+                {enviando ? 'Enviando…' : 'Enviar al reloj'}
               </button>
               )}
             </div>
