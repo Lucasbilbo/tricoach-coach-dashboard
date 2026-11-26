@@ -63,6 +63,15 @@
   (Jon y atleta) y en la vista de solo lectura. NO va al reloj (misma regla).
   UI en `PlanProductos.jsx` (+/− por producto, totales, gestor de productos);
   datos en `productosApi.js` (caché 5 min) y `hooks/useProductosNutricion.js`.
+  **Editor «solo lo elegido» (2026-11-27, variante A de Claude Design)**: el plan
+  enseña únicamente los productos con cantidad > 0 (con su +/−, mezcla y minutos),
+  el resumen (g/h y totales) va ARRIBA de la lista y el resto de la despensa se
+  añade desde la hoja «Añadir producto» (`HojaProductos`, sobre `Hoja` de
+  `ui/HojaAcciones.jsx`, z-index 300 para quedar por encima del cajón del creador).
+  Antes se pintaba la despensa entera con contadores a 0 (~1.100 px en el creador).
+  La etiqueta de las notas pasó a «Notas de nutrición». Cubre creador, tarjeta de
+  la agenda y /home (mismo `PlanProductos`). Repaso: `atleta-nutricion-hoja` y
+  `creador-nutricion-hoja`.
   **Bidones con receta propia** (2026-11-20, migración 020 `receta` jsonb en
   `atleta_productos_nutricion`; aplicada en producción; `productosApi` selecciona
   la columna y sin ella la despensa no carga): un bidón puede llevar sus GRAMOS
