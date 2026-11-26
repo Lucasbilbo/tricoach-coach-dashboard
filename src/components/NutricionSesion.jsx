@@ -14,7 +14,7 @@
 // workout y cualquier texto libre ahí puede romper el parseo o congelar el reloj
 // (misma regla que las notas del entrenador). Se ve en la app.
 import { useRef, useState } from 'react'
-import { COLORS, FONTS, RADIUS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
+import { COLORS, FONTS, buttonStyle, ghostButtonStyle, inputStyle } from '../lib/theme'
 import { hoyMadrid } from '../lib/chartUtils'
 import {
   ESTOMAGO, LIMITE_NOTAS_TOMADO, LIMITES, avisoTomado, formPlanDe, normalizarNutricion,
@@ -24,15 +24,11 @@ import { itemsDe, normalizarClaves, tomadasValidas, textoReceta, tonicidadBidon,
 import { duracionPrevista } from '../lib/tssPrevisto'
 import { guardarNutricion, quitarParte } from '../lib/nutricionApi'
 import Icon from './ui/Icon'
-import PlanProductos, { LineaTiempo } from './PlanProductos'
+import PlanProductos, { LineaTiempo, PistaTiempo } from './PlanProductos'
 
 const etiqueta = { fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
-const subtitulo = { fontSize: 14.5, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }
+const subtitulo = { fontSize: 17, fontWeight: 700, color: COLORS.textPrimary, margin: 0 }
 
-const textoBtn = {
-  display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '8px 0',
-  minHeight: 36, fontSize: 14.5, fontWeight: 500, cursor: 'pointer',
-}
 
 const CAMPOS_TOMADO_UI = [
   { campo: 'tomado_carbohidratos_g_h', label: 'Hidratos', unidad: 'g/h', paso: 5, max: LIMITES.carbohidratos_g_h },
@@ -49,42 +45,55 @@ const formTomadoDe = (n) => ({
 
 // Lista de lo que lleva el plan, en orden: el atleta toca cada cosa al tomársela.
 // Un toque = marcada/desmarcada y guardada (sin botón). Bidón: al terminarlo.
-function ChecklistTomado({ unidades, marcadas, onAlternar }) {
+// Arriba, el avance y la pista de la sesión con lo tomado en teal; la primera
+// pendiente va marcada como «Siguiente».
+function ChecklistTomado({ unidades, marcadas, onAlternar, minutos }) {
   const hechas = unidades.filter((u) => marcadas.has(u.clave)).length
+  const siguiente = unidades.find((u) => !marcadas.has(u.clave))?.clave
+  const pct = unidades.length ? Math.round((hechas / unidades.length) * 100) : 0
+  const puntos = unidades.filter((u) => u.min != null).map((u) => ({ min: u.min, nombre: u.nombre, on: marcadas.has(u.clave) }))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <p style={{ ...etiqueta, margin: 0, display: 'flex', justifyContent: 'space-between' }}>
-        <span>Toca lo que te vayas tomando</span>
-        <span style={{ fontFamily: FONTS.mono, fontWeight: 500 }}>{hechas} de {unidades.length}</span>
-      </p>
-      {unidades.map((u) => {
-        const on = marcadas.has(u.clave)
-        return (
-          <button
-            key={u.clave}
-            type="button"
-            role="checkbox"
-            aria-checked={on}
-            onClick={() => onAlternar(u.clave)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 48, padding: '8px 12px', textAlign: 'left',
-              borderRadius: RADIUS.sm, cursor: 'pointer', fontSize: 15,
-              border: `1px solid ${on ? COLORS.accent : COLORS.cardBorder}`,
-              background: on ? 'rgba(47,191,175,0.10)' : 'transparent',
-              color: on ? COLORS.textPrimary : COLORS.textSecondary,
-            }}
-          >
-            <span style={{
-              width: 24, height: 24, flexShrink: 0, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              border: `1.5px solid ${on ? COLORS.accent : COLORS.textTertiary}`, background: on ? COLORS.accent : 'transparent', color: COLORS.background,
-            }}>
-              {on && <Icon name="check" size={16} strokeWidth={2.6} />}
-            </span>
-            <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>{u.nombre}</span>
-            {u.min != null && <span style={{ fontFamily: FONTS.mono, fontSize: 13.5, color: COLORS.textTertiary }}>Min {u.min}</span>}
-          </button>
-        )
-      })}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 14.5, color: COLORS.textSecondary }}>Toca lo que te vayas tomando</span>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>{hechas} de {unidades.length}</span>
+      </div>
+      <div aria-hidden="true" style={{ height: 6, borderRadius: 3, background: COLORS.cardBorder, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: COLORS.accent, transition: 'width 200ms ease' }} />
+      </div>
+      {puntos.length > 1 && <PistaTiempo puntos={puntos} minutos={minutos} />}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+        {unidades.map((u) => {
+          const on = marcadas.has(u.clave)
+          const esSiguiente = u.clave === siguiente
+          return (
+            <button
+              key={u.clave}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              onClick={() => onAlternar(u.clave)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 56, padding: '8px 14px', textAlign: 'left',
+                borderRadius: 16, cursor: 'pointer', fontSize: 16, border: 'none',
+                background: on ? 'rgba(47,191,175,0.10)' : COLORS.sunken,
+                boxShadow: esSiguiente ? `inset 0 0 0 1.5px ${COLORS.textSoft}` : 'none',
+                color: on ? COLORS.textSoft : COLORS.textPrimary,
+              }}
+            >
+              <span style={{
+                width: 28, height: 28, flexShrink: 0, borderRadius: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: on ? 'none' : `inset 0 0 0 2px ${COLORS.textTertiary}`, background: on ? COLORS.accent : 'transparent', color: COLORS.onAccent,
+              }}>
+                {on && <Icon name="check" size={16} strokeWidth={3} />}
+              </span>
+              <span style={{ flex: 1, minWidth: 0, lineHeight: 1.3, fontWeight: on ? 500 : 600, textDecoration: on ? 'line-through' : 'none', textDecorationColor: 'rgba(201,204,214,0.5)' }}>{u.nombre}</span>
+              {esSiguiente && <span style={{ fontSize: 12.5, fontWeight: 700, color: COLORS.textSoft }}>Siguiente</span>}
+              {u.min != null && <span style={{ minWidth: 54, textAlign: 'right', fontSize: 14, fontWeight: 600, color: on ? COLORS.textTertiary : COLORS.textSoft }}>min {u.min}</span>}
+            </button>
+          )
+        })}
+      </div>
       {unidades.some((u) => u.tipo === 'bidon') && (
         <p style={{ margin: 0, fontSize: 13.5, color: COLORS.textTertiary }}>El bidón, márcalo cuando lo termines.</p>
       )}
@@ -108,7 +117,7 @@ function CamposNumero({ campos, form, onCambiar }) {
             step={paso}
             value={form[campo]}
             onChange={(e) => onCambiar(campo, e.target.value)}
-            style={{ ...inputStyle, fontFamily: FONTS.mono }}
+            style={{ ...inputStyle, fontWeight: 600 }}
           />
         </label>
       ))}
@@ -130,13 +139,13 @@ function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, 
         type="button"
         onClick={onGuardar}
         disabled={!puedeGuardar || guardando}
-        style={{ ...buttonStyle, padding: '8px 16px', opacity: !puedeGuardar || guardando ? 0.5 : 1, cursor: !puedeGuardar ? 'default' : 'pointer' }}
+        style={{ ...buttonStyle, opacity: !puedeGuardar || guardando ? 0.5 : 1, cursor: !puedeGuardar ? 'default' : 'pointer' }}
       >
         {guardando ? 'Guardando…' : textoGuardar}
       </button>
       {extra}
       {onQuitar && (
-        <button type="button" onClick={onQuitar} disabled={guardando} style={{ ...ghostButtonStyle, padding: '8px 12px', fontSize: 14.5, color: COLORS.textSecondary, marginLeft: 'auto' }}>
+        <button type="button" onClick={onQuitar} disabled={guardando} style={{ ...ghostButtonStyle, background: 'transparent', color: COLORS.textSecondary, marginLeft: 'auto' }}>
           Quitar
         </button>
       )}
@@ -262,42 +271,62 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
       return r
     })
 
-  // Cabecera: plan y, si lo hay, lo tomado
-  let resumenCabecera
-  if (hayPlan || hayTomado) {
-    const partes = []
-    // Con lo tomado delante basta: ya lleva el plan al lado ("35 de 60 g/h")
-    if (hayTomado) partes.push(`${esAtleta ? 'tomaste' : 'tomó'} ${resumenTomado(efectivo)}`)
-    else partes.push(resumenPlan(inicial, minutos) || 'ver notas')
-    resumenCabecera = <span style={{ fontFamily: FONTS.mono, fontSize: 13.5 }}>{partes.join(' · ')}</span>
+  // Cabecera plegada: lo esencial en una línea grande y, si hay que llevar la
+  // cuenta, una barra de avance (unidades tomadas o g/h tomados frente al plan).
+  const planGh = efectivo?.carbohidratos_g_h > 0 ? efectivo.carbohidratos_g_h : null
+  const tomadoGh = efectivo?.tomado_carbohidratos_g_h ?? null
+  const marcadasValidas = modoLista && Array.isArray(inicial?.tomado_items) ? tomadasValidas(itemsDe(inicial), inicial.tomado_items).length : 0
+  let principal
+  let avance = null
+  if (hayTomado && modoLista) {
+    principal = `${marcadasValidas} de ${unidades.length} tomadas${tomadoGh != null && planGh ? ` · ${tomadoGh} de ${planGh} g/h` : ''}`
+    avance = unidades.length ? marcadasValidas / unidades.length : null
+  } else if (hayTomado) {
+    principal = `${esAtleta ? 'Tomaste' : 'Tomó'} ${resumenTomado(efectivo)}`
+    avance = tomadoGh != null && planGh ? Math.min(1, tomadoGh / planGh) : null
+  } else if (hayPlan) {
+    principal = resumenPlan(inicial, minutos) || 'Ver notas'
+    if (apuntaTomado && modoLista) avance = 0
   } else if (apuntaTomado) {
-    resumenCabecera = <span style={{ color: COLORS.textSecondary }}>¿qué tomaste?</span>
+    principal = '¿Qué tomaste?'
   } else {
-    resumenCabecera = <span style={{ color: COLORS.textSecondary }}>{'sin plan'}</span>
+    principal = 'Sin plan'
   }
 
   return (
-    <div style={{ marginTop: 4 }}>
+    <div style={{ marginTop: 8 }}>
       {!soloPanel && <button
         type="button"
         onClick={() => setAbierto((a) => !a)}
         aria-expanded={abierto}
-        style={{ ...textoBtn, alignItems: 'flex-start', textAlign: 'left', color: inicial ? COLORS.textPrimary : COLORS.textSecondary }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 58, padding: '10px 14px', border: 'none',
+          borderRadius: 16, background: COLORS.sunken, color: COLORS.textPrimary, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+        }}
       >
-        <Icon name="chevronDown" size={16} style={{ flexShrink: 0, marginTop: 1, transform: abierto ? 'rotate(180deg)' : 'none' }} />
-        <span style={{ lineHeight: 1.4 }}>
-          Nutrición <span style={{ color: COLORS.textPrimary }}>· {resumenCabecera}</span>
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: COLORS.raised, color: aviso ? COLORS.error : COLORS.textSoft }}>
+          <Icon name="gota" size={18} strokeWidth={2} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 13, color: COLORS.textSecondary }}>Nutrición</span>
+          <span style={{ display: 'block', fontSize: 15.5, fontWeight: 650, color: hayPlan || hayTomado ? COLORS.textPrimary : COLORS.textSecondary, lineHeight: 1.3, marginTop: 1, overflowWrap: 'anywhere' }}>{principal}</span>
+          {avance != null && (
+            <span aria-hidden="true" style={{ display: 'block', height: 5, borderRadius: 3, background: COLORS.cardBorder, overflow: 'hidden', marginTop: 7 }}>
+              <span style={{ display: 'block', width: `${Math.round(avance * 100)}%`, height: '100%', borderRadius: 3, background: aviso ? COLORS.error : COLORS.accent }} />
+            </span>
+          )}
           {aviso && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 8, color: COLORS.error, fontWeight: 600 }}>
-              <Icon name="alert" size={13} strokeWidth={2.2} />
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, fontSize: 14, color: COLORS.error, fontWeight: 600 }}>
+              <Icon name="alert" size={14} strokeWidth={2.2} />
               {aviso}
             </span>
           )}
         </span>
+        <Icon name="chevronDown" size={18} color={COLORS.textTertiary} style={{ transform: abierto ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease' }} />
       </button>}
 
       {abierto && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0 10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: soloPanel ? '4px 0 10px' : '14px 0 10px' }}>
           {/* ── Plan ── (el día de la sesión, lo que se marca va arriba y el plan debajo) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, order: tomadoPrimero ? 2 : 0, ...(tomadoPrimero ? { paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` } : {}) }}>
             {apuntaTomado && <p style={subtitulo}>Plan</p>}
@@ -319,8 +348,8 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
               </>
             ) : hayPlan ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <p style={{ margin: 0, fontSize: 14.5, color: COLORS.textPrimary, lineHeight: 1.45 }}>
-                  <span style={{ fontFamily: FONTS.mono }}>{resumenPlan(inicial, minutos)}</span>
+                <p style={{ margin: 0, fontSize: 15, color: COLORS.textPrimary, lineHeight: 1.45 }}>
+                  <span style={{ fontWeight: 600 }}>{resumenPlan(inicial, minutos)}</span>
                   {inicial.notas ? <span style={{ color: COLORS.textSecondary }}> · {inicial.notas}</span> : null}
                 </p>
                 <LineaTiempo items={itemsDe(inicial)} minutos={minutos} />
@@ -344,16 +373,15 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, order: 1, ...(tomadoPrimero ? {} : { paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}` }) }}>
               <p style={subtitulo}>Lo que tomaste</p>
               {modoLista ? (
-                <ChecklistTomado unidades={unidades} marcadas={new Set(normalizarClaves(tomado.tomado_items) || [])} onAlternar={alternar} />
+                <ChecklistTomado unidades={unidades} marcadas={new Set(normalizarClaves(tomado.tomado_items) || [])} onAlternar={alternar} minutos={minutos} />
               ) : (
                 <CamposNumero campos={CAMPOS_TOMADO_UI} form={tomado} onCambiar={cambiarTomado} />
               )}
               <div>
                 <p style={etiqueta}>¿Qué tal te sentó?</p>
-                <div role="radiogroup" aria-label="Qué tal te sentó" style={{ display: 'flex', gap: 4 }}>
+                <div role="radiogroup" aria-label="Qué tal te sentó" style={{ display: 'flex', gap: 6 }}>
                   {ESTOMAGO.map((e) => {
                     const sel = tomado.estomago === e.value
-                    const color = e.value === 1 ? COLORS.error : COLORS.textPrimary
                     return (
                       <button
                         key={e.value}
@@ -362,11 +390,10 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                         aria-checked={sel}
                         onClick={() => cambiarTomado('estomago', sel ? null : e.value)}
                         style={{
-                          flex: 1, minWidth: 0, height: 36, borderRadius: RADIUS.sm, padding: 0, cursor: 'pointer', fontSize: 14.5,
-                          border: `1px solid ${sel ? color : COLORS.cardBorder}`,
-                          background: sel ? 'rgba(237,238,242,0.08)' : 'transparent',
-                          color: sel ? color : COLORS.textSecondary,
-                          fontWeight: sel ? 600 : 500,
+                          flex: 1, minWidth: 0, height: 44, borderRadius: 999, padding: 0, cursor: 'pointer', fontSize: 15, border: 'none',
+                          background: sel ? (e.value === 1 ? COLORS.error : COLORS.textPrimary) : COLORS.raised,
+                          color: sel ? COLORS.background : COLORS.textSecondary,
+                          fontWeight: sel ? 700 : 500,
                         }}
                       >
                         {e.label}
@@ -397,9 +424,9 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           )}
 
           {!esAtleta && hayTomado && (
-            <div style={{ paddingTop: 12, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 14.5, lineHeight: 1.5 }}>
-              <p style={{ ...subtitulo, marginBottom: 4 }}>Lo que tomó {otroNombre || 'el atleta'}</p>
-              <p style={{ margin: 0, fontFamily: FONTS.mono, fontSize: 13.5, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(efectivo)}</p>
+            <div style={{ paddingTop: 14, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 15, lineHeight: 1.5 }}>
+              <p style={{ ...subtitulo, marginBottom: 6 }}>Lo que tomó {otroNombre || 'el atleta'}</p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: inicial.estomago === 1 ? COLORS.error : COLORS.textPrimary }}>{resumenTomado(efectivo)}</p>
               {modoLista && Array.isArray(inicial.tomado_items) && tomadasValidas(itemsDe(inicial), inicial.tomado_items).length < unidades.length && (
                 <p style={{ margin: '4px 0 0', fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.45 }}>
                   Sin tomar: {unidades.filter((u) => !inicial.tomado_items.includes(u.clave)).map((u) => `${u.nombre}${u.min != null ? ` (min ${u.min})` : ''}`).join(' · ')}

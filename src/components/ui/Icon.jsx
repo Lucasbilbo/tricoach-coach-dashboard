@@ -23,6 +23,8 @@ const PATHS = {
   move: 'M7 7h12l-3-3 M17 17H5l3 3',
   more: 'M5 12h.01 M12 12h.01 M19 12h.01',
   // Ajustes: tres deslizadores (más legible a 17 px que un engranaje)
+  // Gota: nutrición e hidratación
+  gota: 'M12 3.5c3.2 4.2 6 7.6 6 10.9a6 6 0 0 1-12 0c0-3.3 2.8-6.7 6-10.9z',
   settings: 'M4 6h9 M17 6h3 M15 4v4 M4 12h3 M11 12h9 M9 10v4 M4 18h11 M19 18h1 M17 16v4',
 }
 
