@@ -16,6 +16,15 @@
 const { withTimeout } = require('./http')
 
 const FRESCO_MS = 5 * 60 * 1000
+// Con el webhook de Strava activo (STRAVA_WEBHOOK_ACTIVO=1) la BD se da por
+// buena mucho más tiempo: cada actividad nueva, editada o borrada llega como
+// evento y `strava-webhook` envejece la sync de ese atleta (marcarPendiente),
+// así la siguiente lectura sí va a Strava. Las 6 h son la red por si se pierde
+// un evento.
+const FRESCO_WEBHOOK_MS = 6 * 3600 * 1000
+function frescoSegunEntorno(env = process.env) {
+  return env.STRAVA_WEBHOOK_ACTIVO === '1' ? FRESCO_WEBHOOK_MS : FRESCO_MS
+}
 const TIMEOUT_BD_MS = 5000
 const MARGEN_MS = 7 * 24 * 3600 * 1000
 // Por encima de esto no se borran ausentes (la URL del filtro not.in sería enorme)
@@ -32,7 +41,7 @@ function maxFecha(a, b) {
 
 // db: { leerSync, leerActividades, guardar, borrarAusentes, guardarSync }
 // listar(token, afterUnix) → { ok, status, actividades, completo }
-function crearStore({ db, listar, now = Date.now }) {
+function crearStore({ db, listar, now = Date.now, frescoMs = FRESCO_MS }) {
   // { athleteId, afterUnix, obtenerToken: async () => token|null, force, medidor }
   // → { ok, actividades, origen, ultimaActividadAt, status?, motivo? }
   async function obtener({ athleteId, afterUnix, obtenerToken, force = false, medidor }) {
@@ -54,7 +63,7 @@ function crearStore({ db, listar, now = Date.now }) {
     const fila = sync.fila
     const ahora = now()
     const cubre = fila && ms(fila.cubierto_desde) <= afterUnix * 1000
-    const fresco = fila && ahora - ms(fila.sincronizado_at) < FRESCO_MS
+    const fresco = fila && ahora - ms(fila.sincronizado_at) < frescoMs
 
     let desdeSync = null
     if (force || !cubre) desdeSync = afterUnix
@@ -214,4 +223,4 @@ function dbSupabase({ supabaseHost, SERVICE_KEY, rest }) {
   }
 }
 
-module.exports = { crearStore, dbSupabase, FRESCO_MS, MARGEN_MS }
+module.exports = { crearStore, dbSupabase, frescoSegunEntorno, FRESCO_MS, FRESCO_WEBHOOK_MS, MARGEN_MS }

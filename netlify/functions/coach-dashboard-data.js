@@ -15,7 +15,7 @@ const { sumarTecnica, sesionesNatacion } = require('./lib/tecnica')
 const { lunesDeSemana } = require('./lib/semanas')
 const supabaseRest = require('./lib/supabase-rest')
 const { actividadesDesde, ultimaActividad } = require('./lib/strava-lista')
-const { crearStore, dbSupabase } = require('./lib/actividades-store')
+const { crearStore, dbSupabase, frescoSegunEntorno } = require('./lib/actividades-store')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -83,6 +83,8 @@ async function procesarAtleta(athleteId, perfil, env) {
     const store = crearStore({
       db: dbSupabase({ supabaseHost: env.supabaseHost, SERVICE_KEY: env.SERVICE_KEY, rest: supabaseRest }),
       listar: (token, desde) => actividadesDesde(token, desde),
+
+      frescoMs: frescoSegunEntorno(),
     })
     // Ajustes de carga y sesiones de natación de la semana salen EN PARALELO
     // con las actividades (antes en serie después: ~2 idas Ohio↔Frankfurt más).

@@ -3,7 +3,7 @@
 // de la sesión (coach y atleta). Las capturas están en un bucket privado y se
 // ven con URL firmada (1 h). Ver src/lib/adjuntos.js y la migración 014.
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { storageDe } from '../lib/supabase'
 import { BUCKET_ADJUNTOS, MAX_IMAGENES, MAX_TEXTO, rutaAdjunto } from '../lib/adjuntos'
 import { COLORS, FONTS, inputStyle } from '../lib/theme'
 import Icon from './ui/Icon'
@@ -17,7 +17,8 @@ function useUrlsFirmadas(rutas) {
   useEffect(() => {
     if (!clave) return undefined
     let vivo = true
-    supabase.storage.from(BUCKET_ADJUNTOS).createSignedUrls(clave.split('|'), 3600)
+    storageDe()
+      .then((storage) => storage.from(BUCKET_ADJUNTOS).createSignedUrls(clave.split('|'), 3600))
       .then(({ data }) => {
         if (!vivo) return
         const urls = {}
@@ -120,7 +121,8 @@ export function AdjuntoEditor({ athleteId, valor, onChange }) {
       try {
         const blob = await reducirImagen(f)
         const ruta = rutaAdjunto(athleteId, crypto.randomUUID())
-        const { error: e } = await supabase.storage.from(BUCKET_ADJUNTOS).upload(ruta, blob, { contentType: 'image/jpeg', upsert: false })
+        const storage = await storageDe()
+        const { error: e } = await storage.from(BUCKET_ADJUNTOS).upload(ruta, blob, { contentType: 'image/jpeg', upsert: false })
         if (e) throw e
         nuevas.push(ruta)
       } catch {

@@ -7,7 +7,7 @@ import { Buffer } from 'node:buffer'
 
 const require = createRequire(import.meta.url)
 const https = require('https')
-const { verifyAuth, uidSinVerificar } = require('../netlify/functions/lib/auth.js')
+const { verifyAuth, uidSinVerificar, reiniciarCachesAuth } = require('../netlify/functions/lib/auth.js')
 
 const REAL = '11111111-1111-4111-8111-111111111111'
 const OTRO = '22222222-2222-4222-8222-222222222222'
@@ -19,6 +19,7 @@ const evento = (jwt) => ({ headers: { authorization: `Bearer ${jwt}` } })
 // Simula Supabase: /auth/v1/user devuelve SIEMPRE el usuario REAL (la firma
 // manda, no lo que diga el payload); coaches contiene solo `coaches`.
 function simular({ coaches }) {
+  reiniciarCachesAuth()
   const rutas = []
   const original = https.request
   https.request = (opts, cb) => {
@@ -65,7 +66,7 @@ test('uidSinVerificar lee el sub y rechaza lo que no es un UUID', () => {
 test('sub correcto: la whitelist sale de la consulta adelantada (una sola)', conEnv(async () => {
   const s = simular({ coaches: [REAL] })
   try {
-    assert.deepEqual(await verifyAuth(evento(jwtCon(REAL))), { uid: REAL, isCoach: true })
+    assert.deepEqual(await verifyAuth(evento(jwtCon(REAL))), { uid: REAL, isCoach: true, via: 'remoto' })
     assert.equal(s.rutas.filter((r) => r.startsWith('/rest/v1/coaches')).length, 1)
   } finally { s.restaurar() }
 }))
@@ -74,7 +75,7 @@ test('sub falsificado: se ignora lo adelantado y manda el uid verificado', conEn
   // El payload dice OTRO (que es coach), pero el usuario verificado es REAL (no coach)
   const s = simular({ coaches: [OTRO] })
   try {
-    assert.deepEqual(await verifyAuth(evento(jwtCon(OTRO))), { uid: REAL, isCoach: false })
+    assert.deepEqual(await verifyAuth(evento(jwtCon(OTRO))), { uid: REAL, isCoach: false, via: 'remoto' })
     assert.ok(s.rutas.includes(`/rest/v1/coaches?id=eq.${REAL}&select=id`))
   } finally { s.restaurar() }
 }))

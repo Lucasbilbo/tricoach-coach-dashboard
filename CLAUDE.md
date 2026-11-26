@@ -35,7 +35,14 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   `StravaAnalysis`, así que solo se descarga al abrir la pestaña Análisis (no en
   Sesiones/Entrenos ni en el dashboard).
 - Backend: Netlify Functions (CommonJS).
-- DB/Auth: Supabase (cliente JS solo en el frontend con la anon key).
+- DB/Auth: Supabase (cliente solo en el frontend con la anon key). Desde
+  2026-11-26 NO se usa `@supabase/supabase-js`: `src/lib/supabase.js` monta el
+  cliente con `@supabase/auth-js` + `@supabase/postgrest-js` (misma config y
+  misma clave de sesión `sb-<ref>-auth-token`) y `storageDe()` carga
+  `@supabase/storage-js` bajo demanda (solo capturas de fuerza). API:
+  `supabase.auth`, `supabase.from`, `supabase.rpc`. Los tres paquetes van
+  fijados a la MISMA versión; súbelos juntos. Entrada 137,7 → 108,5 KB gzip.
+  Todas las pantallas son `lazy` (también JoinPage e IntervalsSetup).
 - Datos: Strava API v3 · Entrega: Intervals.icu API.
 
 ## Rendimiento y caché (2026-10)
@@ -59,9 +66,23 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   usada por `coach-athlete-data` y `coach-dashboard-data`: ventana no cubierta o
   `force` → Strava entero y se guarda; sync < 5 min → solo BD; más vieja →
   Strava desde (última sync − 7 días) + BD; Strava caído con ventana cubierta →
-  BD. Si las tablas fallan, cae a Strava directo. El token de Strava solo se
+  BD. Si las tablas fallan, cae a Strava directo. Con el webhook activo la
+  frescura pasa de 5 min a 6 h (ver «Webhook de Strava»). El token de Strava solo se
   refresca si hay que llamar. "Actualizar" manda `force:true` 15 s
   (`forzarDatosAtleta`). NO hay webhook de Strava en ningún proyecto.
+- **Webhook de Strava** (2026-11-26, APAGADO hasta configurarlo):
+  `netlify/functions/strava-webhook.js` + `lib/strava-webhook.js`. Por cada
+  actividad creada/editada/borrada envejece la `strava_sync` de ese atleta (el
+  atleta sale del `owner_id` buscando en `strava_actividades.datos->athlete->>id`;
+  sin migraciones), así la siguiente lectura pide a Strava solo lo nuevo; sin
+  eventos se lee solo de Supabase hasta 6 h. Responde 200 siempre (Strava
+  desactiva la suscripción si falla). Activarlo: (1) en Netlify, variable
+  `STRAVA_WEBHOOK_VERIFY_TOKEN` (cadena aleatoria) y deploy; (2) crear la
+  suscripción: `curl -X POST https://www.strava.com/api/v3/push_subscriptions
+  -F client_id=… -F client_secret=… -F callback_url=https://<dominio>/.netlify/functions/strava-webhook
+  -F verify_token=<el mismo>` (devuelve `id`); (3) `STRAVA_WEBHOOK_SUBSCRIPTION_ID=<id>`
+  y `STRAVA_WEBHOOK_ACTIVO=1`, deploy. Strava admite UNA suscripción por app:
+  si TriCoach v2 usa la misma app de Strava, la comparten.
 - **Servidor**: splits de Strava cacheados por actividad 24 h en memoria de la
   instancia (`lib/ttl-cache.js`, tope 500; solo respuestas válidas).
 - **Medición**: `coach-athlete-data` devuelve `Server-Timing` (`total`,
@@ -96,6 +117,8 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
   panel del coach guarda la última respuesta en localStorage por uid
   (`dashboardGuardado`, 7 días, se borra al cambiar de usuario) y la pinta al
   instante con «Actualizando…».
+- Hecho 2026-11-26: verificación del JWT en local, cachés de auth y webhook de
+  Strava preparado (ver arriba).
 - Pendiente: mover las functions a **`fra`** (Netlify → Cloud compute →
   Functions → Region; requiere plan Pro). Es la mejora grande: cada ida
   bajaría a ~10–30 ms. Strava (EE. UU.) iría algo más lento, pero casi nunca
@@ -106,7 +129,15 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 
 - Las funciones que devuelven o mutan datos exigen `Authorization: Bearer <jwt>`
   de la sesión de Supabase. Verificación en `netlify/functions/lib/auth.js`
-  (`verifyAuth`: GET `/auth/v1/user` + whitelist en `coaches`).
+  (`verifyAuth` + whitelist en `coaches`). Desde 2026-11-26 la firma se comprueba
+  EN LA FUNCIÓN (`lib/jwt-local.js`): ES256/RS256 con el JWKS público del
+  proyecto (cacheado por instancia, se vuelve a pedir si llega un `kid` nuevo) o
+  HS256 si hay `SUPABASE_JWT_SECRET`; exp, iss, aud y role. Si no puede decidir
+  (proyecto con secreto HS256 y sin la variable, JWKS caído) cae a GET
+  `/auth/v1/user` como antes. `coach-athlete-data` marca `auth-local` /
+  `auth-remoto` en Server-Timing. Diferencia: en local no se ve un cierre de
+  sesión hasta que caduca el token (1 h). Cachés por instancia (60 s): whitelist
+  de coaches y relaciones coach-atleta POSITIVAS (un «no» nunca se cachea).
 - **La identidad NUNCA se lee del body**: el coach sale del JWT. `athleteId` puede
   venir del body porque se autoriza contra `coach_athletes` (`canAccessAthlete`), o
   `uid === athleteId` si es el propio atleta. En `send-to-intervals`, coach y atleta
@@ -478,9 +509,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 - `netlify/functions/` — coach-dashboard-data, coach-athlete-data,
   coach-activity-detail, send-to-intervals, move-session, delete-session,
   season, my-connections, strava-auth, verify-intervals-key, accept-invitation,
-  set-fc-max, sync-ftp;
+  set-fc-max, sync-ftp, strava-webhook;
   `lib/` (auth, http, supabase-rest, rate-limit, oauth-state, metrics, semanas,
-  strava, strava-lista, actividades-store, tecnica, ttl-cache, server-timing,
+  strava, strava-lista, actividades-store, jwt-local, strava-webhook, tecnica, ttl-cache, server-timing,
   intervals-api, intervals-evento, intervals-text.cjs, mover-reglas.cjs, potencia,
   season-validate).
 - `supabase/migrations/` — 001–027 (+ ficheros `PENDIENTE_*` que NO se aplican
@@ -654,6 +685,9 @@ envían a Intervals.icu → Garmin. Los atletas tienen su propia vista (`/home`)
 Frontend (`.env`, prefijo `VITE_`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 Backend (Netlify env): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (⚠️ no
 `SUPABASE_SERVICE_KEY`), `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`.
+Opcionales: `SUPABASE_JWT_SECRET` (solo si el proyecto firma con el secreto
+HS256 clásico: verificación del JWT en local), `STRAVA_WEBHOOK_VERIFY_TOKEN`,
+`STRAVA_WEBHOOK_SUBSCRIPTION_ID`, `STRAVA_WEBHOOK_ACTIVO` (webhook de Strava).
 
 ## Columnas reales de `profiles` (verificadas)
 
