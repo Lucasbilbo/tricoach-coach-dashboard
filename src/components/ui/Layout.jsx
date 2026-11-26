@@ -143,7 +143,7 @@ export function Tabs({ tabs, active, onChange }) {
               style={{
                 border: 'none',
                 borderRadius: 22,
-                minHeight: 40,
+                minHeight: 44,
                 padding: '0 18px',
                 background: sel ? COLORS.textPrimary : 'transparent',
                 color: sel ? COLORS.background : COLORS.textSecondary,
