@@ -1,3 +1,4 @@
+import { num } from '../../lib/numero'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { decimalToRitmo, formatDiaMes, hoyMadrid } from '../../lib/chartUtils'
 import { pedirDatosAtleta } from '../../lib/athleteData'
@@ -46,7 +47,7 @@ function formatEffort(act) {
   }
   if (act.disciplina === 'bike') {
     if (act.potencia_media != null) return `${act.potencia_media}W`
-    if (act.distancia_km && act.duracion_min) return `${(act.distancia_km / (act.duracion_min / 60)).toFixed(1)} km/h`
+    if (act.distancia_km && act.duracion_min) return `${num(act.distancia_km / (act.duracion_min / 60), 1)} km/h`
     return '—'
   }
   if (act.disciplina === 'swim') {
@@ -492,7 +493,7 @@ export default function StravaAnalysis({
                   </span>
                   <span style={{ display: 'flex', gap: 14, marginTop: 4, fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSecondary }}>
                     <span style={{ color: COLORS.textPrimary }} title={act.metros_tecnica ? `Incluye ${act.metros_tecnica} m de técnica/pies que el reloj no cuenta` : undefined}>
-                      {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
+                      {act.distancia_km != null ? `${num(act.distancia_km)} km` : '—'}
                       {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary }}> · {act.metros_tecnica} m téc.</span> : null}
                     </span>
                     <span>{formatEffort(act)}</span>
@@ -566,7 +567,7 @@ export default function StravaAnalysis({
                   style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}
                   title={act.metros_tecnica ? `Incluye ${act.metros_tecnica} m de técnica/pies que el reloj no cuenta` : undefined}
                 >
-                  {act.distancia_km != null ? `${act.distancia_km} km` : '—'}
+                  {act.distancia_km != null ? `${num(act.distancia_km)} km` : '—'}
                   {act.metros_tecnica ? <span style={{ color: COLORS.textTertiary, fontSize: 11 }}> +{act.metros_tecnica} téc.</span> : null}
                 </span>
                 <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary }}>{formatEffort(act)}</span>
