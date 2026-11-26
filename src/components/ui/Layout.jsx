@@ -33,7 +33,9 @@ export function Brand({ sub }) {
 // Cabecera de página: fila de marca (con volver opcional y acciones) y título
 // ancho (displayStyle). `title` es opcional: /home abre directamente con el
 // entreno de hoy.
-export function PageHeader({ onBack, backLabel = 'Volver', brandSub, title, subtitle, actions, topActions }) {
+// `anchoTitulo`: ancho mínimo del titular antes de que `actions` baje de fila (220 por
+// defecto; una ficha con título corto y una sola acción lo reduce para que quepan juntos).
+export function PageHeader({ onBack, backLabel = 'Volver', brandSub, title, subtitle, actions, topActions, anchoTitulo = 220 }) {
   return (
     <header style={{ marginBottom: title ? 24 : 18, paddingTop: 'env(safe-area-inset-top)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 44, marginBottom: title ? 16 : 0 }}>
@@ -52,7 +54,7 @@ export function PageHeader({ onBack, backLabel = 'Volver', brandSub, title, subt
       </div>
       {title && (
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0, flex: '1 1 220px' }}>
+          <div style={{ minWidth: 0, flex: `1 1 ${anchoTitulo}px` }}>
             <h1 style={{ ...displayStyle, margin: 0, fontSize: 'clamp(36px, 10vw, 48px)', color: COLORS.textPrimary, overflowWrap: 'anywhere' }}>
               {title}
             </h1>
