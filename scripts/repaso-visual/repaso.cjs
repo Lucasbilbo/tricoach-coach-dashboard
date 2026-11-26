@@ -161,6 +161,15 @@ function handlerAtleta() {
 }
 const atletaData = handlerAtleta()
 
+// En móvil los controles de periodo y comparar viven en la hoja «Más opciones»;
+// en escritorio son botones sueltos. Pulsa el que haya.
+async function opcionPeriodo(page, rol, nombreEscritorio, nombreHoja) {
+  const suelto = page.getByRole(rol, { name: nombreEscritorio, exact: true }).first()
+  if (await suelto.isVisible().catch(() => false)) return suelto.click()
+  await page.getByRole('button', { name: /^Más opciones/ }).first().click()
+  await page.getByRole('button', { name: nombreHoja, exact: true }).first().click()
+}
+
 function dashboardData() {
   // 8 semanas, la última a medias; media de las 4 anteriores ≈ 300 → 412 sale "Por encima"
   const semanas = [260, 310, 280, 330, 290, 300, 310, 180].map((t, i) => ({ semana: `w${i}`, tss_total: t }))
@@ -246,6 +255,7 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'atleta-analisis-semana', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'periodo:semana'] },
   { quien: 'coach', nombre: 'atleta-analisis-semana-anterior', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'periodo:semana', 'periodo:anterior'] },
   { quien: 'coach', nombre: 'atleta-analisis-fechas', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'periodo:fechas'] },
+  { quien: 'coach', nombre: 'atleta-analisis-mas', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'mas'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-comparar', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'comparar'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-actividad', url: `/athlete/${F.A}`, pasos: ['tab:Análisis', 'actividad'], soloPantalla: true },
   { quien: 'coach', nombre: 'sin-strava-analisis', url: `/athlete/${F.B}`, pasos: ['tab:Análisis'], esperado: /status of 409/ },
@@ -301,8 +311,9 @@ const PANTALLAS = [
           else if (paso === 'historial') { const b = page.locator('button[aria-expanded]').filter({ hasText: 'Rodaje largo' }).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           else if (paso === 'editar') await page.getByRole('button', { name: 'Editar sesión' }).first().click()
           else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()
-          else if (paso === 'periodo:semana') await page.getByRole('radio', { name: 'Semana', exact: true }).first().click()
-          else if (paso === 'periodo:fechas') await page.getByRole('radio', { name: 'Fechas', exact: true }).first().click()
+          else if (paso === 'periodo:semana') await opcionPeriodo(page, 'radio', 'Semana', 'Semana concreta')
+          else if (paso === 'periodo:fechas') await opcionPeriodo(page, 'radio', 'Fechas', 'Rango de fechas')
+          else if (paso === 'mas') await page.getByRole('button', { name: /^Más opciones/ }).first().click()
           else if (paso === 'periodo:anterior') await page.getByRole('button', { name: 'Semana anterior' }).first().click()
           else if (paso === 'nuevo') await page.getByRole('button', { name: 'Prescribir entreno' }).first().click()
           else if (paso.startsWith('disciplina:')) await page.getByRole('button', { name: paso.slice(11), exact: true }).last().click()
@@ -310,7 +321,7 @@ const PANTALLAS = [
           else if (paso === 'ajustes') await page.getByRole('button', { name: /^Ajustes: potenciómetro/ }).first().click()
           else if (paso === 'ajustes-coach') await page.getByRole('button', { name: /^Bici y pulso/ }).first().click()
           else if (paso === 'feedback') await page.getByRole('button', { name: '¿Cómo te fue?' }).first().click()
-          else if (paso === 'comparar') await page.getByRole('button', { name: 'Comparar semanas' }).first().click()
+          else if (paso === 'comparar') await opcionPeriodo(page, 'button', 'Comparar semanas', 'Comparar semanas')
           else if (paso === 'actividad') { const b = page.getByText(/^Run \d/).first(); await b.scrollIntoViewIfNeeded(); await b.click() }
           await page.waitForTimeout(1500)
         } catch (e) { errores.push(`paso ${paso}: ${e.message.split('\n')[0]}`) }

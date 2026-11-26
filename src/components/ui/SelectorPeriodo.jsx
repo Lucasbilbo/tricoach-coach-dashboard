@@ -13,39 +13,78 @@ import {
   terminaHoy,
 } from '../../lib/periodo'
 import Icon from './Icon'
+import HojaAcciones from './HojaAcciones'
 import { Segmented } from './Layout'
 
 // Selector del periodo de Análisis (coach y atleta): últimas N semanas, una
 // semana concreta (◀ ▶ de lunes a domingo) o un rango entre dos fechas. La
 // lógica está en lib/periodo.js; aquí solo se pinta y se llama a `onChange`.
-export default function SelectorPeriodo({ periodo, onChange }) {
+//
+// `compacto` (móvil del coach): los presets en una sola fila y un botón «⋯»
+// que abre una hoja con Semana, Fechas y las acciones que le pasa quien lo usa
+// (`acciones`: comparar, actualizar). Diseño aprobado en Claude Design
+// (variante A, 2026-11-27).
+export default function SelectorPeriodo({ periodo, onChange, compacto = false, acciones = [] }) {
   const hoy = hoyMadrid()
+  const [hojaAbierta, setHojaAbierta] = useState(false)
   const preset = periodo.tipo === 'semanas' ? periodo.semanas : null
   const modo = periodo.tipo === 'semanas' ? null : periodo.tipo // 'semana' | 'rango'
 
+  const elegirModo = (m) => {
+    if (m === modo) return
+    const p = m === 'semana' ? periodoSemanaPasada(hoy) : periodoRangoPorDefecto(hoy)
+    if (p) onChange(p)
+  }
+  const presets = (
+    <Segmented
+      ariaLabel="Semanas a mostrar"
+      value={preset}
+      onChange={(n) => onChange(periodoSemanas(n))}
+      options={SEMANAS_PRESET.map((n) => ({ value: n, label: `${n} sem` }))}
+    />
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Segmented
-          ariaLabel="Semanas a mostrar"
-          value={preset}
-          onChange={(n) => onChange(periodoSemanas(n))}
-          options={SEMANAS_PRESET.map((n) => ({ value: n, label: `${n} sem` }))}
-        />
-        <Segmented
-          ariaLabel="Una semana o un rango de fechas"
-          value={modo}
-          onChange={(m) => {
-            if (m === modo) return
-            const p = m === 'semana' ? periodoSemanaPasada(hoy) : periodoRangoPorDefecto(hoy)
-            if (p) onChange(p)
-          }}
-          options={[
-            { value: 'semana', label: 'Semana' },
-            { value: 'rango', label: 'Fechas' },
+      {compacto ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {presets}
+          <button
+            type="button"
+            onClick={() => setHojaAbierta(true)}
+            aria-label="Más opciones: semana, fechas, comparar y actualizar"
+            aria-haspopup="dialog"
+            style={{ ...iconButtonStyle, background: modo ? 'rgba(237,238,242,0.12)' : iconButtonStyle.background, color: modo ? COLORS.textPrimary : iconButtonStyle.color }}
+          >
+            <Icon name="more" size={20} strokeWidth={3} />
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {presets}
+          <Segmented
+            ariaLabel="Una semana o un rango de fechas"
+            value={modo}
+            onChange={elegirModo}
+            options={[
+              { value: 'semana', label: 'Semana' },
+              { value: 'rango', label: 'Fechas' },
+            ]}
+          />
+        </div>
+      )}
+
+      {hojaAbierta && (
+        <HojaAcciones
+          titulo="Más opciones"
+          onCerrar={() => setHojaAbierta(false)}
+          acciones={[
+            { etiqueta: 'Semana concreta', onElegir: () => elegirModo('semana') },
+            { etiqueta: 'Rango de fechas', onElegir: () => elegirModo('rango') },
+            ...acciones,
           ]}
         />
-      </div>
+      )}
 
       {modo === 'semana' && <NavegadorSemana periodo={periodo} hoy={hoy} onChange={onChange} />}
       {modo === 'rango' && <CamposFechas periodo={periodo} hoy={hoy} onChange={onChange} />}

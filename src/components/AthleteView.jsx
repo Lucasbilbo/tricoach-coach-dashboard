@@ -18,6 +18,7 @@ import AnalisisCargando from './shared/AnalisisCargando'
 import SeasonPanel from './season/SeasonPanel'
 import { SEMANAS_BASE, SEMANAS_CARGA, claveArchivo, esPreset, periodoInicial } from '../lib/periodo'
 import { useDatosRango } from '../hooks/useDatosRango'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 export default function AthleteView() {
   const { id } = useParams()
@@ -42,6 +43,7 @@ export default function AthleteView() {
   const [sesionesVersion, setSesionesVersion] = useState(0)
   const [refrescos, setRefrescos] = useState(0)
   const [comparadorAbierto, setComparadorAbierto] = useState(false)
+  const movil = useIsMobile(700) // mismo corte que las pestañas flotantes
 
   // Al abrir Análisis (también con ?tab=analisis) se pide ya el paquete de
   // gráficos, en paralelo con los datos
@@ -110,6 +112,10 @@ export default function AthleteView() {
   const cargandoAnalisis = rangoDatos.activo ? rangoDatos.cargando : cargando
   const errorAnalisis = rangoDatos.activo ? rangoDatos.error : error
 
+  const actualizarDatos = () => {
+    forzarDatosAtleta(id)
+    setRefrescos((v) => v + 1)
+  }
 
   return (
     <div style={pageStyle}>
@@ -117,11 +123,17 @@ export default function AthleteView() {
         <PageHeader
           onBack={() => navigate('/dashboard')}
           backLabel="Atletas"
+          anchoTitulo={movil ? 120 : 220}
           title={datos?.atleta?.nombre || (cargando ? ' ' : 'Atleta')}
           actions={
-            <button onClick={() => setModalAbierto(true)} style={{ ...buttonStyle, minHeight: 50, padding: '0 22px', fontSize: 16 }}>
+            // Móvil: «Prescribir» (más corto) en la misma fila que el nombre
+            <button
+              onClick={() => setModalAbierto(true)}
+              aria-label="Prescribir entreno"
+              style={{ ...buttonStyle, minHeight: movil ? 44 : 50, padding: movil ? '0 18px' : '0 22px', fontSize: movil ? 15 : 16 }}
+            >
               <Icon name="plus" size={18} strokeWidth={2.4} />
-              Prescribir entreno
+              {movil ? 'Prescribir' : 'Prescribir entreno'}
             </button>
           }
         />
@@ -140,25 +152,34 @@ export default function AthleteView() {
 
         {activeTab === 'analisis' && !sinStrava && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
-            <SelectorPeriodo periodo={periodo} onChange={setPeriodo} />
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {/* Los datos de Strava se reutilizan 5 min; esto fuerza una lectura nueva */}
-              <button
-                onClick={() => {
-                  forzarDatosAtleta(id)
-                  setRefrescos((v) => v + 1)
-                }}
-                disabled={cargandoAnalisis}
-                aria-label="Actualizar datos de Strava"
-                title="Actualizar datos de Strava"
-                style={{ ...iconButtonStyle, opacity: cargandoAnalisis ? 0.5 : 1 }}
-              >
-                <Icon name="refresh" size={18} strokeWidth={2} />
-              </button>
-              <button onClick={() => setComparadorAbierto(true)} style={ghostButtonStyle}>
-                Comparar semanas
-              </button>
-            </div>
+            {/* Móvil: presets en una fila y «⋯» con Semana, Fechas, Comparar y Actualizar
+                (antes eran tres filas de controles que empujaban los datos bajo ~300 px) */}
+            <SelectorPeriodo
+              periodo={periodo}
+              onChange={setPeriodo}
+              compacto={movil}
+              acciones={[
+                { etiqueta: 'Comparar semanas', onElegir: () => setComparadorAbierto(true) },
+                { etiqueta: 'Actualizar datos', detalle: 'Lectura nueva de Strava', desactivada: cargandoAnalisis, onElegir: actualizarDatos },
+              ]}
+            />
+            {!movil && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {/* Los datos de Strava se reutilizan 5 min; esto fuerza una lectura nueva */}
+                <button
+                  onClick={actualizarDatos}
+                  disabled={cargandoAnalisis}
+                  aria-label="Actualizar datos de Strava"
+                  title="Actualizar datos de Strava"
+                  style={{ ...iconButtonStyle, opacity: cargandoAnalisis ? 0.5 : 1 }}
+                >
+                  <Icon name="refresh" size={18} strokeWidth={2} />
+                </button>
+                <button onClick={() => setComparadorAbierto(true)} style={ghostButtonStyle}>
+                  Comparar semanas
+                </button>
+              </div>
+            )}
           </div>
         )}
 
