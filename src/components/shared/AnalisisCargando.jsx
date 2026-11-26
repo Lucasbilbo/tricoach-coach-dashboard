@@ -1,7 +1,7 @@
 import { COLORS, cardStyle } from '../../lib/theme'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
-// Esqueleto del análisis mientras llegan los datos de Strava (1–4 s): misma
+// Esqueleto del análisis mientras llegan los datos (1–4 s): misma
 // rejilla que StravaAnalysis (4 tarjetas + forma/carga) para que la página no
 // salte al pintarse. Antes era una línea de texto arriba del todo.
 const bloque = { background: 'rgba(237,238,242,0.05)', borderRadius: 6 }
@@ -26,7 +26,7 @@ export default function AnalisisCargando() {
           </div>
         ))}
       </div>
-      <p style={{ margin: '14px 2px 0', fontSize: 12.5, color: COLORS.textTertiary }}>Leyendo las actividades de Strava…</p>
+      <p style={{ margin: '14px 2px 0', fontSize: 12.5, color: COLORS.textTertiary }}>Cargando el análisis…</p>
     </div>
   )
 }
