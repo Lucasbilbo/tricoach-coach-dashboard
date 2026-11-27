@@ -19,6 +19,7 @@ import {
 import { listarTemporada } from '../../lib/seasonApi'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import EventEditor from './EventEditor'
+import FilaDesplazable from '../ui/FilaDesplazable'
 import { Chip, CuentaAtras, EstadoPill, IconoAviso, PrioridadBadge, SportDot, SportRail } from './SeasonBits'
 
 const FILTROS = [
@@ -43,7 +44,9 @@ function SeasonStrip({ eventos, hoy }) {
   const mesActual = hoy.slice(0, 7)
 
   return (
-    <div style={{ ...cardStyle, padding: '14px 12px 12px', marginBottom: 20, overflowX: 'auto' }}>
+    <div style={{ ...cardStyle, padding: '14px 12px 12px', marginBottom: 20 }}>
+      {/* C7: degradado al borde mientras la tira de meses se sigue desplazando */}
+      <FilaDesplazable fondo={COLORS.card} style={{ display: 'block' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, minmax(40px, 1fr))', minWidth: 480 }}>
         {meses.map((m, i) => {
           const items = porMes[m.clave] || []
@@ -92,7 +95,8 @@ function SeasonStrip({ eventos, hoy }) {
           )
         })}
       </div>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13, color: COLORS.textTertiary }}>
+      </FilaDesplazable>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, paddingTop: 10, borderTop: `1px solid ${COLORS.cardBorder}`, fontSize: 13, color: COLORS.textTertiary }}>
         {['run', 'tri', 'bike', 'swim'].map((d) => (
           <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <SportDot deporte={d} size={7} /> {DEPORTES[d].label}
@@ -290,15 +294,17 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
 
       <SeasonStrip eventos={eventos} hoy={hoy} />
 
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: escenarios.length ? 8 : 4, scrollbarWidth: 'none' }}>
-        {FILTROS.map((f) => (
-          <Chip key={f.clave} activo={filtro === f.clave} onClick={() => setFiltro(f.clave)}>
-            {f.label}
-          </Chip>
-        ))}
+      <div style={{ marginBottom: escenarios.length ? 4 : 0 }}>
+        <FilaDesplazable fondo={COLORS.background}>
+          {FILTROS.map((f) => (
+            <Chip key={f.clave} activo={filtro === f.clave} onClick={() => setFiltro(f.clave)}>
+              {f.label}
+            </Chip>
+          ))}
+        </FilaDesplazable>
       </div>
       {escenarios.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto', paddingBottom: 4, marginBottom: 4, scrollbarWidth: 'none' }}>
+        <FilaDesplazable fondo={COLORS.background} style={{ alignItems: 'center' }}>
           <span style={{ fontSize: 13.5, color: COLORS.textTertiary, marginRight: 2, whiteSpace: 'nowrap' }}>Escenario</span>
           <Chip activo={!escenario} onClick={() => setEscenario('')}>Todos</Chip>
           {escenarios.map((e) => (
@@ -306,7 +312,7 @@ export default function SeasonPanel({ athleteId, atletaNombre, esCoach = false }
               {e}
             </Chip>
           ))}
-        </div>
+        </FilaDesplazable>
       )}
 
       {eventos.length === 0 && (
