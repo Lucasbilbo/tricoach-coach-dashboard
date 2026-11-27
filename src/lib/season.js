@@ -17,7 +17,9 @@ export const TRI_GRADIENT = 'conic-gradient(#2FBFAF 0 33.3%, #E8934A 0 66.6%, #E
 export const ESTADOS = {
   candidata: { label: 'Candidata', color: '#8A90A0', fondo: 'transparent', borde: '#2A3040' },
   confirmada: { label: 'Confirmada', color: '#EDEEF2', fondo: 'rgba(237,238,242,0.06)', borde: '#3A4152' },
-  inscrito: { label: 'Inscrito', color: '#0B0D12', fondo: '#2FBFAF', borde: '#2FBFAF' },
+  // En contorno como el resto de la escalera (candidata → confirmada → inscrito): el teal
+  // relleno queda solo para la acción principal de la pantalla (C6).
+  inscrito: { label: 'Inscrito', color: '#2FBFAF', fondo: 'rgba(47,191,175,0.10)', borde: '#2FBFAF' },
   descartada: { label: 'Descartada', color: '#7A808F', fondo: 'transparent', borde: '#1B202C' },
   hecha: { label: 'Hecha', color: '#8B7FD1', fondo: 'rgba(139,127,209,0.12)', borde: '#8B7FD1' },
 }

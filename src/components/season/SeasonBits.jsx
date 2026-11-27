@@ -1,5 +1,6 @@
 import { COLORS, FONTS } from '../../lib/theme'
 import { COLOR_AVISO, DEPORTES, ESTADOS, TRI_GRADIENT } from '../../lib/season'
+import Icon from '../ui/Icon'
 
 // Piezas visuales pequeñas de la Temporada.
 
@@ -26,7 +27,9 @@ export function EstadoPill({ estado }) {
   return (
     <span
       style={{
-        display: 'inline-block',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
         fontSize: 12.5,
         fontWeight: 600,
         padding: '4px 10px',
@@ -37,6 +40,7 @@ export function EstadoPill({ estado }) {
         whiteSpace: 'nowrap',
       }}
     >
+      {estado === 'inscrito' && <Icon name="check" size={12} strokeWidth={2.6} />}
       {e.label}
     </span>
   )
