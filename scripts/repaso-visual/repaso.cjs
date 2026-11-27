@@ -332,6 +332,7 @@ const PANTALLAS = [
             await page.waitForFunction(() => document.querySelectorAll('button[aria-label="Quitar bloque"]').length === 3, null, { timeout: 3000 })
             const nombres = await page.locator('button[aria-label="Quitar bloque"]').evaluateAll((bs) => bs.map((b) => { let e = b.parentElement; while (e && !e.textContent.trim()) e = e.parentElement; return e ? e.textContent : '' }))
             if (!/Serie/.test(nombres[1] || '') || /Serie/.test(nombres[0] || '') || /Serie/.test(nombres[2] || '')) throw new Error('Deshacer no devolvió «Serie» a la posición 2: ' + JSON.stringify(nombres))
+          }
           else if (paso === 'menu-sesion-sin-enviar') {
             // ⋯ de la primera sesión futura sin enviar: debe ofrecer «Enviar al reloj»
             const tarjeta = page.locator('article').filter({ hasText: 'Sin enviar' }).first()
