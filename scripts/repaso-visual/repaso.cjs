@@ -263,6 +263,8 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'creador-nuevo', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo'], expandir: true },
   { quien: 'coach', nombre: 'creador-carrera', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`], expandir: true },
   { quien: 'coach', nombre: 'creador-natacion', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Natación', `rapida:400 cal + 8x100m 1:45 rec 20" + 200 pull`], expandir: true },
+  { quien: 'coach', nombre: 'creador-quitar-bloque', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-bloque'], soloPantalla: true },
+  { quien: 'coach', nombre: 'creador-deshacer-bloque', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-bloque', 'deshacer-bloque'], soloPantalla: true },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
   { quien: 'coach', nombre: 'atleta-nutricion-plan', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion-plan'] },
@@ -317,6 +319,19 @@ const PANTALLAS = [
           else if (paso === 'periodo:semana') await opcionPeriodo(page, 'radio', 'Semana', 'Semana concreta')
           else if (paso === 'periodo:fechas') await opcionPeriodo(page, 'radio', 'Fechas', 'Rango de fechas')
           else if (paso === 'ajustar-producto') await page.getByRole('button', { name: /^Ajustar reparto/ }).first().click()
+          else if (paso === 'quitar-bloque') {
+            await page.getByRole('button', { name: 'Quitar bloque' }).nth(1).click()
+            // El aviso «Bloque 2 quitado · Deshacer» debe verse; si no, el paso falla
+            await page.getByRole('status').filter({ hasText: 'Bloque 2 quitado' }).waitFor({ timeout: 3000 })
+            await page.getByRole('button', { name: 'Deshacer' }).waitFor({ timeout: 3000 })
+          }
+          else if (paso === 'deshacer-bloque') {
+            await page.getByRole('button', { name: 'Deshacer' }).click()
+            // Vuelve a su sitio: tres bloques y «Serie» en medio
+            await page.waitForFunction(() => document.querySelectorAll('button[aria-label="Quitar bloque"]').length === 3, null, { timeout: 3000 })
+            const nombres = await page.locator('button[aria-label="Quitar bloque"]').evaluateAll((bs) => bs.map((b) => { let e = b.parentElement; while (e && !e.textContent.trim()) e = e.parentElement; return e ? e.textContent : '' }))
+            if (!/Serie/.test(nombres[1] || '') || /Serie/.test(nombres[0] || '') || /Serie/.test(nombres[2] || '')) throw new Error('Deshacer no devolvió «Serie» a la posición 2: ' + JSON.stringify(nombres))
+          }
           else if (paso === 'anadir-producto') await page.getByRole('button', { name: 'Añadir producto' }).first().click()
           else if (paso === 'mas') await page.getByRole('button', { name: /^Más opciones/ }).first().click()
           else if (paso === 'periodo:anterior') await page.getByRole('button', { name: 'Semana anterior' }).first().click()

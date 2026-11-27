@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDisponibilidadConEstado } from '../hooks/useDisponibilidad'
 import { evaluarDisponibilidad, formatHora, textoAviso } from '../lib/disponibilidad'
 import { ahoraMadrid, disciplinasALaHora, horasPosibles } from '../lib/agenda'
@@ -60,6 +60,10 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // Bloques desplegados (índices). Todos plegados al abrir, al generar con la
   // escritura rápida o al cargar una plantilla; el que se añade a mano, abierto.
   const [abiertos, setAbiertos] = useState(() => new Set())
+  // Último bloque quitado, para «Deshacer» (6 s): { bloque, idx, abierto, n }
+  const [quitado, setQuitado] = useState(null)
+  const temporizadorQuitado = useRef(null)
+  useEffect(() => () => clearTimeout(temporizadorQuitado.current), [])
   const alternarBloque = (idx) => setAbiertos((prev) => {
     const s = new Set(prev)
     if (s.has(idx)) s.delete(idx)
@@ -175,9 +179,34 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   function removeBloque(idx) {
+    // Quitar es inmediato y reversible: aviso con «Deshacer» en vez de diálogo de confirmación
+    const bloque = form.bloques[idx]
+    if (!bloque) return
     setForm((prev) => ({ ...prev, bloques: prev.bloques.filter((_, i) => i !== idx) }))
     // Los índices abiertos por debajo suben uno
+    const estabaAbierto = abiertos.has(idx)
     setAbiertos((prev) => new Set([...prev].filter((i) => i !== idx).map((i) => (i > idx ? i - 1 : i))))
+    clearTimeout(temporizadorQuitado.current)
+    setQuitado({ bloque, idx, abierto: estabaAbierto, n: idx + 1, disciplina: form.disciplina })
+    temporizadorQuitado.current = setTimeout(() => setQuitado(null), 6000)
+  }
+
+  // Devuelve el bloque a su sitio (o al final si la lista ha cambiado desde entonces)
+  function deshacerQuitar() {
+    if (!quitado) return
+    clearTimeout(temporizadorQuitado.current)
+    const { bloque, idx, abierto } = quitado
+    const pos = Math.min(idx, form.bloques.length)
+    setForm((prev) => {
+      const bloques = [...prev.bloques]
+      bloques.splice(Math.min(idx, bloques.length), 0, bloque)
+      return { ...prev, bloques }
+    })
+    setAbiertos((prev) => {
+      const subidos = [...prev].map((i) => (i >= pos ? i + 1 : i))
+      return new Set(abierto ? [...subidos, pos] : subidos)
+    })
+    setQuitado(null)
   }
 
   function moveBloque(idx, dir) {
@@ -927,6 +956,26 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
             </>
           )}
         </div>
+
+        {quitado && quitado.disciplina === form.disciplina && (
+          <div
+            role="status"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, margin: '0 16px 10px', padding: '6px 6px 6px 16px',
+              minHeight: 56, boxSizing: 'border-box', background: COLORS.raised, border: `1px solid ${COLORS.restBorder}`, borderRadius: 16,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>Bloque {quitado.n} quitado</span>
+            <button
+              type="button"
+              onClick={deshacerQuitar}
+              style={{ minHeight: 44, padding: '0 16px', border: 'none', borderRadius: 22, background: 'transparent', color: COLORS.accent, fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Deshacer
+            </button>
+          </div>
+        )}
 
         {/* Pie fijo: avisos y botones siempre a la vista. Antes estaban al final
             del contenido y había que bajar todo el formulario para guardar. */}
