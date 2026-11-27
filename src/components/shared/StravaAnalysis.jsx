@@ -360,8 +360,12 @@ export default function StravaAnalysis({
         {paceTrend.length > 0 && (
           <div style={cardStyle}>
             <div style={seccionLabel}>
-              {esPreset(periodo) ? `Ritmo medio de carrera, últimas ${paceTrend.length} semanas` : 'Ritmo medio de carrera por semana'}
+              {esPreset(periodo) ? `Ritmo medio de carrera, últimas ${paceTrend.length} semanas` : 'Ritmo medio de carrera por semana'} · min/km
             </div>
+            {/* C4: la altura es relativa a estas semanas (no hay eje); el ritmo exacto va sobre cada barra */}
+            <p style={{ margin: '-4px 0 12px', fontSize: 12.5, color: COLORS.textSecondary, lineHeight: 1.4 }}>
+              Barra más alta = más rápido. La altura es relativa a estas semanas.
+            </p>
             <div
               style={{
                 display: 'grid',
