@@ -139,3 +139,4 @@
   workout y un texto libre ahí puede romper el parseo / congelar el reloj
   (misma regla que las notas del entrenador).
 - Tests: `test/nutricion.test.js`.
+- **Aviso y acciones (2026-11-27, N3/N4)**: el aviso de nutrición del coach (`avisoTomado`: «Le sentó mal» / «Comió bastante menos de lo previsto») ya no es rojo ni vive solo en un `title` (invisible en táctil): va en ámbar (`COLORS.warning`) y su motivo se escribe bajo la fila de acciones de la tarjeta y en la cabecera plegable. En `Botonera`, «Quitar plan»/«Quitar lo tomado» (rojo, izquierda) queda lejos de «Guardar» (derecha) y «Editado por …» pasa a línea de apoyo encima. No hay aviso de «sin plan»: sería ruido en todas las sesiones futuras.

@@ -132,23 +132,28 @@ export function CamposPlanNutricion({ athleteId, form, onCambiar, minutos, puede
   return <PlanProductos athleteId={athleteId} form={form} onCambiar={onCambiar} minutos={minutos} puedeEditarDespensa={puedeEditarDespensa} />
 }
 
-function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, extra }) {
+// Jerarquía (N4): «Quitar …» (destructivo) a la izquierda y lejos del botón principal,
+// «Guardar» a la derecha; lo que `extra` diga (p. ej. «Editado por ti») va como línea
+// de apoyo encima, no entre los dos botones.
+function Botonera({ puedeGuardar, guardando, onGuardar, textoGuardar, onQuitar, textoQuitar = 'Quitar', extra }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-      <button
-        type="button"
-        onClick={onGuardar}
-        disabled={!puedeGuardar || guardando}
-        style={{ ...buttonStyle, opacity: !puedeGuardar || guardando ? 0.5 : 1, cursor: !puedeGuardar ? 'default' : 'pointer' }}
-      >
-        {guardando ? 'Guardando…' : textoGuardar}
-      </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {extra}
-      {onQuitar && (
-        <button type="button" onClick={onQuitar} disabled={guardando} style={{ ...ghostButtonStyle, background: 'transparent', color: COLORS.textSecondary, marginLeft: 'auto' }}>
-          Quitar
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        {onQuitar ? (
+          <button type="button" onClick={onQuitar} disabled={guardando} style={{ ...ghostButtonStyle, background: 'transparent', color: COLORS.error, padding: '0 4px' }}>
+            {textoQuitar}
+          </button>
+        ) : <span />}
+        <button
+          type="button"
+          onClick={onGuardar}
+          disabled={!puedeGuardar || guardando}
+          style={{ ...buttonStyle, opacity: !puedeGuardar || guardando ? 0.5 : 1, cursor: !puedeGuardar ? 'default' : 'pointer' }}
+        >
+          {guardando ? 'Guardando…' : textoGuardar}
         </button>
-      )}
+      </div>
     </div>
   )
 }
@@ -304,7 +309,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           borderRadius: 16, background: COLORS.sunken, color: COLORS.textPrimary, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
         }}
       >
-        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: COLORS.raised, color: aviso ? COLORS.error : COLORS.textSoft }}>
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: COLORS.raised, color: aviso ? COLORS.warning : COLORS.textSoft }}>
           <Icon name="gota" size={18} strokeWidth={2} />
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -312,11 +317,11 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
           <span style={{ display: 'block', fontSize: 15.5, fontWeight: 650, color: hayPlan || hayTomado ? COLORS.textPrimary : COLORS.textSecondary, lineHeight: 1.3, marginTop: 1, overflowWrap: 'anywhere' }}>{principal}</span>
           {avance != null && (
             <span aria-hidden="true" style={{ display: 'block', height: 5, borderRadius: 3, background: COLORS.cardBorder, overflow: 'hidden', marginTop: 7 }}>
-              <span style={{ display: 'block', width: `${Math.round(avance * 100)}%`, height: '100%', borderRadius: 3, background: aviso ? COLORS.error : COLORS.accent }} />
+              <span style={{ display: 'block', width: `${Math.round(avance * 100)}%`, height: '100%', borderRadius: 3, background: aviso ? COLORS.warning : COLORS.accent }} />
             </span>
           )}
           {aviso && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, fontSize: 14, color: COLORS.error, fontWeight: 600 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, fontSize: 14, color: COLORS.warning, fontWeight: 600 }}>
               <Icon name="alert" size={14} strokeWidth={2.2} />
               {aviso}
             </span>
@@ -339,6 +344,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                   onGuardar={guardarPlan}
                   textoGuardar="Guardar plan"
                   onQuitar={hayPlan ? quitarPlan : null}
+                  textoQuitar="Quitar plan"
                   extra={!planSucio && hayPlan && (
                     <span style={{ fontSize: 13.5, color: COLORS.textSecondary }}>
                       {editadoPorOtro ? `Editado por ${otroNombre || (esAtleta ? 'tu entrenador' : 'el atleta')}` : 'Editado por ti'}
@@ -419,6 +425,7 @@ export default function NutricionSesion({ sesion, uid, inicial, onCambio, quien,
                 onGuardar={guardarTomado}
                 textoGuardar={hayTomado ? 'Guardar cambios' : 'Guardar'}
                 onQuitar={hayTomado ? quitarTomado : null}
+                textoQuitar="Quitar lo tomado"
               />
             </div>
           )}

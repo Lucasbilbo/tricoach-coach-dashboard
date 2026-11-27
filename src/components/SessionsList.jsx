@@ -547,7 +547,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             {mostrarNutri && (
               <button
                 onClick={() => setNutriAbiertaId((prev) => (prev === sesion.id ? null : sesion.id))}
-                style={{ ...textoBtnStyle, color: avisoNutri ? COLORS.error : textoBtnStyle.color }}
+                style={{ ...textoBtnStyle, color: avisoNutri ? COLORS.warning : textoBtnStyle.color }}
                 aria-expanded={nutriAbierta}
                 title={avisoNutri || undefined}
               >
@@ -570,6 +570,13 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             </button>
           )}
         </div>
+
+        {avisoNutri && !nutriAbierta && (
+          // El motivo estaba solo en el tooltip (no se ve en táctil): N3
+          <p role="status" style={{ margin: '6px 0 0', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: COLORS.warning }}>
+            {avisoNutri}
+          </p>
+        )}
 
         {nutriAbierta && mostrarNutri && (
           <div style={{ marginTop: 4, paddingTop: 4, borderTop: `1px solid ${COLORS.cardBorder}` }}>
