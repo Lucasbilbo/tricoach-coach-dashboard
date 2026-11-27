@@ -47,6 +47,7 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
 - Marca **GetRiCoach** (`Brand`/`BrandMark` en `ui/Layout.jsx`): ola (natación),
   línea (bici) y zancadas discontinuas (carrera). Mismo símbolo en
   `public/favicon.svg` y `public/apple-touch-icon.png`. No usar "TriCoach".
+- **Sesiones: una sola píldora principal (2026-11-27, C1/C2)**: «Prescribir» es la única píldora rellena de la pantalla; «Enviar las N» del aviso ámbar es de contorno. «Enviar al reloj» de cada sesión ya no es un botón propio en la tarjeta (era una fila más por sesión): va como primera entrada del menú «⋯» (solo si no está enviada, no es pasada y tiene entreno), y el estado «Sin enviar» sigue visible en la tarjeta. El lápiz de editar se queda fuera del menú (es lo que más se pulsa). Repaso: `atleta-sesion-menu`.
 - **Filo por disciplina** (`railStyle`): marca vertical DENTRO de la tarjeta
   (background-image); si un componente cambia el fondo al pasar el ratón,
   que use `backgroundColor`. Nada de pastillas rellenas de deporte.

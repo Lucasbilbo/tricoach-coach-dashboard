@@ -487,6 +487,17 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
               <>
                 <div onClick={() => setMenuId(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
                 <div role="menu" style={{ position: 'absolute', top: 48, right: 0, zIndex: 21, minWidth: 210, background: '#1A1E27', borderRadius: 16, padding: 6, boxShadow: '0 16px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+                  {!enviada && !pasada && tieneWorkout && (
+                    <button
+                      role="menuitem"
+                      onClick={() => { setMenuId(null); handleReenviarGarmin(sesion) }}
+                      disabled={reenviando === sesion.id}
+                      style={{ ...itemMenuStyle, color: COLORS.accent, opacity: reenviando === sesion.id ? 0.6 : 1 }}
+                    >
+                      <Icon name="send" size={16} />
+                      {reenviando === sesion.id ? 'Enviando…' : 'Enviar al reloj'}
+                    </button>
+                  )}
                   <button
                     role="menuitem"
                     onClick={() => {
@@ -559,16 +570,6 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
               </button>
             )}
           </div>
-          {!enviada && !pasada && tieneWorkout && (
-            <button
-              onClick={() => handleReenviarGarmin(sesion)}
-              disabled={reenviando === sesion.id}
-              style={{ ...ghostButtonStyle, color: COLORS.accent, opacity: reenviando === sesion.id ? 0.6 : 1 }}
-            >
-              <Icon name="send" size={15} />
-              {reenviando === sesion.id ? 'Enviando…' : 'Enviar al reloj'}
-            </button>
-          )}
         </div>
 
         {avisoNutri && !nutriAbierta && (
@@ -720,7 +721,7 @@ export default function SessionsList({ coachId, athleteId, actividades, weeks = 
             type="button"
             onClick={() => handleEnviarTodas(sinEnviar)}
             disabled={enviandoTodas || reenviando !== null}
-            style={{ ...buttonStyle, background: COLOR_PENDIENTE, color: '#2A1F05', opacity: enviandoTodas ? 0.6 : 1 }}
+            style={{ ...buttonStyle, background: 'transparent', color: COLOR_PENDIENTE, boxShadow: `inset 0 0 0 1.5px ${COLOR_PENDIENTE}`, opacity: enviandoTodas ? 0.6 : 1 }}
           >
             <Icon name="send" size={16} />
             {enviandoTodas ? 'Enviando…' : `Enviar las ${sinEnviar.length}`}

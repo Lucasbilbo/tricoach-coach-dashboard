@@ -265,6 +265,7 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'creador-natacion', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Natación', `rapida:400 cal + 8x100m 1:45 rec 20" + 200 pull`], expandir: true },
   { quien: 'coach', nombre: 'creador-quitar-bloque', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-bloque'], soloPantalla: true },
   { quien: 'coach', nombre: 'creador-deshacer-bloque', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-bloque', 'deshacer-bloque'], soloPantalla: true },
+  { quien: 'coach', nombre: 'atleta-sesion-menu', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'menu-sesion-sin-enviar'], soloPantalla: true },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
   { quien: 'coach', nombre: 'atleta-nutricion-plan', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion-plan'] },
@@ -331,6 +332,12 @@ const PANTALLAS = [
             await page.waitForFunction(() => document.querySelectorAll('button[aria-label="Quitar bloque"]').length === 3, null, { timeout: 3000 })
             const nombres = await page.locator('button[aria-label="Quitar bloque"]').evaluateAll((bs) => bs.map((b) => { let e = b.parentElement; while (e && !e.textContent.trim()) e = e.parentElement; return e ? e.textContent : '' }))
             if (!/Serie/.test(nombres[1] || '') || /Serie/.test(nombres[0] || '') || /Serie/.test(nombres[2] || '')) throw new Error('Deshacer no devolvió «Serie» a la posición 2: ' + JSON.stringify(nombres))
+          else if (paso === 'menu-sesion-sin-enviar') {
+            // ⋯ de la primera sesión futura sin enviar: debe ofrecer «Enviar al reloj»
+            const tarjeta = page.locator('article').filter({ hasText: 'Sin enviar' }).first()
+            await tarjeta.scrollIntoViewIfNeeded()
+            await tarjeta.getByRole('button', { name: 'Más acciones' }).click()
+            await page.getByRole('menuitem', { name: 'Enviar al reloj' }).waitFor({ timeout: 3000 })
           }
           else if (paso === 'anadir-producto') await page.getByRole('button', { name: 'Añadir producto' }).first().click()
           else if (paso === 'mas') await page.getByRole('button', { name: /^Más opciones/ }).first().click()
