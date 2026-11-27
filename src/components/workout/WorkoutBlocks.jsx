@@ -36,7 +36,7 @@ function BotonesBloque({ idx, total, onMove, onRemove }) {
       <button type="button" onClick={() => onMove(idx, 1)} disabled={idx === total - 1} style={{ ...iconBtn, opacity: idx === total - 1 ? 0.35 : 1 }} aria-label="Bajar bloque">
         <Icon name="chevronDown" size={15} />
       </button>
-      {/* Quitar va aparte de subir/bajar: borrar un bloque no tiene deshacer */}
+      {/* Quitar va aparte de subir/bajar; el creador avisa con «Deshacer» */}
       <button type="button" onClick={() => onRemove(idx)} style={{ ...iconBtn, marginLeft: 10 }} aria-label="Quitar bloque">
         <Icon name="trash" size={14} />
       </button>

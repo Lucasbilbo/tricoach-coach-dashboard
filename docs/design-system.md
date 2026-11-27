@@ -41,6 +41,7 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
 - Inputs a 16 px y regla global en `index.css`: en pantallas táctiles ningún
   campo baja de 16 px (Safari en iPhone hacía zoom). `:active`/hover también
   en `index.css` (los inline styles no pueden).
+- **Quitar bloque con Deshacer (2026-11-27)**: quitar es inmediato y sale un aviso fijo sobre el pie del cajón, «Bloque N quitado · Deshacer» (6 s, solo para la misma disciplina). Deshacer lo devuelve a su posición y recupera si estaba abierto; si la lista cambió, lo inserta como mucho al final. Sin diálogo de confirmación: es reversible y se usa mucho. Repaso: `creador-quitar-bloque` y `creador-deshacer-bloque` (este falla si el bloque no vuelve a su sitio).
 - **Pestañas** (`Tabs`): en el móvil barra flotante ABAJO; en tablet y
   escritorio grupo de píldoras fijo arriba. `pageStyle` deja sitio abajo.
 - Marca **GetRiCoach** (`Brand`/`BrandMark` en `ui/Layout.jsx`): ola (natación),
