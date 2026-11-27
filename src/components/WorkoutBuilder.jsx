@@ -21,6 +21,7 @@ import { AdjuntoEditor } from './AdjuntoEntreno'
 import { adjuntoDe } from '../lib/adjuntos'
 import Icon from './ui/Icon'
 import Aviso from './ui/Aviso'
+import FilaDesplazable from './ui/FilaDesplazable'
 import { avisoEventoAntiguo } from '../lib/avisosReloj'
 import { CamposPlanNutricion } from './NutricionSesion'
 import { duracionPrevista } from '../lib/tssPrevisto'
@@ -628,15 +629,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           {/* Fecha — chips de próximos 14 días */}
           <div style={{ marginBottom: 14 }}>
             <label style={sectionLabel}>Fecha</label>
-            <div
-              style={{
-                display: 'flex',
-                gap: 6,
-                overflowX: 'auto',
-                paddingBottom: 6,
-                scrollbarWidth: 'none',
-              }}
-            >
+            <FilaDesplazable fondo="#12151C">
               {DIAS_CHIPS.map((dia) => {
                 const sel = form.fecha === dia.value
                 const bloqueo = sel ? null : noEncaja(dia.value, form.disciplina)
@@ -654,7 +647,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                   </button>
                 )
               })}
-            </div>
+            </FilaDesplazable>
             <div style={{ marginTop: 6 }}>
               <button
                 onClick={() => setMostrarInputFecha((v) => !v)}
@@ -692,7 +685,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
           {form.fecha && !esRest && (
             <div style={{ marginBottom: 14 }}>
               <label style={sectionLabel}>Hora <span style={{ textTransform: 'none', fontWeight: 400, color: COLORS.textTertiary }}>(opcional)</span></label>
-              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
+              <FilaDesplazable fondo="#12151C">
                 {[null, ...chipsHora].map((h) => {
                   const sel = (form.hora ?? null) === h
                   return (
@@ -707,7 +700,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                     </button>
                   )
                 })}
-              </div>
+              </FilaDesplazable>
               {form.disciplina && horasSugeridas.length === 0 && (
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textTertiary }}>
                   {form.fecha === ahora.fecha && horasPosibles(disponibilidad, form.fecha, form.disciplina, duracionAviso, null).length > 0
@@ -719,7 +712,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
                 <button
                   type="button"
                   onClick={() => setMostrarInputHora((v) => !v)}
-                  style={{ background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }}
+                  style={{ background: 'transparent', border: 'none', color: COLORS.textSecondary, fontSize: 13, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', minHeight: 44, fontFamily: "'Archivo Variable', 'Archivo', system-ui, sans-serif" }}
                 >
                   <Icon name="chevronDown" size={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 4, transform: mostrarInputHora ? 'rotate(180deg)' : 'none' }} />{mostrarInputHora ? 'Ocultar' : 'Otra hora'}
                 </button>

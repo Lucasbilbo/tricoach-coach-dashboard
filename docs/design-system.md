@@ -36,7 +36,8 @@ de dorsal (cuenta atrás, fecha en bloque): 900 con `fontStretch: 70%`.
   principal = píldora teal rellena (una por pantalla); secundario = píldora
   `raised`; botones de icono = círculo de 44 px. Nada táctil por debajo de 44 px.
 - **Mínimos (2026-11-26)**: ningún texto de la app baja de 12 px (la agenda ya no usa 9,5–11,5; su columna de horas pasó de 32 a 36 px para que «sin hora» quepa) y las pestañas de escritorio y el interruptor del potenciómetro tienen 44 px de zona táctil (el interruptor dibuja 46×28 dentro de un botón de 52×44). Pendiente: los chips de la agenda (142×16 px) necesitan hoja de acción al tocar, cambio visual que pasa por Claude Design.
-  **2026-11-27 (creador de entrenos)**: `miniBtn` (36→44 px), los botones de subir/bajar/quitar bloque (32→44 px, con «quitar» separado 10 px porque no tiene deshacer), los enlaces de texto de la escritura rápida y «Otra fecha» (alto mínimo 44 px). La escritura rápida es un `textarea` que crece con lo escrito (Enter sigue generando). Pendiente de Claude Design: deshacer/confirmar al quitar un bloque.
+  **2026-11-27 (creador de entrenos)**: `miniBtn` (36→44 px), los botones de subir/bajar/quitar bloque (32→44 px, con «quitar» separado 10 px porque no tiene deshacer), los enlaces de texto de la escritura rápida y «Otra fecha» (alto mínimo 44 px). La escritura rápida es un `textarea` que crece con lo escrito (Enter sigue generando). Deshacer/confirmar al quitar un bloque: ver más abajo.
+  **Filas que se desplazan (W6)**: `ui/FilaDesplazable` pone un degradado en el borde derecho mientras hay más contenido (desaparece al llegar al final, no recibe toques). Usada en las filas de fecha y hora del creador; `fondo` = color de lo que hay detrás. «Otra hora» también mide 44 px.
 - Inputs a 16 px y regla global en `index.css`: en pantallas táctiles ningún
   campo baja de 16 px (Safari en iPhone hacía zoom). `:active`/hover también
   en `index.css` (los inline styles no pueden).
