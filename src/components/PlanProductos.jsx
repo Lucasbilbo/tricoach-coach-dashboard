@@ -20,7 +20,7 @@ import { Hoja } from './ui/HojaAcciones'
 
 const etiqueta = { fontSize: 13.5, fontWeight: 600, color: COLORS.textSecondary, margin: '0 0 6px' }
 const botonCantidad = {
-  width: 40, height: 40, borderRadius: 20, border: 'none', background: COLORS.raised,
+  width: 44, height: 44, borderRadius: 22, border: 'none', background: COLORS.raised,
   color: COLORS.textPrimary, fontSize: 20, fontWeight: 600, lineHeight: 1, cursor: 'pointer', padding: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
@@ -72,7 +72,7 @@ function Mezcla({ item, onCambiar }) {
         value={item[clave] === 0 ? '' : item[clave]}
         placeholder="0"
         onChange={(e) => onCambiar(clave, e.target.value)}
-        style={{ ...inputStyle, padding: '8px 12px', fontWeight: 600 }}
+        style={{ ...inputStyle, padding: '8px 12px', minHeight: 48, fontWeight: 600 }}
       />
     </label>
   )
@@ -345,6 +345,36 @@ function Gestor({ productos, anadir, editar, quitar, onCerrar }) {
 // Hoja «Añadir producto»: la despensa entera con un + por producto. Solo se abre al
 // pulsar «Añadir producto»; el plan enseña únicamente lo elegido. Se queda abierta
 // para poder sumar varios. Por encima del cajón del creador (z-index 200).
+// Qué lleva cada producto elegido, de un vistazo (N2): minutos y, en bidones con
+// mezcla propia, hidratos y sodio. Los campos para cambiarlos viven en la hoja
+// «Ajustes» (Mezcla + Momentos), con texto de 16 px y cajas de 44 px.
+function resumenAjustes(item) {
+  const n = Number(item.cantidad) || 0
+  const mins = Array.from({ length: n }, (_, i) => item.minutos?.[i]).filter((m) => m !== '' && m != null)
+  const partes = [mins.length ? `Min ${mins.join(' · ')}` : 'Sin minuto']
+  if (item.tipo === 'bidon' && !item.receta) {
+    partes.push(`${Number(item.carbohidratos_g) || 0} g · ${Number(item.sodio_mg) || 0} mg`)
+  }
+  return partes
+}
+
+const chipResumen = {
+  display: 'inline-flex', alignItems: 'center', minHeight: 32, padding: '0 12px', borderRadius: 16,
+  background: COLORS.raised, color: COLORS.textPrimary, fontSize: 13.5, fontFamily: FONTS.mono,
+}
+
+function HojaAjustes({ item, producto, minutos, onCambiarItem, onCerrar }) {
+  return (
+    <Hoja titulo={producto.nombre} onCerrar={onCerrar} zIndex={300}>
+      {producto.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => onCambiarItem(item, campo, valor)} />}
+      <Momentos item={item} minutos={minutos} onCambiar={(v) => onCambiarItem(item, 'minutos', v)} />
+      <button type="button" onClick={onCerrar} style={{ ...buttonStyle, width: '100%', marginTop: 10 }}>
+        Listo
+      </button>
+    </Hoja>
+  )
+}
+
 function HojaProductos({ grupos, cantidadDe, onMas, onCerrar }) {
   return (
     <Hoja titulo="Añadir producto" onCerrar={onCerrar} zIndex={300}>
@@ -388,6 +418,7 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
   const { productos, disponible, anadir, editar, quitar } = useProductosNutricion(athleteId)
   const [gestorAbierto, setGestorAbierto] = useState(false)
   const [hojaAbierta, setHojaAbierta] = useState(false)
+  const [ajustando, setAjustando] = useState(null) // producto_id cuya hoja de ajustes está abierta
   const items = Array.isArray(form.productos) ? form.productos : []
   const itemDe = (id) => items.find((i) => i.producto_id === id)
 
@@ -470,8 +501,23 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
                         </span>
                         <Stepper cantidad={cantidad} nombre={p.nombre} onMenos={() => cambiarCantidad(p, -1)} onMas={() => cambiarCantidad(p, 1)} />
                       </div>
-                      {item && p.tipo === 'bidon' && <Mezcla item={item} onCambiar={(campo, valor) => cambiarItem(item, campo, valor)} />}
-                      {item && <Momentos item={item} minutos={minutos} onCambiar={(v) => cambiarItem(item, 'minutos', v)} />}
+                      {item && (
+                        <div style={{ padding: '0 6px 6px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {resumenAjustes(item).map((t) => <span key={t} style={chipResumen}>{t}</span>)}
+                          </div>
+                          {p.tipo === 'bidon' && textoReceta(item) && (
+                            <p style={{ margin: 0, fontSize: 13.5, color: COLORS.textSecondary, lineHeight: 1.45 }}>
+                              {item.receta ? 'Receta' : 'Cada bidón'}: <span style={{ fontFamily: FONTS.mono, color: COLORS.textPrimary }}>{textoReceta(item)}</span>
+                              {tonicidadBidon(item) && <span style={{ fontFamily: FONTS.mono }}> · {tonicidadBidon(item).texto}</span>}
+                            </p>
+                          )}
+                          <button type="button" onClick={() => setAjustando(p.id)} aria-haspopup="dialog" style={{ ...textoBtn, minHeight: 44, padding: 0, color: COLORS.accent, alignSelf: 'flex-start' }}>
+                            {p.tipo === 'bidon' && !item.receta ? 'Ajustar reparto y bidón' : 'Ajustar reparto'}
+                            <Icon name="chevronDown" size={16} style={{ transform: 'rotate(-90deg)' }} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -517,6 +563,15 @@ export default function PlanProductos({ athleteId, form, onCambiar, minutos, pue
         </>
       )}
 
+      {ajustando && itemDe(ajustando) && (
+        <HojaAjustes
+          item={itemDe(ajustando)}
+          producto={productos.find((x) => x.id === ajustando) || { nombre: itemDe(ajustando).nombre, tipo: itemDe(ajustando).tipo }}
+          minutos={minutos}
+          onCambiarItem={cambiarItem}
+          onCerrar={() => setAjustando(null)}
+        />
+      )}
       {hojaAbierta && <HojaProductos grupos={grupos} cantidadDe={cantidadDe} onMas={(p) => cambiarCantidad(p, 1)} onCerrar={() => setHojaAbierta(false)} />}
 
       <label style={{ display: 'flex', flexDirection: 'column' }}>

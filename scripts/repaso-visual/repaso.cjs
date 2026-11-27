@@ -272,6 +272,7 @@ const PANTALLAS = [
   { quien: 'atleta', nombre: 'home-historial', url: '/home', pasos: ['historial'] },
   { quien: 'atleta', nombre: 'home-ajustes', url: '/home', pasos: ['ajustes'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-nutricion-hoja', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion-plan', 'anadir-producto'], soloPantalla: true },
+  { quien: 'coach', nombre: 'atleta-nutricion-ajustes', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nutricion-plan', 'ajustar-producto'], soloPantalla: true },
   { quien: 'coach', nombre: 'creador-nutricion-hoja', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', 'anadir-producto'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-ajustes-bici', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'ajustes-coach'] },
   { quien: 'atleta', nombre: 'home-disponibilidad', url: '/home', pasos: ['tab:Horario'] },
@@ -315,6 +316,7 @@ const PANTALLAS = [
           else if (paso.startsWith('semanas:')) await page.getByRole('radio', { name: `${paso.slice(8)} sem` }).first().click()
           else if (paso === 'periodo:semana') await opcionPeriodo(page, 'radio', 'Semana', 'Semana concreta')
           else if (paso === 'periodo:fechas') await opcionPeriodo(page, 'radio', 'Fechas', 'Rango de fechas')
+          else if (paso === 'ajustar-producto') await page.getByRole('button', { name: /^Ajustar reparto/ }).first().click()
           else if (paso === 'anadir-producto') await page.getByRole('button', { name: 'Añadir producto' }).first().click()
           else if (paso === 'mas') await page.getByRole('button', { name: /^Más opciones/ }).first().click()
           else if (paso === 'periodo:anterior') await page.getByRole('button', { name: 'Semana anterior' }).first().click()
