@@ -60,7 +60,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   // Bloques desplegados (índices). Todos plegados al abrir, al generar con la
   // escritura rápida o al cargar una plantilla; el que se añade a mano, abierto.
   const [abiertos, setAbiertos] = useState(() => new Set())
-  // Último bloque quitado, para «Deshacer» (6 s): { bloque, idx, abierto, n }
+  // Último bloque o paso quitado, para «Deshacer» (6 s): { bloque, idx, abierto, n } o { tipo:'paso', paso, repeatIdx, idx, n }
   const [quitado, setQuitado] = useState(null)
   const temporizadorQuitado = useRef(null)
   useEffect(() => () => clearTimeout(temporizadorQuitado.current), [])
@@ -195,6 +195,20 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   function deshacerQuitar() {
     if (!quitado) return
     clearTimeout(temporizadorQuitado.current)
+    if (quitado.tipo === 'paso') {
+      const { paso, repeatIdx, idx: pasoIdx } = quitado
+      setForm((prev) => ({
+        ...prev,
+        bloques: prev.bloques.map((b, i) => {
+          if (i !== repeatIdx || !b.pasos) return b
+          const pasos = [...b.pasos]
+          pasos.splice(Math.min(pasoIdx, pasos.length), 0, paso)
+          return { ...b, pasos }
+        }),
+      }))
+      setQuitado(null)
+      return
+    }
     const { bloque, idx, abierto } = quitado
     const pos = Math.min(idx, form.bloques.length)
     setForm((prev) => {
@@ -210,6 +224,8 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   function moveBloque(idx, dir) {
+    // Reordenar cambia los índices: el «Deshacer» de un paso ya no sabría a qué bloque volver
+    if (quitado?.tipo === 'paso') setQuitado(null)
     const target = idx + dir
     if (target >= 0 && target < form.bloques.length) {
       // El estado abierto/plegado viaja con el bloque
@@ -244,12 +260,18 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
   }
 
   function removePaso(repeatIdx, pasoIdx) {
+    // Igual que los bloques: inmediato y reversible con «Deshacer»
+    const paso = form.bloques[repeatIdx]?.pasos?.[pasoIdx]
+    if (!paso) return
     setForm((prev) => ({
       ...prev,
       bloques: prev.bloques.map((b, i) =>
         i === repeatIdx ? { ...b, pasos: b.pasos.filter((_, pi) => pi !== pasoIdx) } : b
       ),
     }))
+    clearTimeout(temporizadorQuitado.current)
+    setQuitado({ tipo: 'paso', paso, repeatIdx, idx: pasoIdx, n: pasoIdx + 1, disciplina: form.disciplina })
+    temporizadorQuitado.current = setTimeout(() => setQuitado(null), 6000)
   }
 
   function addPaso(repeatIdx) {
@@ -966,7 +988,7 @@ export default function WorkoutBuilder({ isOpen, onClose, onSaved, athleteId, co
               boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             }}
           >
-            <span style={{ fontSize: 14 }}>Bloque {quitado.n} quitado</span>
+            <span style={{ fontSize: 14 }}>{quitado.tipo === 'paso' ? 'Paso' : 'Bloque'} {quitado.n} quitado</span>
             <button
               type="button"
               onClick={deshacerQuitar}

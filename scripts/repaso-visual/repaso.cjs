@@ -265,6 +265,8 @@ const PANTALLAS = [
   { quien: 'coach', nombre: 'creador-natacion', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Natación', `rapida:400 cal + 8x100m 1:45 rec 20" + 200 pull`], expandir: true },
   { quien: 'coach', nombre: 'creador-quitar-bloque', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-bloque'], soloPantalla: true },
   { quien: 'coach', nombre: 'creador-deshacer-bloque', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-bloque', 'deshacer-bloque'], soloPantalla: true },
+  { quien: 'coach', nombre: 'creador-quitar-paso', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-paso'], soloPantalla: true },
+  { quien: 'coach', nombre: 'creador-deshacer-paso', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'nuevo', 'disciplina:Carrera', `rapida:15' Z1 + 6x(3' Z4 / 2' Z1) + 10' Z1`, 'quitar-paso', 'deshacer-paso'], soloPantalla: true },
   { quien: 'coach', nombre: 'atleta-sesion-menu', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'menu-sesion-sin-enviar'], soloPantalla: true },
   { quien: 'coach', nombre: 'creador-editar', url: `/athlete/${F.A}`, pasos: ['tab:Sesiones', 'editar'], expandir: true },
   { quien: 'atleta', nombre: 'home', url: '/home' },
@@ -332,6 +334,24 @@ const PANTALLAS = [
             await page.waitForFunction(() => document.querySelectorAll('button[aria-label="Quitar bloque"]').length === 3, null, { timeout: 3000 })
             const nombres = await page.locator('button[aria-label="Quitar bloque"]').evaluateAll((bs) => bs.map((b) => { let e = b.parentElement; while (e && !e.textContent.trim()) e = e.parentElement; return e ? e.textContent : '' }))
             if (!/Serie/.test(nombres[1] || '') || /Serie/.test(nombres[0] || '') || /Serie/.test(nombres[2] || '')) throw new Error('Deshacer no devolvió «Serie» a la posición 2: ' + JSON.stringify(nombres))
+          }
+          else if (paso === 'quitar-paso') {
+            const botones = page.getByRole('button', { name: /^Quitar paso/ })
+            if (await botones.count() === 0) {
+              const cab = page.locator('button[aria-expanded="false"]').filter({ hasText: /Serie|6x|×/ }).first()
+              await cab.click()
+              await botones.first().waitFor({ timeout: 3000 })
+            }
+            const antes = await botones.count()
+            await botones.first().click()
+            await page.getByRole('status').filter({ hasText: 'Paso 1 quitado' }).waitFor({ timeout: 3000 })
+            if (await botones.count() !== antes - 1) throw new Error('quitar-paso: no bajó el número de pasos')
+          }
+          else if (paso === 'deshacer-paso') {
+            const botones = page.getByRole('button', { name: /^Quitar paso/ })
+            const antes = await botones.count()
+            await page.getByRole('button', { name: 'Deshacer' }).click()
+            await page.waitForFunction((n) => document.querySelectorAll('button[aria-label^="Quitar paso"]').length === n + 1, antes, { timeout: 3000 })
           }
           else if (paso === 'menu-sesion-sin-enviar') {
             // ⋯ de la primera sesión futura sin enviar: debe ofrecer «Enviar al reloj»
