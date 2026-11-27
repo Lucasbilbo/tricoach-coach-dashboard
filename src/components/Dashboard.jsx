@@ -26,9 +26,10 @@ function TssRelativo({ tss, semanas }) {
       {rel && (
         <div
           title={`Su media de las 4 semanas anteriores: ${rel.media} TSS`}
-          style={{ fontSize: 13, marginTop: 2, color: rel.nivel === 'alta' ? AVISO : COLORS.textSecondary, whiteSpace: 'nowrap' }}
+          style={{ fontSize: 13, marginTop: 2, color: rel.nivel === 'alta' ? AVISO : COLORS.textSecondary }}
         >
-          {TEXTO_NIVEL[rel.nivel]}
+          {/* C5: la referencia (media de sus 4 semanas anteriores) va escrita, no solo en el tooltip */}
+          {rel.nivel === 'normal' ? `${TEXTO_NIVEL.normal} · media ${rel.media}` : `${TEXTO_NIVEL[rel.nivel]} · ${rel.media}`}
         </div>
       )}
     </div>

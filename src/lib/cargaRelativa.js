@@ -26,4 +26,5 @@ export function cargaRelativa(tssSemana, semanas) {
   return { nivel, media: Math.round(media), ratio }
 }
 
-export const TEXTO_NIVEL = { alta: 'Por encima', normal: 'En su línea', baja: 'Por debajo' }
+// Se lee con la media detrás: «Por encima de su media · 340» (Dashboard.jsx)
+export const TEXTO_NIVEL = { alta: 'Por encima de su media', normal: 'En su línea', baja: 'Por debajo de su media' }
